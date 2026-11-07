@@ -3692,6 +3692,38 @@ static void fs_frame_prep(void) {
   fsg_chrome_init();
 }
 
+/* src/menu.c. Nonzero stops ML's menu drawing itself while a module screen
+ * owns the panel; see the note further down for why the menu is left open. */
+extern int menu_redraw_blocked;
+
+/*
+ * Cheap insurance for a screen that has stopped painting.
+ *
+ * Darkroom, Color Creator and WB Shift repaint only when something changes, so
+ * if Canon or ML puts anything into the real buffer after the last frame -- an
+ * asynchronous dialog, a menu pass that slipped through, a resize -- nothing
+ * would restore it. Once every 250 ms the already-rendered idle buffer is
+ * copied back onto the panel: 345 KB of memcpy, no rendering, no card I/O.
+ *
+ * If ML's menu closed underneath us (menu_redraw_task does exactly that when
+ * menu_ensure_canon_dialog() fails) the flag is cleared and the front buffer
+ * taken back, so the state the screens rely on is restored rather than assumed.
+ */
+static void fs_keep_panel(void) {
+  static uint32_t last;
+  uint32_t now = get_ms_clock();
+  if ((uint32_t)(now - last) < 250)
+    return;
+  last = now;
+  if (!gui_menu_shown()) {
+    menu_redraw_blocked = 0;
+    canon_gui_disable_front_buffer();
+  }
+  fsg_chrome_init();
+  BMP_LOCK(bmp_idle_copy(1, 0);)
+  ml_refresh_display_needed = 1;
+}
+
 static void fs_paint(void (*fn)(void)) {
   uint32_t t0 = get_ms_clock();
   fs_frame_prep();
@@ -3834,300 +3866,97 @@ static void fs_gui_close(void) { fs_gui_active = 0; }
  * is all that is wanted here: no accidental exposure while the shelf owns the
  * panel, arrows and SET untouched. */
 
-/* platform/6D.116/consts.h:144, which modules cannot see:
- *   #define GUIMODE_ML_MENU (RECORDING ? 0 : lv ? 92 : 2)
+/*
+ * Piggyback ML's own menu, the way every full-screen module does.
  *
- * The distinction matters here: PauseLiveView() stops the frames but leaves
- * lv == 1, so on every path this module takes, ML's answer is 92, not 2.
- * Asking for 2 while lv is 1 is asking for a mode Canon does not have. */
-#define FS_GUIMODE_ML_MENU (RECORDING ? 0 : lv ? 92 : 2)
+ * arkanoid, lua_menu, ime_std and flexinfo all leave gui_menu_shown() at 1 and
+ * set menu_redraw_blocked = 1 while they own the panel. That combination is
+ * what keeps ML's own machinery off the canvas:
+ *
+ *   _redraw_do() (zebra.c) starts with
+ *       if (gui_menu_shown()) { menu_redraw(); return; }
+ *   With the menu closed -- the state gui_stop_menu() put the body in -- every
+ *   redraw() issued anywhere in ML falls through to
+ *       canon_gui_enable_front_buffer(0); dialog_redraw(dialog);
+ *   which is Canon's dialog painted over a module screen. That is the wipe this
+ *   module has been chasing: not Canon repainting on a timer, but ML painting
+ *   Canon's dialog over us on request.
+ *
+ *   With the menu open and its redraws blocked, menu_redraw_task() also keeps
+ *   running menu_ensure_canon_dialog(), which re-pokes
+ *   SetGUIRequestMode(GUIMODE_ML_MENU) every 2000 ms because
+ *   CONFIG_MENU_TIMEOUT_FIX says the 6D MPU otherwise turns the dialog off.
+ *   That is the keepalive this module was hand-rolling -- already correct, and
+ *   already gated on lv, unlike the version here.
+ *
+ * Nothing here calls SetGUIRequestMode() or PauseLiveView() any more. The menu
+ * settled the GUI-mode question in piggyback_canon_menu() when it opened, and
+ * PauseLiveView() sets lv = 0 (PROP_LV_ACTION, propvalues.c) while also setting
+ * lv_paused, after which gui-common.c drops every key event before
+ * handle_module_keys() -- this module's own key callback -- is reached.
+ */
+static int fs_menu_opened;    /* the menu was opened here; close it on release */
+static int fs_menu_was_open;  /* it was already open when the screen took over */
+/* The one thing the key callback asks: is the panel this module's right now?
+ * Enumerating the per-screen flags there was wrong -- the develop path calls
+ * fs_screen_release() while fs_develop_active and fs_bath_ui are still set, so
+ * the redraw that puts ML's menu back was swallowed. */
+static volatile int fs_holding_panel;
 
 #define FS_KEY_GUARD_MS 400
 static volatile uint32_t fs_key_guard_until;
-/* Nonzero when fs_screen_take() asked Canon for a different GUI mode, so
- * fs_screen_release() has to ask for the normal one back. */
-static int fs_took_mode;
-/* Nonzero while a module screen owns the panel and the GUI-mode poke below
- * has to keep running. */
-static volatile int fs_gui_holding;
-static int fs_gui_pokes;
 
-/*
- * Canon's MPU switches its own dialog off after a couple of seconds unless
- * something keeps asking for it.
- *
- * ML knows this and does it in menu_ensure_canon_dialog(): behind
- * CONFIG_MENU_TIMEOUT_FIX -- which platform/6D.116/internals.h defines -- it
- * re-issues SetGUIRequestMode(GUIMODE_ML_MENU) every 2000 ms, with the comment
- * "the MPU decides to turn off the underlying Canon dialog so we have to keep
- * poking it to stay awake".
- *
- * That poke lives in the menu's redraw task, and gui_stop_menu() stops that
- * task. So while a module screen holds the panel nobody pokes, Canon's dialog
- * is switched off a couple of seconds in, and the panel goes back to whatever
- * buffer was underneath: exactly the "the shelf is gone a few seconds after it
- * opened" this log has been showing. Nothing done to the front buffer or the
- * palette can fix that, because it is the dialog itself that is being turned
- * off, not repainted.
- */
-static int fs_keeper_gen;
-
-static void fs_gui_keepalive_task(void *unused) {
-  /* One task per screen: a task left over from the previous open would keep
-   * poking alongside the new one, and the two would never exit. */
-  int gen = (int)(uintptr_t)unused;
-  while (fs_gui_holding && gen == fs_keeper_gen) {
-    msleep(2000);
-    if (!fs_gui_holding || gen != fs_keeper_gen)
-      break;
-    {
-      int want = FS_GUIMODE_ML_MENU;
-      if (want) {
-        SetGUIRequestMode(want);
-        /* The request is handled by Canon's GUI task some milliseconds later,
-         * and that is when it can touch the front buffer again. Taking the
-         * buffer back 0 ms after posting caught it mid-flight. */
-        msleep(20);
-        if (!canon_gui_front_buffer_disabled()) {
-          canon_gui_disable_front_buffer();
-          /* A static screen (Darkroom, Creator, WB Shift) has no clock of its
-           * own, so nothing else would repaint it after a wipe. */
-          fs_gui_dirty = 1;
-          fs_darkroom_dirty = 1;
-          fs_creator_dirty = 1;
-          fs_wb_dirty = 1;
-        }
-      }
-    }
-    fs_gui_pokes++;
-    if (fs_gui_pokes <= 3) {
-      fs_log("keeper: poke %d -> mode=%d fb_disabled=%d", fs_gui_pokes,
-             get_gui_mode(), canon_gui_front_buffer_disabled());
-      fs_log_flush();
-    }
-  }
-}
-/* LiveView and playback were running when a screen opened, so
- * fs_screen_release() has to give them back. */
-static int fs_lv_was_on;
 
 static void fs_screen_take(void) {
+  fs_holding_panel = 1;
   powersave_prohibit();
-  gui_stop_menu();
   display_on();
   msleep(150);
   /*
-   * Take the front buffer, the way ML's own menu does.
-   *
-   * gui_stop_menu() closes the menu but leaves Canon drawing the GUI: it
-   * repaints its own frame into the overlay region continuously, so everything
-   * this module draws survives for about one frame and is then wiped. That is
-   * exactly what the panel showed: a red flash that vanished, then nothing,
-   * while the BMP probe read the drawing back out of VRAM intact
-   * ("nonzero=318 of 343"). canon_gui_disable_front_buffer() is the call that
-   * stops it; menu.c uses the same one when it opens.
+   * Keep ML's menu open and block its redraws, instead of closing it. See the
+   * note above menu_redraw_blocked: with the menu closed every redraw() in ML
+   * paints Canon's dialog over this module's canvas. Opened without the menu
+   * (a shortcut), the menu is opened so the same state holds.
    */
-  /*
-   * Leave photo mode before drawing.
-   *
-   * In photo mode the BMP buffer is Canon's own GUI canvas: its GUI task
-   * repaints into it continuously, so a module frame survives one refresh --
-   * the red flash
-   * -- and is then wiped. That is why the BMP probe could read a complete frame
-   * out of VRAM ("sampled=343 nonzero=343") while the panel showed nothing, and
-   * why disabling the front buffer only turned "flash then nothing" into
-   * "nothing": it stopped the repaint but froze a display Canon no longer fed.
-   *
-   * In play mode the panel shows a picture buffer and the OSD is composited on
-   * top of it, so an overlay written once stays written. This is the same call
-   * ML's own full-screen tools make (modules/bench/mem_bench.c:
-   * "run the benchmark in either LV on PLAY mode (photo mode is not very
-   * interesting)" -> enter_play_mode() before
-   * canon_gui_disable_front_buffer()), and the reference film module logs
-   * lv/gui_state before opening its shelf for the same reason.
-   */
-  /*
-   * Stop LiveView before the GUI draws, and stop the playback image with it.
-   *
-   * The screens are opaque, but the frame underneath them is not ours: with
-   * LiveView running, Canon keeps a live picture in the buffer the OSD is
-   * composited over, and its GUI task keeps feeding the panel. The filter here
-   * already declines to grade while a screen is up (see the fs_gui_active gate
-   * in the step function), which stops *our* writes but leaves Canon's stream
-   * running: the shelf and the colour wheel flicker, and the strip's own
-   * rotation fights the frames arriving underneath it.
-   *
-   * So the pipeline is shut off, not just ignored: close_liveview() for the
-   * sensor, then play mode below, where the panel shows a still buffer that
-   * nobody else is rewriting. Both are undone in fs_screen_release().
-   */
-  fs_lv_was_on = lv ? 1 : 0;
-  if (lv) {
-    /*
-     * Pause the sensor rather than leave LiveView.
-     *
-     * close_liveview() works by pressing the LV button, and that is a mode
-     * change: about a second, it can be refused, and it is not what the screen
-     * needs. PROP_LV_ACTION stops the frames arriving at once, keeps the body
-     * where the user left it, and is undoable in one call on the way out.
-     * Pausing is also what ML itself does before drawing over LiveView
-     * (powersave.c uses the same call for the motion-detect screens).
-     */
-    fs_log("screen: pausing LiveView for the GUI (lv=%d paused=%d)",
-           (int)lv, (int)lv_paused);
-    fs_log_flush();
-    PauseLiveView();
-    msleep(80);
-    fs_log("screen: LiveView pause returned (lv=%d paused=%d)",
-           (int)lv, (int)lv_paused);
-    fs_log_flush();
-  }
-  /*
-   * Do NOT switch to play mode any more.
-   *
-   * Play mode is what put a photograph under this screen: the OSD is composited
-   * at opacity 0x3f on this body -- the screen-take logs the readback,
-   * "chrome palette entry 244 = 0x3f2b08fb (wanted 0xff......)" -- so Canon
-   * decoding a playback frame shows straight through the panels, and no palette
-   * or blanking trick changes that. Staying on the shooting screen removes the
-   * picture instead of painting over it.
-   *
-   * The old reason for play mode was that Canon repaints the bitmap buffer in
-   * photo mode; that repaint is now disabled on both paths
-   * (canon_gui_disable_front_buffer), which is the call ML's own menu makes.
-   */
-  fs_took_mode = 0;
-  /*
-   * Ask Canon for its own menu screen, the way ML's menu does.
-   *
-   * The one screen on this body that provably stays where it is put is ML's
-   * menu, and menu.c gets there by switching Canon into its menu GUI mode
-   * (GUIMODE_ML_MENU is 2 with LiveView off) and then pushing the redraw flood
-   * -- five frames, 20 ms apart -- while it draws. Canon re-asserts the buffer
-   * on its own schedule, which is why one disable call was not enough here:
-   * the shelf was reclaimed a few seconds in.
-   *
-   * The flood here pushes canon_gui_disable_front_buffer(), not the
-   * canon_gui_enable_front_buffer(0) that menu.c's flood uses: enable() clears
-   * WINSYS_BMP_DIRTY_BIT_NEG and hands the panel back to Canon, so flooding it
-   * would do the opposite of what this module needs.
-   */
-  if (FS_GUIMODE_ML_MENU == 0) {
-    /* ML does not switch modes while recording either. Leave the body alone
-     * and keep what the shooting screen gives. */
-    fs_log("screen: recording, not requesting a GUI mode change");
-    fs_log_flush();
-  } else {
-    int want = FS_GUIMODE_ML_MENU;
-    fs_log("screen: requesting Canon menu GUI mode (%d) from mode %d",
-           want, get_gui_mode());
-    fs_log_flush();
-    SetGUIRequestMode(want);
-    msleep(200);
-    /* canon_gui_enable_front_buffer() *clears* WINSYS_BMP_DIRTY_BIT_NEG, i.e.
-     * it hands the panel back to Canon; disable() is what takes it away. The
-     * flood has to push disable(), not enable(). */
-    for (int i = 0; i < 5; i++) {
-      canon_gui_disable_front_buffer();
+  fs_menu_was_open = gui_menu_shown() ? 1 : 0;
+  fs_menu_opened = 0;
+  if (!fs_menu_was_open) {
+    int waited;
+    gui_open_menu();
+    for (waited = 0; waited < 400 && !gui_menu_shown(); waited += 20)
       msleep(20);
-    }
-    fs_took_mode = 1;   /* release asks for the normal GUI mode back */
-    fs_gui_pokes = 0;
-    fs_gui_holding = 1;
-    fs_keeper_gen++;
-    if (!task_create("fs_keeper", 0x1c, 0x1000, fs_gui_keepalive_task,
-                     (void *)(uintptr_t)fs_keeper_gen)) {
-      fs_gui_holding = 0;
-      fs_log("screen: no task for the GUI-mode keepalive (2 s poke missing)");
-      fs_log_flush();
-    }
+    fs_menu_opened = gui_menu_shown() ? 1 : 0;
   }
-  fs_log("screen: Canon menu mode held (mode=%d fb_disabled=%d lv=%d)",
-         get_gui_mode(), canon_gui_front_buffer_disabled(), lv ? 1 : 0);
-  fs_log_flush();
-  gui_uilock(
-      UILOCK_SHUTTER); /* the shutter cannot fire under a module screen */
-  bmp_on();
-  msleep(30);
-  /*
-   * Stop Canon repainting the overlay when we stay on the LiveView screen.
-   *
-   * This module's own notes name the call -- "canon_gui_disable_front_buffer()
-   * is the call that stops it; menu.c uses the same one when it opens" -- and
-   * then never made it. So with LiveView running, Canon's GUI task kept
-   * repainting the bitmap buffer: our frame survived about one refresh and was
-   * then wiped, and because the shelf redraws on a clock the panel strobed --
-   * the LiveView "attacking" the screen.
-   *
-   * The other path (LiveView off) switches to play mode instead, where the OSD
-   * is composited over the picture buffer and a write persists; disabling the
-   * front buffer there is what once produced "flash then nothing", so it is
-   * done only on the path that does not take it.
-   *
-   * menu.c's open sequence is the reference: piggyback_canon_menu();
-   * canon_gui_disable_front_buffer(); redraw. The close sequence is already
-   * mirrored in fs_screen_release(): canon_gui_enable_front_buffer(1).
-   */
-  /*
-   * Stop Canon repainting the panel, on BOTH paths.
-   *
-   * This used to run only when the screen was taken with LiveView on, on the
-   * theory that play mode composites the OSD over a picture buffer and a write
-   * there persists. The camera says otherwise: after a few key presses the
-   * screen reverts to the playback photograph, which is Canon redrawing the
-   * buffer our panels are drawn in. "flash then nothing", the reason this was
-   * restricted, came from the single-buffer days before bmp_idle_copy; the
-   * double-buffered paint in fs_paint() is what the LV path has been using
-   * since, and it is the same paint.
-   */
+  menu_redraw_blocked = 1;
   canon_gui_disable_front_buffer();
-  fs_log("screen: Canon's overlay repaint stopped (disabled=%d, lv=%d play=%d)",
-         canon_gui_front_buffer_disabled(), lv ? 1 : 0, fs_took_mode);
+  fs_log("screen: menu shown=%d (was %d) blocked=%d fb_disabled=%d mode=%d lv=%d",
+         gui_menu_shown(), fs_menu_was_open, menu_redraw_blocked,
+         canon_gui_front_buffer_disabled(), get_gui_mode(), lv ? 1 : 0);
   fs_log_flush();
   /*
-   * Program the chrome entries opaque before anything is drawn with them.
-   *
-   * This body reports opacity 0x3f for the palette it hands out (the shelf probe
-   * reads pal[9]=0x3f4054d2), which is why the playback picture kept showing
-   * through the panels. The chrome now has its own seven entries, written with
-   * 0xFF asked for, and the readback is logged so the card can say whether the
-   * display accepted it -- which is the one thing here I cannot see.
+   * Program the chrome entries opaque before anything is drawn with them, and
+   * log the readback of the REGISTER (shamem_read) next to Canon's RAM shadow:
+   * EngDrvOut() writes the hardware and never updates LCD_Palette[3*e+2], so
+   * the shadow alone reports Canon's 0x3f no matter what was just written.
    */
   fsg_chrome_init();
   {
-    /*
-     * Read the REGISTER, not LCD_Palette[3*e+2].
-     *
-     * That slot is Canon's RAM shadow of the entry; EngDrvOut() writes the
-     * hardware and never updates the shadow, so reading it back reports 0x3f --
-     * Canon's opacity -- no matter what was just written. The module's notes
-     * concluded from exactly that readback that the body clamps the overlay to
-     * opacity 0x3f. ML's own selftest reads the register with shamem_read()
-     * (modules/selftest: EngDrvOut, then shamem_read(LCD_Palette[0])), which is
-     * what is done here.
-     */
     uint32_t got = shamem_read((uint32_t)LCD_Palette[3 * fsg_chrome_entry(4)]);
     fs_log("screen: chrome entry %d: hw=0x%08x shadow=0x%08x (wrote 0xff......)",
            fsg_chrome_entry(4), (unsigned)got,
            (unsigned)LCD_Palette[3 * fsg_chrome_entry(4) + 2]);
     fs_log_flush();
   }
+  gui_uilock(UILOCK_SHUTTER); /* the shutter cannot fire under this screen */
+  bmp_on();
+  msleep(30);
   clrscr();
   /*
-   * Palette calibration strip.
-   *
-   * The red flash proved the module can paint the panel, so "nothing shows" is
-   * about WHICH palette entries the panel is willing to show. This paints
-   * eleven equal bars, one per palette index that the drawer actually uses, so
-   * the answer is "how many bars did you see, and where do they stop" instead
-   * of another guess. 1=red, 8=red(real), 15=white, 38=almost black,
-   * 45/60/79=grey ramp, 80/120/200=the canister palette, 255=ClearScreen.
+   * Palette calibration strip, when Debug ▸ Calibration is on: eleven equal
+   * bars, one per palette index the drawer uses, so "how many bars and where do
+   * they stop" answers "which entries can this panel show" without a guess.
    */
   if (film_sim_calib) {
-    /* Blue behind, because it is one of the sixteen base colours the flash
-     * proved visible: any bar that cannot be shown leaves a blue gap, so
-     * "which ones are missing" needs no colour names from the user. 254 rather
-     * than 255, which is ML's ClearScreen index and not a fill colour. */
     static const unsigned char idx[11] = {1,  8,  15,  38,  45, 60,
                                           79, 80, 120, 200, 254};
     int bw = 720 / 11;
@@ -4141,6 +3970,9 @@ static void fs_screen_take(void) {
 }
 
 static void fs_screen_release(void) {
+  /* Cleared first: everything below, including the redraw() that hands the
+   * menu back, must not be swallowed by the key callback. */
+  fs_holding_panel = 0;
   fsg_pal_reset();  /* hand the borrowed palette entries back */
   /* and invalidate the cache that decides when to program them again: it was
    * comparing against the stock code only, so coming back to the same stock
@@ -4149,42 +3981,25 @@ static void fs_screen_release(void) {
   fs_pal_last_code = -1;
   fs_pal_last_ms = 0;
   fsg_can_unload(); /* and let go of the artwork file */
-  fs_gui_holding = 0; /* the keepalive task exits within 2 s */
-  if (fs_gui_pokes)
-    fs_log("keeper: %d GUI-mode pokes this screen", fs_gui_pokes);
   fsg_chrome_reset(); /* chrome entries back to Canon's values */
-  gui_uilock(
-      UILOCK_NONE); /* keys belong to Canon again, before we ask for a mode */
-  if (fs_took_mode) {
-    /* Back to the normal GUI: the shelf was opened from the shooting screen,
-     * and leaving the body on Canon's menu screen after Q would be useless. */
-    fs_took_mode = 0;
-    SetGUIRequestMode(0);
-    msleep(120);
-  }
-  canon_gui_enable_front_buffer(1); /* give Canon its panel back, redrawn */
+  gui_uilock(UILOCK_NONE); /* keys belong to Canon again */
   /*
-   * Start LiveView again if it was running when the screen opened.
-   *
-   * Only outside movie mode: there the LV button is the record button, which is
-   * exactly why close_liveview() leaves movie mode through play instead of
-   * pressing it.
+   * Hand the menu back before the panel. If this screen opened the menu, close
+   * it; if the menu was already there, let it draw itself again now that
+   * menu_redraw_blocked is clear.
    */
-  if (fs_lv_was_on) {
-    fs_lv_was_on = 0;
-    /*
-     * ResumeLiveView() refuses on its own in play mode and with a menu open,
-     * so the guard against resuming into a screen that is not ours is ML's,
-     * not a 200 ms guess. It returns 0 when it declined.
-     */
-    if (lv_paused) {
-      int resumed = ResumeLiveView();
-      fs_log("screen: LiveView resume %s (paused=%d lv=%d mode=%d)",
-             resumed ? "done" : "declined (play or menu)", (int)lv_paused,
-             (int)lv, (int)get_gui_mode());
-      fs_log_flush();
-    }
+  menu_redraw_blocked = 0;
+  if (fs_menu_opened && !fs_menu_was_open) {
+    fs_menu_opened = 0;
+    gui_stop_menu();
+    msleep(120);
+  } else {
+    redraw();
   }
+  fs_log("screen: released (menu=%d blocked=%d)",
+         gui_menu_shown(), menu_redraw_blocked);
+  fs_log_flush();
+  canon_gui_enable_front_buffer(1); /* give Canon its panel back, redrawn */
   /* Both the file and the picture are gone, so the next screen must load them
    * again: without this the stock looks unchanged and no record is read. */
   fs_pic_code[0] = '\0';
@@ -4196,6 +4011,8 @@ static void fs_screen_release(void) {
 static int fs_shelf_run(void) {
   if (fs_gui_active)
     return FS_VIEW_NONE;
+
+  fs_keep_panel(); /* see its comment: restores a wiped idle frame */
 
   fs_log("shelf: running");
   fs_log_flush();
@@ -4555,6 +4372,8 @@ static void fs_darkroom_close(void) { fs_darkroom_active = 0; }
 static int fs_darkroom_run(void) {
   if (fs_darkroom_active)
     return FS_VIEW_NONE;
+
+  fs_keep_panel(); /* see its comment: restores a wiped idle frame */
 
   fs_log("darkroom: running");
   fs_log_flush();
@@ -6067,6 +5886,8 @@ static int fs_creator_run(void) {
   if (fs_gui_active || fs_creator_active)
     return FS_VIEW_NONE;
 
+  fs_keep_panel(); /* see its comment: restores a wiped idle frame */
+
   fs_log("creator: running");
   fs_log_flush();
   beep_times(1);
@@ -6248,6 +6069,8 @@ static void fs_wb_apply_task(void *unused) {
 static int fs_wb_run(void) {
   if (fs_gui_active || fs_creator_active || fs_wb_active)
     return FS_VIEW_NONE;
+
+  fs_keep_panel(); /* see its comment: restores a wiped idle frame */
 
   fs_log("wb: running (ba=%d gm=%d)", (int)film_sim_wbs_ba, (int)film_sim_wbs_gm);
   fs_log_flush();
@@ -7570,11 +7393,7 @@ static unsigned int fs_keypress_raw_cbr(unsigned int event_ptr) {
    * repaints from its idle buffer instead.
    */
   if (k == MLEV_REDRAW) {
-    /* fs_bath_ui is the develop screen (fs_screen_take + own_screen): it holds
-     * the panel for 20-30 s with none of the other flags set, and a redraw
-     * pass-through there wiped the chemical tank until the next progress tick. */
-    if (fs_gui_active || fs_darkroom_active || fs_creator_active ||
-        fs_wb_active || fs_view_active || fs_bath_ui) {
+    if (fs_holding_panel) {
       fs_gui_dirty = 1;
       fs_darkroom_dirty = 1;
       fs_creator_dirty = 1;
