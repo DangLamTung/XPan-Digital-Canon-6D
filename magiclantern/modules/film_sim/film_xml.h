@@ -215,12 +215,17 @@ static int fs_load_films_xml(void)
         snprintf(fullpath, sizeof(fullpath), "%s/%s", FILM_DIR, file_info.name);
 
         uint32_t size = 0;
-        if (FIO_GetFileSize(fullpath, &size) != 0 || size == 0 || size > 4096) continue;
+        /* >= not >: size == 4096 passed, FIO_ReadFile filled xml_buf[0..4095],
+         * and xml_buf[r] then wrote one byte past the end of the 4096-byte
+         * static -- over whatever compiler put next to it. */
+        static char xml_buf[4096];
+        if (FIO_GetFileSize(fullpath, &size) != 0 || size == 0 ||
+            size >= (uint32_t)sizeof xml_buf)
+          continue;
 
         FILE *fp = FIO_OpenFile(fullpath, O_RDONLY | O_SYNC);
         if (!fp) continue;
 
-        static char xml_buf[4096];
         int r = FIO_ReadFile(fp, xml_buf, size);
         FIO_CloseFile(fp);
         if (r <= 0) continue;

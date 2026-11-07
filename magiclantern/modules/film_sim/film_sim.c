@@ -5733,6 +5733,11 @@ static unsigned int fs_film_dir_sig(int *count_out)
     }
   } while (FIO_FindNextEx(dirent, file) == 0);
 
+  /* Every other directory walk in this file closes its handle. This one did
+   * not, and the watcher calls it every 3 seconds: one leaked DryOS fio_dirent
+   * per 3 s until the handle table is full, after which every FIO call
+   * camera-wide fails. */
+  FIO_FindClose(dirent);
   free(file);
   if (count_out) *count_out = n;
   return sig;
@@ -5858,6 +5863,7 @@ static void fs_share_look_task(void *unused)
   char name[40];
   uint32_t size = 0;
   int n = 0;
+  int len;
 
   { static int ok; fs_ensure_dir(FS_SHARE_DIR, &ok); }
 
@@ -5873,6 +5879,11 @@ static void fs_share_look_task(void *unused)
     const char *leaf = strrchr(src, '/');
     leaf = leaf ? leaf + 1 : src;
     snprintf(name, sizeof name, "%s", leaf);
+    /* The leaf is a recipe file, so it already ends in ".fs"; appending
+     * another produced "ML/SHARE/portra.fs.fs". */
+    len = (int)strlen(name);
+    if (len > 3 && !strcasecmp(name + len - 3, ".fs"))
+      name[len - 3] = 0;
   }
 
   {
@@ -7525,9 +7536,41 @@ static int fs_key_handle(int k);
 
 static int fs_key_handle(int k);
 
+static int fs_stat_redraw_swallowed;
+
 static unsigned int fs_keypress_raw_cbr(unsigned int event_ptr) {
   struct event *ev = (struct event *)event_ptr;
   int k = ev ? ev->param : -1;
+
+  /*
+   * MLEV_REDRAW (-7) is ML asking for a full redraw, and it travels through
+   * this very callback: redraw() posts it with fake_simple_button(), and
+   * handle_ml_events() (debug.c) turns it into _redraw_do() -- which enables
+   * Canon's front buffer and calls dialog_redraw() over the whole bitmap
+   * canvas. Any ML task that calls redraw() therefore paints Canon's dialog
+   * on top of whatever this module has drawn: NotifyBox_task, the LiveView
+   * hiprio task, lens_display_set_dirty(), menu_set_dirty(). Passing it
+   * through is why screens were wiped from outside this module, which no
+   * amount of front-buffer juggling here could prevent.
+   *
+   * While a screen owns the panel it is swallowed, and the screen's own loop
+   * repaints from its idle buffer instead.
+   */
+  if (k == MLEV_REDRAW) {
+    if (fs_gui_active || fs_darkroom_active || fs_creator_active ||
+        fs_wb_active || fs_view_active) {
+      fs_gui_dirty = 1;
+      fs_darkroom_dirty = 1;
+      fs_creator_dirty = 1;
+      fs_wb_dirty = 1;
+      if (!fs_stat_redraw_swallowed++) {
+        fs_log("rawkey: MLEV_REDRAW swallowed, a module screen owns the panel");
+        fs_log_flush();
+      }
+      return 0;
+    }
+    return 1;
+  }
 
   /* Events the body never should send. FILMSIM.LOG had twenty of these per
    * session -- "p=-7 x-123456" -- and each one forced a redraw. They are
@@ -8169,14 +8212,16 @@ static struct menu_entry fs_menu_develop[] = {
         .help = "Develop the newest photo with 4 distinct stocks into "
                 "FLC1..FLC4.JPG. Takes about 3 minutes.",
     },
-    MENU_EOL,
     {
-            .name = "View Last Develop",
-            .select = fs_view_last,
-            .icon_type = IT_ACTION,
-            .help = "Show the last developed frame on the camera's own screen. "
-                    "MENU or PLAY closes it.",
-        },
+        /* This sat after MENU_EOL, and menu iteration stops at that entry, so
+         * the row was in the array and never on the screen. */
+        .name = "View Last Develop",
+        .select = fs_view_last,
+        .icon_type = IT_ACTION,
+        .help = "Show the last developed frame on the camera's own screen. "
+                "MENU or PLAY closes it.",
+    },
+    MENU_EOL,
 };
 
 static struct menu_entry fs_menu_capture[] = {

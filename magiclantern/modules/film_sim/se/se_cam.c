@@ -1637,7 +1637,11 @@ static se_err se_cam_develop_mraw(struct dev *d, const se_cr2_info *info,
     ex.exposure_program = info->exposure_program;
     ex.metering_mode = info->metering_mode;
     ex.flash = info->flash;
-    if (se_jpeg_begin(&enc, W, H, 88, strip, &ex, jpeg_out, d) != SE_OK) {
+    /* The framing window, not the full mRAW frame -- look_emit() emits only
+     * d->crop_y0..d->crop_y1 rows from `row + crop_x0 * 3`. */
+    if (se_jpeg_begin(&enc, d->crop_x1 - d->crop_x0,
+                      d->crop_y1 - d->crop_y0, 88, strip, &ex, jpeg_out,
+                      d) != SE_OK) {
         e = SE_E_IO;
         goto done;
     }
@@ -1711,6 +1715,10 @@ done:
     if (!ok && out_path) FIO_RemoveFile(out_path);
     free(band);
     free(row8);
+    /* rd and row16 were allocated above and never released: ~32 KB of system
+     * heap leaked on every mRAW develop. */
+    free(row16);
+    free(rd);
     (void)mem;
     return e;
 }
@@ -1858,7 +1866,13 @@ se_err se_cam_develop_raw(const char *cr2_path, const char *stock_path,
     ex.exposure_program = info.exposure_program;
     ex.metering_mode = info.metering_mode;
     ex.flash = info.flash;
-    if (se_jpeg_begin(&enc, ow, oh, 88, strip, &ex, jpeg_out, &d) != SE_OK) {
+    /* The framing window, not the full frame: look_emit() emits only
+     * crop_y0..crop_y1 rows and passes `row + crop_x0 * 3`, so an encoder
+     * told ow x oh reads ow pixels from that offset (past the end of the row
+     * buffer) and its SOF0 promises rows it never receives. se_cam_develop()
+     * has always passed the crop size; this path and the mRAW one did not. */
+    if (se_jpeg_begin(&enc, d.crop_x1 - d.crop_x0, d.crop_y1 - d.crop_y0, 88,
+                      strip, &ex, jpeg_out, &d) != SE_OK) {
         e = SE_E_IO;
         goto done;
     }
