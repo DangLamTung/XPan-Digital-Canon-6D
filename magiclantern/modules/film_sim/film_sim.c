@@ -4127,15 +4127,20 @@ static int fs_shelf_run(void) {
       static uint32_t last_full;
       uint32_t now = get_ms_clock();
       /*
-       * A full frame is drawn when the action has finished, not while it runs.
+       * A full frame is rate limited, not deferred until the strip stops.
        *
-       * A dial step or a glide changes one band; drawing all 480 rows in the
-       * middle of that is work nobody sees, and it is what made the screen
-       * stutter and then look stuck. So while the strip is still gliding only
-       * its band is repainted, and the whole screen is drawn once it settles.
-       * The first frame is the exception: there is nothing on the panel yet.
+       * Deferring it was wrong: the card's log shows what happened -- "paint 20
+       * frames, 130 ms, 2122 rows", i.e. ~106 rows a frame, all of them bands,
+       * and no 480-row frame at all after a stock change. The stock's name and
+       * description live in the card (rows 54..342), so they simply never
+       * redrew: the shelf showed the film it had before the click, for as long
+       * as the strip kept easing. The pixels behind the text changed, nothing
+       * said so, and only a full frame can put it right.
+       *
+       * The work that made fast turning unusable was never this paint -- it was
+       * the 16 KB picture-style write per detent, now debounced.
        */
-      int full_due = fs_gui_dirty && !fs_strip_moving &&
+      int full_due = fs_gui_dirty &&
                      (!last_full || (uint32_t)(now - last_full) >= 100);
       if (!fs_gui_logged)
         full_due = 1;
