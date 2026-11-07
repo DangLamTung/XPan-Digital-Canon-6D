@@ -2,6 +2,33 @@
 
 ![Six frames, six film looks](docs/img/promo.jpg)
 
+> ## Disclaimer — read before installing
+>
+> **This is unofficial, unsupported software.** It is not affiliated with,
+> endorsed by, or supported by Canon, Hasselblad, Fujifilm, OM System, or the
+> Magic Lantern project. Names such as "XPan", "Portra" or "Classic Chrome" are
+> used to describe what a look imitates; they are trademarks of their owners.
+>
+> **It runs as a firmware payload on your camera.** Like Magic Lantern itself,
+> it loads code the manufacturer never intended to run. That can, in principle,
+> damage the camera, corrupt a card, lose photographs, or leave the body needing
+> a service centre. Everything here is provided **"as is", with no warranty of
+> any kind**, and you install it entirely at your own risk.
+>
+> **Before you start:** copy everything off the card, and try it on a spare card
+> if you have one. Do not use it for anything you cannot afford to shoot again,
+> and do not install it on a camera you rely on for paid work.
+>
+> **It is unfinished in places, and says so.** Level 3 (raw develop) is marked in
+> progress in the module's own menu; mRAW is not implemented; 20 of the 33 stock
+> names have no recipe shipped and fall back to a generated one. Anything the
+> module cannot do, it reports on screen and in `ML/LOGS/FILMSIM.LOG` — if you
+> see an error there, that is the honest state, not a bug report waiting to be
+> argued with.
+>
+> **No liability.** By installing this you accept that you, not the authors, are
+> responsible for what happens to your camera, your card and your photographs.
+
 A Magic Lantern module for the EOS 6D that does two things the camera cannot do
 on its own: it writes a film look into the JPEG **at the shutter**, and it
 frames the sensor at **65:24**, the panoramic shape of a Hasselblad XPan.
