@@ -3905,12 +3905,22 @@ static void fs_screen_take(void) {
    * canon_gui_disable_front_buffer(); redraw. The close sequence is already
    * mirrored in fs_screen_release(): canon_gui_enable_front_buffer(1).
    */
-  if (!fs_took_play) {
-    canon_gui_disable_front_buffer();
-    fs_log("screen: Canon's overlay repaint stopped (disabled=%d, lv=%d)",
-           canon_gui_front_buffer_disabled(), lv ? 1 : 0);
-    fs_log_flush();
-  }
+  /*
+   * Stop Canon repainting the panel, on BOTH paths.
+   *
+   * This used to run only when the screen was taken with LiveView on, on the
+   * theory that play mode composites the OSD over a picture buffer and a write
+   * there persists. The camera says otherwise: after a few key presses the
+   * screen reverts to the playback photograph, which is Canon redrawing the
+   * buffer our panels are drawn in. "flash then nothing", the reason this was
+   * restricted, came from the single-buffer days before bmp_idle_copy; the
+   * double-buffered paint in fs_paint() is what the LV path has been using
+   * since, and it is the same paint.
+   */
+  canon_gui_disable_front_buffer();
+  fs_log("screen: Canon's overlay repaint stopped (disabled=%d, lv=%d play=%d)",
+         canon_gui_front_buffer_disabled(), lv ? 1 : 0, fs_took_play);
+  fs_log_flush();
   /*
    * Program the chrome entries opaque before anything is drawn with them.
    *
