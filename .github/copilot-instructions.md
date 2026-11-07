@@ -135,12 +135,21 @@ timings plus `develop: profile look/encode/rows`).
    shelf is still wanted.
 3. 20 of 33 stocks have no `.fs` recipe and fall back to a generated one.
 
-## Develop targets: one photo, a marked set, or automatic
+## Menu: shelf first, everything else under Film Settings
 
-* `Photo` (root menu) picks the frame; `Mark` (SET) ticks it for the set, Q clears.
-  Marks live in `fs_marks[][]` as leaf names, never as directory indexes, because a
-  new shot renumbers DCIM.
-* `Develop ▸ Current Photo` / `Marked Set` / `Comparison x4` / `Auto Develop`.
+* Root: **Film Shelf** (opens the shelf GUI -- picking a stock used to be three
+  presses deep inside Film Look), **Film Settings**, **Develop**, **Photo**.
+* `Film Settings` holds Stock, Level, Strength, Grade Quality, Saturation, Grain,
+  Grain Size, Pad to 3:2, Aspect, User Look, Custom Look, Recipe, LiveView,
+  Capture, Debug.
+* `Mark` and `Develop ▸ Marked Set` were removed: the root entry was one photo at
+  a time with no visible state, and the set was almost always empty. The
+  `fs_marks[][]` array stays because `ML/SETTINGS/DEVSET.TXT` still fills it.
+* `Photo` (root menu) picks the frame Develop uses.
+
+## Develop targets: one photo, a set from the card, or automatic
+
+* `Develop ▸ Current Photo` / `Comparison x4` / `Auto Develop` / `Darkroom`.
 * `Auto Develop` (`film.sim.auto`, default 0) runs `fs_auto_task`: a watcher that
   develops a new frame once its size is stable across two 2.5 s polls, and develops
   the selected photo when the level is switched to 2 or 3. It never runs while a

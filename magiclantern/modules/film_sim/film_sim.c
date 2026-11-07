@@ -142,7 +142,8 @@ static CONFIG_INT("film.sim.calib", film_sim_calib, 0);
 static CONFIG_INT("film.sim.dbglog", film_sim_dbglog,
                   1); /* periodic LiveView logging */
 /* Framing for the preview and the written file:
- * 0 full 3:2, 1 1:1, 2 4:5, 3 9:16, 4 16:9, 5 XPan 65:24. */
+ * 0 full 3:2, 1 1:1, 2 4:5, 3 9:16, 4 16:9, 5 XPan 65:24,
+ * 6 Cinemascope 2.39:1. */
 static CONFIG_INT("film.sim.aspect", film_sim_aspect, 0);
 /*
  * Letterbox framings wider than 3:2 into a 3:2 frame.
@@ -155,7 +156,7 @@ static CONFIG_INT("film.sim.aspect", film_sim_aspect, 0);
  * framed.
  */
 static CONFIG_INT("film.sim.pad", film_sim_pad, 1);
-#define FS_ASPECT_MAX 5
+#define FS_ASPECT_MAX 6
 
 /* Off by default: this patches two firmware entry points to look at the frame
  * Canon is about to encode. See fs_yuvhook.c -- it only reads, but it is an
@@ -1676,8 +1677,8 @@ static unsigned int fs_display_filter(unsigned int ctx) {
  * the update callback below, so the menu and the screen cannot disagree.
  */
 static const char *fs_aspect_names[] = {
-    "3:2 full (native)", "1:1 square", "4:5 portrait",
-    "9:16 story",        "16:9 video", "65:24 XPan",
+    "3:2 full (native)", "1:1 square", "4:5 portrait", "9:16 story",
+    "16:9 video",        "65:24 XPan", "2.39:1 Cinemascope",
 };
 #define FS_ASPECT_COUNT                                                        \
   ((int)(sizeof fs_aspect_names / sizeof fs_aspect_names[0]))
@@ -3132,7 +3133,17 @@ static uint32_t fs_view_checksum(void) {
 }
 
 static void fs_view_osd(void) {
-  BMP_LOCK(bmp_fill(COLOR_BLACK, 0, 0, 720, FS_VIEW_TOPBAR);
+  /*
+   * Clear the middle first, and with COLOR_EMPTY rather than BLACK.
+   *
+   * The overlay is not reset when this screen opens: when the develop hands the
+   * panel over (fs_view_run(out, 1)) the bath screen's pixels are still in the
+   * bitmap buffer, and they sat opaque over the middle of the picture. Index 0
+   * is the display's own "transparent", which is what lets the YUV frame show.
+   */
+  BMP_LOCK(bmp_fill(COLOR_EMPTY, 0, FS_VIEW_TOPBAR, 720,
+                    FS_VIEW_MAXH - 20 - FS_VIEW_TOPBAR);
+           bmp_fill(COLOR_BLACK, 0, 0, 720, FS_VIEW_TOPBAR);
            bmp_printf(FONT(FONT_MED, COLOR_WHITE, COLOR_BLACK), 10, 4, "%s",
                       fs_view_note[0] ? fs_view_note : fs_view_path);
            bmp_fill(COLOR_BLACK, 0, FS_VIEW_MAXH - 20, 720, 20);
@@ -7820,39 +7831,6 @@ static MENU_UPDATE_FUNC(fs_level_update) {
                 "3: decode the sensor raw and grade it from scratch.");
 }
 
-/* Mark: tick the photo under the cursor for the multi-image develop set. */
-static MENU_UPDATE_FUNC(fs_mark_update) {
-  if (fs_mark_count <= 0) {
-    MENU_SET_VALUE("none");
-    MENU_SET_HELP("SET: add the selected photo to the develop set. "
-                  "Q: clear the set. Develop > Marked Set runs them all.");
-    return;
-  }
-  MENU_SET_VALUE("%d marked", fs_mark_count);
-  MENU_SET_HELP("SET: add or remove the selected photo. Q: clear the set. "
-                "Develop > Marked Set develops all of them.");
-}
-
-static MENU_SELECT_FUNC(fs_mark_toggle_current) {
-  if (dcim_photo_count <= 0)
-    fs_scan_dcim_photos();
-  if (dcim_photo_count <= 0)
-    return;
-  dcim_photo_index = fs_clamp_i(dcim_photo_index, 0, dcim_photo_count - 1);
-  fs_mark_toggle(dcim_photo_list[dcim_photo_index]);
-  fs_log("mark: %s now %d marked", dcim_photo_list[dcim_photo_index],
-         fs_mark_count);
-}
-
-static MENU_SELECT_FUNC(fs_mark_clear) { fs_mark_count = 0; }
-
-static MENU_UPDATE_FUNC(fs_marked_update) {
-  MENU_SET_VALUE("%d marked", fs_mark_count);
-  if (film_sim_level < FS_LEVEL_GRADE)
-    MENU_SET_WARNING(MENU_WARN_NOT_WORKING,
-                     "Level 1 writes the look at capture; nothing to develop.");
-}
-
 /* Shown on every develop entry: with Level 1 nothing is developed, and that is
  * not visible from the entry itself. */
 static MENU_UPDATE_FUNC(fs_current_update) {
@@ -7863,18 +7841,6 @@ static MENU_UPDATE_FUNC(fs_current_update) {
                      "Set Level to 2 or 3.");
 }
 
-static void fs_set_task(void *unused) {
-  (void)unused;
-  fs_develop_set_task(NULL);
-}
-
-static MENU_SELECT_FUNC(fs_marked_trigger) {
-  if (fs_mark_count <= 0) {
-    NotifyBox(1500, "No photos marked");
-    return;
-  }
-  task_create("fs_set", 0x1e, FS_DEV_STACK, fs_set_task, 0);
-}
 
 static MENU_UPDATE_FUNC(fs_replace_update) {
   MENU_SET_VALUE(film_sim_replace ? "On" : "Off");
@@ -7993,13 +7959,6 @@ static struct menu_entry fs_menu_develop[] = {
         .icon_type = IT_ACTION,
         .help = "Develop the photo chosen by the Photo entry, with the "
                 "current stock.",
-    },
-    {
-        .name = "Marked Set",
-        .select = fs_marked_trigger,
-        .update = fs_marked_update,
-        .icon_type = IT_ACTION,
-        .help = "Develop every photo ticked with Mark, one after another.",
     },
     {
         .name = "External LUT",
@@ -8226,83 +8185,7 @@ static struct menu_entry fs_menu_fuji[] = {
     MENU_EOL,
 };
 
-static struct menu_entry fs_menu_look[] = {
-    {
-            .name = "Film Shelf",
-            .select = fs_gui_open,
-            .icon_type = IT_ACTION,
-            .help = "Open the shelf, choose a film, SET applies it. The choice "
-                    "stays as the active stock after you leave.",
-        },
-    {
-            .name = "Stock",
-            .select = fs_film_next,
-            .select_Q = fs_film_prev,
-            .update = fs_film_update,
-            .help = "SET: next stock, Q: previous stock.",
-        },
-    {
-            .name = "Level",
-            .priv = &film_sim_level,
-            .max = FS_LEVEL_RAW,
-            .update = fs_level_update,
-            .help = "1 picture style, 2 style + grade, 3 raw develop.",
-        },
-    {
-        .name = "Strength",
-        .priv = &film_sim_strength,
-        .max = 100,
-        .help = "How much of the stock's look is applied.",
-    },
-    {
-        .name = "Grade Quality",
-        .priv = &film_sim_gradeq,
-        .max = 2,
-        .select = fs_gradeq_select,
-        .update = fs_gradeq_update,
-        .help = "How much of the look is graded into the shot, and therefore "
-                "how long the next frame waits. High is the full look. Normal "
-                "drops the per-hue work (greens no longer behave differently "
-                "from reds) for about a fifth less time. Fast applies the tone "
-                "curve only and leaves colour untouched -- 5x less time, no "
-                "colour shift at all. Develop always uses the full look.",
-    },
-    {
-        .name = "Saturation",
-        .priv = &film_sim_satboost,
-        .min = 20,
-        .max = 200,
-        .update = fs_satboost_update,
-        .help = "Saturation on top of every stock's own SAT line: 100 leaves "
-                "the recipe as written, 160 is about one and a half times as "
-                "saturated. Applies to developed files and to LiveView.",
-    },
-    {
-        .name = "Grain",
-        .priv = &film_sim_grain,
-        .max = 100,
-        .help = "Grain amount on top of what the stock itself asks for.",
-    },
-    {
-        .name = "Grain Size",
-        .priv = &film_sim_grainsize,
-        .min = -1, .max = 100,
-        .help = "-1 keeps each stock's own GRAIN_SIZE. 0..100 overrides it for "
-                "every stock: the engine turns it into a 1..9 pixel cell, and "
-                "that cell shrinks with the frame so a half-size develop is "
-                "not twice as grainy.",
-    },
-    {
-        .name = "Pad to 3:2",
-        .priv = &film_sim_pad,
-        .max = 1,
-        .update = fs_pad_update,
-        .help = "Framings wider than 3:2 (16:9, 65:24 XPan) are written into a "
-                "3:2 frame with black bars, so the body shows the whole frame "
-                "instead of something that is not what you composed.",
-    },
-    MENU_EOL,
-};
+
 
 static struct menu_entry fs_menu_live[] = {
     {
@@ -8438,14 +8321,94 @@ static struct menu_entry fs_menu_userlook[] = {
     MENU_EOL,
 };
 
-static struct menu_entry film_sim_menu[] = {
+/*
+ * Everything that is not "pick a stock" or "develop", in one menu.
+ *
+ * The root used to carry nine submenus plus the shelf buried inside Film Look;
+ * picking a stock is the thing done most often and it took three presses from
+ * the ML menu. The shelf is now the first row of the root menu and every
+ * setting lives here, one level down.
+ */
+static struct menu_entry fs_menu_settings[] = {
     {
-        .name = "Film Look",
-        .select = menu_open_submenu,
-        .icon_type = IT_ACTION,
-        .help = "Pick a stock and how much of it: shelf, stock, level, "
-                "strength, saturation, grain and padding.",
-        .children = fs_menu_look,
+            .name = "Stock",
+            .select = fs_film_next,
+            .select_Q = fs_film_prev,
+            .update = fs_film_update,
+            .help = "SET: next stock, Q: previous stock.",
+        },
+    {
+            .name = "Level",
+            .priv = &film_sim_level,
+            .max = FS_LEVEL_RAW,
+            .update = fs_level_update,
+            .help = "1 picture style, 2 style + grade, 3 raw develop.",
+        },
+    {
+        .name = "Strength",
+        .priv = &film_sim_strength,
+        .max = 100,
+        .help = "How much of the stock's look is applied.",
+    },
+    {
+        .name = "Grade Quality",
+        .priv = &film_sim_gradeq,
+        .max = 2,
+        .select = fs_gradeq_select,
+        .update = fs_gradeq_update,
+        .help = "How much of the look is graded into the shot, and therefore "
+                "how long the next frame waits. High is the full look. Normal "
+                "drops the per-hue work (greens no longer behave differently "
+                "from reds) for about a fifth less time. Fast applies the tone "
+                "curve only and leaves colour untouched -- 5x less time, no "
+                "colour shift at all. Develop always uses the full look.",
+    },
+    {
+        .name = "Saturation",
+        .priv = &film_sim_satboost,
+        .min = 20,
+        .max = 200,
+        .update = fs_satboost_update,
+        .help = "Saturation on top of every stock's own SAT line: 100 leaves "
+                "the recipe as written, 160 is about one and a half times as "
+                "saturated. Applies to developed files and to LiveView.",
+    },
+    {
+        .name = "Grain",
+        .priv = &film_sim_grain,
+        .max = 100,
+        .help = "Grain amount on top of what the stock itself asks for.",
+    },
+    {
+        .name = "Grain Size",
+        .priv = &film_sim_grainsize,
+        .min = -1, .max = 100,
+        .help = "-1 keeps each stock's own GRAIN_SIZE. 0..100 overrides it for "
+                "every stock: the engine turns it into a 1..9 pixel cell, and "
+                "that cell shrinks with the frame so a half-size develop is "
+                "not twice as grainy.",
+    },
+    {
+        .name = "Pad to 3:2",
+        .priv = &film_sim_pad,
+        .max = 1,
+        .update = fs_pad_update,
+        .help = "Framings wider than 3:2 (16:9, 65:24 XPan, 2.39:1) are written "
+                "into a 3:2 frame with black bars, so the body shows the whole "
+                "frame instead of something that is not what you composed.",
+    },
+    {
+        .name = "Aspect",
+        .priv = &film_sim_aspect,
+        .max = FS_ASPECT_COUNT - 1,
+        .choices = fs_aspect_names,
+        .update = fs_aspect_update,
+        .help = "One setting for both halves of what-you-see-is-what-you-get: "
+                "the bars on LiveView and the window a developed file is cut "
+                "to are this same mode. Canon's own JPEG is always the full "
+                "3:2 sensor, which a module cannot change, so a file the camera "
+                "shoots is 3:2 with the bars; a file Develop writes is cut to "
+                "the shape the bars showed.",
     },
     {
         .name = "User Look",
@@ -8470,41 +8433,6 @@ static struct menu_entry film_sim_menu[] = {
         .children = fs_menu_fuji,
     },
     {
-        .name = "Aspect",
-        .priv = &film_sim_aspect,
-        .max = FS_ASPECT_COUNT - 1,
-        .choices = fs_aspect_names,
-        .update = fs_aspect_update,
-        .help = "One setting for both halves of what-you-see-is-what-you-get: "
-                "the bars on LiveView and the window a developed file is cut "
-                "to are this same mode. Canon's own JPEG is always the full "
-                "3:2 sensor, which a module cannot change, so a file the camera "
-                "shoots is 3:2 with the bars; a file Develop writes is cut to "
-                "the shape the bars showed.",
-    },
-    {
-        .name = "Develop",
-        .select = menu_open_submenu,
-        .icon_type = IT_ACTION,
-        .help = "Develop now: this photo, a marked set, a 4-way comparison, "
-                "the darkroom, or watch for new frames.",
-        .children = fs_menu_develop,
-    },
-    {
-        .name = "Photo",
-        .select = fs_photo_next,
-        .select_Q = fs_photo_prev,
-        .update = fs_photo_update,
-        .help = "Which photo Develop uses. SET: next, Q: previous.",
-    },
-    {
-        .name = "Mark",
-        .select = fs_mark_toggle_current,
-        .select_Q = fs_mark_clear,
-        .update = fs_mark_update,
-        .help = "Tick this photo for the develop set. Q: clear the set.",
-    },
-    {
         .name = "LiveView",
         .select = menu_open_submenu,
         .icon_type = IT_ACTION,
@@ -8524,6 +8452,40 @@ static struct menu_entry film_sim_menu[] = {
         .icon_type = IT_ACTION,
         .help = "Log and film-list maintenance.",
         .children = fs_menu_debug,
+    },
+    MENU_EOL,
+};
+static struct menu_entry film_sim_menu[] = {
+    {
+        .name = "Film Shelf",
+        .select = fs_gui_open,
+        .icon_type = IT_ACTION,
+        .help = "Open the shelf, choose a film, SET applies it. The choice "
+                "stays as the active stock after you leave. Film Settings has "
+                "everything else.",
+    },
+    {
+        .name = "Film Settings",
+        .select = menu_open_submenu,
+        .icon_type = IT_ACTION,
+        .help = "Stock, level, strength, saturation, grain, aspect, looks, "
+                "LiveView, capture and debug.",
+        .children = fs_menu_settings,
+    },
+    {
+        .name = "Develop",
+        .select = menu_open_submenu,
+        .icon_type = IT_ACTION,
+        .help = "Develop now: the darkroom, this photo, a 4-way comparison, or "
+                "watch for new frames.",
+        .children = fs_menu_develop,
+    },
+    {
+        .name = "Photo",
+        .select = fs_photo_next,
+        .select_Q = fs_photo_prev,
+        .update = fs_photo_update,
+        .help = "Which frame Develop uses. SET: next, Q: previous.",
     },
     MENU_EOL,
 };

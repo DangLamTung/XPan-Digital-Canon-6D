@@ -133,10 +133,13 @@ nothing is worse than an absent row. The full mapping, field by field, is in
    card, or set the `EOS_DEVELOP` + `BOOTDISK` flags from a reader.
 4. Power on, press **ERASE** to open the ML menu, then **Modules → Film Sim**.
 
-Then pick a `Level`: 1 writes the look into a picture style and lets the camera
-bake it; 2 grades the frame at the shutter; 3 decodes the sensor raw first
-(full RAW only — mRAW is not implemented and the menu says so). Develop and the
-shelf are always explicit: **Develop ▸ Current Photo / Darkroom / Comparison x4**.
+Then open **Film Shelf** — the first row of the module's menu — and pick a stock.
+Everything else is under **Film Settings**: `Level` (1 writes the look into a
+picture style and lets the camera bake it; 2 grades the frame at the shutter; 3
+decodes the sensor raw first — full RAW only, mRAW is not implemented and the
+menu says so), strength, saturation, grain, **Aspect** (3:2, 1:1, 4:5, 9:16,
+16:9, 65:24 XPan, 2.39:1 Cinemascope), the looks and the capture options.
+Develop is always explicit: **Develop ▸ Current Photo / Darkroom / Comparison x4**.
 
 Full walk-through, including updating a card that already boots ML and where
 every file lands: **[install.md](docs/install.md)**.
@@ -145,7 +148,7 @@ every file lands: **[install.md](docs/install.md)**.
 
 * **Aspect ratio cannot be baked into Canon's JPEG.** The camera writes
   5472×3648 at the full sensor shape, and a module can only write pixels into
-  the YUV buffer, not change the dimensions of the file. `Framing` therefore
+  the YUV buffer, not change the dimensions of the file. `Aspect` therefore
   draws bars on LiveView and the crop is applied afterwards; Develop output is
   cropped for real.
 * **Two routes, one look, and only one of them is on by default.** The stock can

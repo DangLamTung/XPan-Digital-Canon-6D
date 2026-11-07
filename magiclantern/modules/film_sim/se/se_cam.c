@@ -373,6 +373,7 @@ static int jpeg_out(void *ctx, const unsigned char *data, size_t len)
  * one fs_core_aspect_ratio() uses for the LiveView bars, because the whole
  * point is that the two agree:
  *   0 3:2 full (native)  1 1:1   2 4:5   3 9:16   4 16:9   5 65:24 XPan
+ *   6 2.39:1 cinemascope
  * (This comment said "1 16:9, 2 XPan", which never matched the switch below
  * in aspect_target().) Set once, read when the encoder is sized and when rows
  * are emitted. */
@@ -489,9 +490,11 @@ static void aspect_target(int mode, int *tw, int *th)
     case 2: *tw = 1080; *th = 1350; break;   /* 4:5  portrait */
     case 3: *tw = 1080; *th = 1920; break;   /* 9:16 story    */
     case 4: *tw = 1920; *th = 1080; break;   /* 16:9 video    */
-    /* XPan is not a platform shape, so there is nothing to downscale for:
-     * keep the frame's own resolution (2736 x 1010 on a 6D) and just crop. */
+    /* Neither XPan nor cinemascope is a platform shape, so there is nothing to
+     * downscale for: the frame keeps its own resolution and is only cropped
+     * (2736 x 1010 for XPan on a 6D, 2736 x 1144 for 2.39:1). */
     case 5: break;                           /* 65:24 XPan: native */
+    case 6: break;                           /* 2.39:1 cinemascope: native */
     default: break;                          /* 0 keeps the raw resolution */
     }
 }
@@ -508,6 +511,7 @@ void se_cam_aspect_window(int w, int h, int *x0, int *x1, int *y0, int *y1)
     case 3: num = 16; den = 9;  break;  /* 9:16   */
     case 4: num = 9;  den = 16; break;  /* 16:9   */
     case 5: num = 24; den = 65; break;  /* 65:24  */
+    case 6: num = 100; den = 239; break; /* 2.39:1 cinemascope */
     default: return;
     }
 
@@ -1747,6 +1751,7 @@ se_err se_cam_develop_raw(const char *cr2_path, const char *stock_path,
     uint32_t        sz = 0;
     static unsigned char hdr[256 * 1024];
     size_t          need;
+    size_t          arena_size;
     int             ow = 0, oh = 0, ok = 0;
     long            failed = 0;
 
@@ -1769,26 +1774,7 @@ se_err se_cam_develop_raw(const char *cr2_path, const char *stock_path,
 
     if (progress) progress(ctx, "Opening", 0);
 
-    /* One allocation for every buffer this path needs: the pipeline reports
-     * its own scratch, the stock text and the decode arena come on top. */
-    mem = malloc(SE_ARENA + SE_OUTBUF + SE_STOCK_MAX + (64 * 1024));
-    if (!mem) { e = SE_E_NOMEM; goto done; }
-    d.obuf[0] = (unsigned char *)mem + SE_ARENA;
-    d.obuf[1] = d.obuf[0] + SE_OUTHALF;
-    stocktext = (char *)(mem + SE_ARENA + SE_OUTBUF);
-    se_arena_init(&ar, mem, SE_ARENA);
-    se_out_start();
-
-    se_log("rawdevelop: scale %d, arena %d bytes", scale, (int)SE_ARENA);
-
-    /* --- the stock ----------------------------------------------------- */
-    e = read_whole(stock_path, stocktext, SE_STOCK_MAX, &got);
-    if (e != SE_OK) goto done;
-    e = se_stock_parse(stocktext, got, &st);
-    if (e != SE_OK) goto done;
-    se_log("rawdevelop: recipe %s (sat=%d grain=%d) from %s", st.name,
-           (int)(st.sat + 0.5f), (int)(st.grain + 0.5f), stock_path);
-
+    /* The header first: it decides how much scratch the pipeline needs. */
     /* --- the CR2 header ------------------------------------------------ */
     d.in = FIO_OpenFile(cr2_path, O_RDONLY | O_SYNC);
     if (!d.in) { e = SE_E_IO; goto done; }
@@ -1801,6 +1787,44 @@ se_err se_cam_develop_raw(const char *cr2_path, const char *stock_path,
     se_log("rawdevelop: raw %dx%d, active %dx%d, cfa %d, black %d",
            info.raw_width, info.raw_height, info.active_width,
            info.active_height, info.cfa_phase, info.black);
+
+    /*
+     * Size the arena from what the pipeline says it needs, not from a constant.
+     *
+     * SE_ARENA is 384 KB. se_develop() allocates band + rgb + rgb8 + strip +
+     * the curve table (+ the raw staging buffer and a jpeg context) from this
+     * arena, and on a 6D full frame at half size that is roughly 600-1000 KB:
+     * with the fixed 384 KB it returned SE_E_NOMEM every time, which is why a
+     * level-3 develop on this body never produced a file. The real number
+     * depends on the frame, so the caller asks instead of assuming.
+     */
+    need = se_develop_scratch_size(&info);
+    {
+        arena_size = need > (size_t)SE_ARENA ? need : (size_t)SE_ARENA;
+        mem = malloc(arena_size + SE_OUTBUF + SE_STOCK_MAX + (64 * 1024));
+        if (!mem) {
+            se_log("rawdevelop: no memory: need %d bytes of scratch for this "
+                   "frame, malloc refused",
+                   (int)need);
+            e = SE_E_NOMEM;
+            goto done;
+        }
+        d.obuf[0] = (unsigned char *)mem + arena_size;
+        d.obuf[1] = d.obuf[0] + SE_OUTHALF;
+        stocktext = (char *)(mem + arena_size + SE_OUTBUF);
+        se_arena_init(&ar, mem, arena_size);
+        se_log("rawdevelop: scale %d, scratch need %d, arena %d bytes",
+               scale, (int)need, (int)arena_size);
+    }
+    se_out_start();
+
+    /* --- the stock ----------------------------------------------------- */
+    e = read_whole(stock_path, stocktext, SE_STOCK_MAX, &got);
+    if (e != SE_OK) goto done;
+    e = se_stock_parse(stocktext, got, &st);
+    if (e != SE_OK) goto done;
+    se_log("rawdevelop: recipe %s (sat=%d grain=%d) from %s", st.name,
+           (int)(st.sat + 0.5f), (int)(st.grain + 0.5f), stock_path);
 
     /* mRAW is not a mosaic: no black level, no CFA, no demosaic. */
     if (se_cr2_is_mraw(cr2_read, &d, &info)) {
@@ -1847,7 +1871,10 @@ se_err se_cam_develop_raw(const char *cr2_path, const char *stock_path,
     d.rows_done = 0;
     d.last_pct = -1;
     se_look_fit(&lk, ow, SE_LOOK_BUDGET);
-    se_arena_init(&ar2, mem, SE_ARENA);
+    /* Same memory as `ar`: the decode arena is done with by the time the
+     * pipeline runs, and that was already true before the size became a
+     * variable. */
+    se_arena_init(&ar2, mem, arena_size);
     if (se_look_begin(&run, &lk, ow, &ar2) != SE_OK) { e = SE_E_NOMEM; goto done; }
     d.run = run;
 

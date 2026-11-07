@@ -18,13 +18,14 @@
 #include "engine/se.h"
 
 /*
- * Framing applied to the file the develop writes: 0 = full 3:2, 1 = 16:9,
- * 2 = XPan 65:24. The rows outside the window are never encoded, so the result
- * is a crop, not letterbox bars. Set before calling a develop.
+ * Framing applied to the file the develop writes, indexed as in
+ * film_sim_aspect: 0 full 3:2, 1 1:1, 2 4:5, 3 9:16, 4 16:9, 5 65:24 XPan,
+ * 6 2.39:1 cinemascope. The rows outside the window are never encoded, so the
+ * result is a crop, not letterbox bars. Set before calling a develop.
  */
 void se_cam_set_aspect(int mode);
 
-/* Letterbox framings wider than 3:2 (16:9, 65:24) into a 3:2 frame. */
+/* Letterbox framings wider than 3:2 (16:9, 65:24, 2.39:1) into a 3:2 frame. */
 void se_cam_set_pad32(int on);
 
 /* How much of the stock to apply to a developed file, 0..100 (100 = as written). */

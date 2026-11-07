@@ -320,8 +320,13 @@ if [ -f "$VOL/ML/modules/film_lv.mo" ]; then
             && echo "  ok   film_lv  '$s'" || { echo "  MISSING film_lv '$s'" >&2; BAD=1; }
     done
 fi
-for s in "Level" "Stock" "Photo" "Mark" "Strength" "Grain" "Develop" "Capture" "LiveView Filter" "Debug" \
-         "Current Photo" "Marked Set" "Auto Develop" "Film Shelf" "Darkroom" "Comparison x4"; do
+# The menu itself, not just the module: a build that loads but whose rows are
+# missing is the failure this catches. Mark and Marked Set are gone on purpose
+# (the root entry ticked one photo at a time with no visible state); Film
+# Settings and Cinemascope are the new rows.
+for s in "Level" "Stock" "Photo" "Strength" "Grain" "Develop" "Capture" "LiveView Filter" "Debug" \
+         "Current Photo" "Auto Develop" "Film Shelf" "Film Settings" "Darkroom" "Comparison x4" \
+         "Cinemascope" "Pad to 3:2"; do
     strings "$VOL/ML/modules/film_sim.mo" | grep -q "$s" \
         && echo "  ok   film_sim '$s'" || { echo "  MISSING film_sim '$s'" >&2; BAD=1; }
 done

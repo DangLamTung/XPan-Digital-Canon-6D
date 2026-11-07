@@ -230,7 +230,10 @@ static int fs_core_aspect_ratio(int mode, int *num, int *den)
     case 2: *num = 5;  *den = 4;  return 1;   /* 4:5   */
     case 3: *num = 16; *den = 9;  return 1;   /* 9:16  */
     case 4: *num = 9;  *den = 16; return 1;   /* 16:9  */
-    case 5: *num = 24; *den = 65; return 1;   /* XPan  */
+    case 5: *num = 24; *den = 65; return 1;   /* XPan 65:24 */
+    /* Cinemascope: the 2.39:1 of an anamorphic print. Stated as 100:239 rather
+     * than a float, because the bars are placed with integer maths. */
+    case 6: *num = 100; *den = 239; return 1;
     default: return 0;
     }
 }
