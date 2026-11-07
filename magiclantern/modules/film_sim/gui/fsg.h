@@ -150,6 +150,7 @@ void fsg_pal(const int *rgb, int n);
 #define FSG_CHROME_BASE 240
 #define FSG_CHROME_N    7
 void fsg_chrome_init(void);   /* program them; call when a screen is taken */
+void fsg_chrome_reset(void);  /* and hand them back on release */
 int  fsg_chrome_entry(int i); /* palette entry for chrome slot i, for the log */
 /* Put the borrowed entries back the way they were found. */
 void fsg_pal_reset(void);

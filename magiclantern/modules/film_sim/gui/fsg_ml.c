@@ -47,6 +47,11 @@ static void fsg_pal_write(int entry, int rgb, uint32_t alpha)
   uint32_t e = a | ((uint32_t)y << 16) | ((uint32_t)u << 8) | (uint32_t)v;
   EngDrvOut(LCD_Palette[3 * entry], e);
   EngDrvOut(LCD_Palette[3 * entry + 0x300], e);
+  /* LCD_Palette[3*e+2] is Canon's RAM shadow of the entry, and
+   * palette_disable(0) -- what bmp_on() runs -- copies every shadow back to
+   * the hardware. Leaving it alone means one bmp_off()/bmp_on() pair anywhere
+   * in ML silently undoes this write. */
+  LCD_Palette[3 * entry + 2] = (int)e;
 }
 
 /* Chrome slots, in the order ml_color() returns them. */
@@ -67,10 +72,18 @@ int fsg_chrome_entry(int i)
  * but here the whole point is to stop the picture under the screen from showing
  * through, so 0xFF is written directly.
  */
+static uint32_t fsg_chrome_orig[FSG_CHROME_N];
+static int fsg_chrome_saved;
+
 void fsg_chrome_init(void)
 {
   if (!display_is_on() || !bmp_is_on())
     return;
+  if (!fsg_chrome_saved) {
+    for (int i = 0; i < FSG_CHROME_N; i++)
+      fsg_chrome_orig[i] = (uint32_t)LCD_Palette[3 * (FSG_CHROME_BASE + i) + 2];
+    fsg_chrome_saved = 1;
+  }
   for (int i = 0; i < FSG_CHROME_N; i++) {
     int rgb = fsg_chrome_rgb[i];
     int r = (rgb >> 16) & 255, g = (rgb >> 8) & 255, b = rgb & 255;
@@ -81,6 +94,25 @@ void fsg_chrome_init(void)
                  (uint32_t)v;
     EngDrvOut(LCD_Palette[3 * (FSG_CHROME_BASE + i)], e);
     EngDrvOut(LCD_Palette[3 * (FSG_CHROME_BASE + i) + 0x300], e);
+    LCD_Palette[3 * (FSG_CHROME_BASE + i) + 2] = (int)e;
+  }
+}
+
+/* Hand the chrome entries back. These are indices Canon's own GUI can also
+ * draw with, so they must not be left opaque and recoloured after the screen
+ * closes. */
+void fsg_chrome_reset(void)
+{
+  if (!fsg_chrome_saved)
+    return;
+  fsg_chrome_saved = 0;
+  if (!display_is_on() || !bmp_is_on())
+    return;
+  for (int i = 0; i < FSG_CHROME_N; i++) {
+    uint32_t entry = fsg_chrome_orig[i];
+    EngDrvOut(LCD_Palette[3 * (FSG_CHROME_BASE + i)], entry);
+    EngDrvOut(LCD_Palette[3 * (FSG_CHROME_BASE + i) + 0x300], entry);
+    LCD_Palette[3 * (FSG_CHROME_BASE + i) + 2] = (int)entry;
   }
 }
 
@@ -114,6 +146,7 @@ void fsg_pal_reset(void)
     uint32_t entry = fsg_pal_orig[i];
     EngDrvOut(LCD_Palette[3 * (FSG_PAL_BASE + i)], entry);
     EngDrvOut(LCD_Palette[3 * (FSG_PAL_BASE + i) + 0x300], entry);
+    LCD_Palette[3 * (FSG_PAL_BASE + i) + 2] = (int)entry;
   }
 }
 
