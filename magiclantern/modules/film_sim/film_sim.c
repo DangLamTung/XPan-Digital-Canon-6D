@@ -3874,14 +3874,36 @@ static void fs_screen_take(void) {
            (int)lv, (int)lv_paused);
     fs_log_flush();
   }
-  if (!lv) {
-    enter_play_mode();
-    fs_took_play = 1;
-    fs_log(
-        "screen: photo mode - asked for play mode (now gui_state=%d mode=%d)",
-        gui_state, get_gui_mode());
+  /*
+   * Do NOT switch to play mode any more.
+   *
+   * Play mode is what put a photograph under this screen: the OSD is composited
+   * at opacity 0x3f on this body -- the screen-take logs the readback,
+   * "chrome palette entry 244 = 0x3f2b08fb (wanted 0xff......)" -- so Canon
+   * decoding a playback frame shows straight through the panels, and no palette
+   * or blanking trick changes that. Staying on the shooting screen removes the
+   * picture instead of painting over it.
+   *
+   * The old reason for play mode was that Canon repaints the bitmap buffer in
+   * photo mode; that repaint is now disabled on both paths
+   * (canon_gui_disable_front_buffer), which is the call ML's own menu makes.
+   */
+  fs_took_play = 0;
+  /*
+   * Opened from playback? Leave it, for the same reason: the photograph being
+   * played is the thing under the panels. Shooting mode has no picture in that
+   * buffer.
+   */
+  if (get_gui_mode() == 1) {
+    fs_log("screen: leaving playback (mode=1) for the shooting screen");
     fs_log_flush();
+    SetGUIRequestMode(0);
+    msleep(200);
+    fs_took_play = 1;   /* release asks for the shooting screen as well */
   }
+  fs_log("screen: on the shooting screen (gui_state=%d mode=%d lv=%d)",
+         gui_state, get_gui_mode(), lv ? 1 : 0);
+  fs_log_flush();
   gui_uilock(
       UILOCK_SHUTTER); /* the shutter cannot fire under a module screen */
   bmp_on();
