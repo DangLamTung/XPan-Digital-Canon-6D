@@ -3672,8 +3672,16 @@ static void fs_paint_account(uint32_t ms, int rows) {
   fs_paint_frames++;
 }
 
+static int fs_fb_reasserts;
+
 static void fs_paint(void (*fn)(void)) {
   uint32_t t0 = get_ms_clock();
+  /* Canon re-enables its front buffer on its own schedule; take it back on
+   * every frame, which is what ML's redraw flood does five times at open. */
+  if (!canon_gui_front_buffer_disabled()) {
+    canon_gui_enable_front_buffer(0);
+    fs_fb_reasserts++;
+  }
   if (film_sim_direct) {
     BMP_LOCK(bmp_draw_to_idle(0); fn();)
   } else {
@@ -3908,19 +3916,33 @@ static void fs_screen_take(void) {
    */
   fs_took_play = 0;
   /*
-   * Opened from playback? Leave it, for the same reason: the photograph being
-   * played is the thing under the panels. Shooting mode has no picture in that
-   * buffer.
+   * Ask Canon for its own menu screen, the way ML's menu does.
+   *
+   * The one screen on this body that provably stays where it is put is ML's
+   * menu, and menu.c gets there by switching Canon into its menu GUI mode
+   * (GUIMODE_ML_MENU is 2 with LiveView off) and then flooding
+   * canon_gui_enable_front_buffer(0) for five frames while it draws. Canon
+   * re-asserts the buffer on its own schedule, which is why a single
+   * disable call was not enough here: the shelf was reclaimed a few seconds in.
+   *
+   * Left alone, the same call sequence is used: mode, flood, then keep
+   * re-asserting on every repaint (see fs_paint).
    */
-  if (get_gui_mode() == 1) {
-    fs_log("screen: leaving playback (mode=1) for the shooting screen");
+  {
+    int want = 2;   /* GUIMODE_ML_MENU with LiveView off, per platform/6D.116/consts.h */
+    fs_log("screen: requesting Canon menu GUI mode (%d) from mode %d",
+           want, get_gui_mode());
     fs_log_flush();
-    SetGUIRequestMode(0);
+    SetGUIRequestMode(want);
     msleep(200);
-    fs_took_play = 1;   /* release asks for the shooting screen as well */
+    for (int i = 0; i < 5; i++) {
+      canon_gui_enable_front_buffer(0);
+      msleep(20);
+    }
+    fs_took_play = 1;   /* release asks for the shooting screen back */
   }
-  fs_log("screen: on the shooting screen (gui_state=%d mode=%d lv=%d)",
-         gui_state, get_gui_mode(), lv ? 1 : 0);
+  fs_log("screen: Canon menu mode held (mode=%d disabled=%d lv=%d)",
+         get_gui_mode(), canon_gui_front_buffer_disabled(), lv ? 1 : 0);
   fs_log_flush();
   gui_uilock(
       UILOCK_SHUTTER); /* the shutter cannot fire under a module screen */
@@ -4195,9 +4217,11 @@ static int fs_shelf_run(void) {
     /* Once a second, what the painting cost -- the number the log has to carry
      * for "the strip redraws 94 rows, not 480" to be checkable on the camera. */
     if (fs_paint_frames && get_ms_clock() - fs_paint_since > 1000) {
-      fs_log("shelf: paint %d frames, %d ms, %d rows (full=%d rows, band=%d+%d)",
-             fs_paint_frames, (int)fs_paint_ms, fs_paint_rows_drawn,
-             FS_BMP_H, FSG_STRIP_H, FSG_HEADER_H);
+      fs_log("shelf: paint %d frames, %d ms, %d rows (full=%d rows, band=%d+%d)"
+             " reassert=%d", fs_paint_frames, (int)fs_paint_ms,
+             fs_paint_rows_drawn, FS_BMP_H, FSG_STRIP_H, FSG_HEADER_H,
+             fs_fb_reasserts);
+      fs_fb_reasserts = 0;
       fs_paint_ms = 0;
       fs_paint_rows_drawn = 0;
       fs_paint_frames = 0;
