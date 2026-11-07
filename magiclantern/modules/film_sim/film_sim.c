@@ -3679,7 +3679,7 @@ static void fs_paint(void (*fn)(void)) {
   /* Canon re-enables its front buffer on its own schedule; take it back on
    * every frame, which is what ML's redraw flood does five times at open. */
   if (!canon_gui_front_buffer_disabled()) {
-    canon_gui_enable_front_buffer(0);
+    canon_gui_disable_front_buffer();
     fs_fb_reasserts++;
   }
   if (film_sim_direct) {
@@ -3822,9 +3822,9 @@ static void fs_gui_close(void) { fs_gui_active = 0; }
 
 #define FS_KEY_GUARD_MS 400
 static volatile uint32_t fs_key_guard_until;
-/* Nonzero when fs_screen_take() moved the body into play mode and
- * fs_screen_release() has to put it back into shooting. */
-static int fs_took_play;
+/* Nonzero when fs_screen_take() asked Canon for a different GUI mode, so
+ * fs_screen_release() has to ask for the normal one back. */
+static int fs_took_mode;
 /* LiveView and playback were running when a screen opened, so
  * fs_screen_release() has to give them back. */
 static int fs_lv_was_on;
@@ -3914,34 +3914,44 @@ static void fs_screen_take(void) {
    * photo mode; that repaint is now disabled on both paths
    * (canon_gui_disable_front_buffer), which is the call ML's own menu makes.
    */
-  fs_took_play = 0;
+  fs_took_mode = 0;
   /*
    * Ask Canon for its own menu screen, the way ML's menu does.
    *
    * The one screen on this body that provably stays where it is put is ML's
    * menu, and menu.c gets there by switching Canon into its menu GUI mode
-   * (GUIMODE_ML_MENU is 2 with LiveView off) and then flooding
-   * canon_gui_enable_front_buffer(0) for five frames while it draws. Canon
-   * re-asserts the buffer on its own schedule, which is why a single
-   * disable call was not enough here: the shelf was reclaimed a few seconds in.
+   * (GUIMODE_ML_MENU is 2 with LiveView off) and then pushing the redraw flood
+   * -- five frames, 20 ms apart -- while it draws. Canon re-asserts the buffer
+   * on its own schedule, which is why one disable call was not enough here:
+   * the shelf was reclaimed a few seconds in.
    *
-   * Left alone, the same call sequence is used: mode, flood, then keep
-   * re-asserting on every repaint (see fs_paint).
+   * The flood here pushes canon_gui_disable_front_buffer(), not the
+   * canon_gui_enable_front_buffer(0) that menu.c's flood uses: enable() clears
+   * WINSYS_BMP_DIRTY_BIT_NEG and hands the panel back to Canon, so flooding it
+   * would do the opposite of what this module needs.
    */
-  {
+  if (RECORDING) {
+    /* GUIMODE_ML_MENU is 0 while recording, i.e. ML does not switch modes
+     * either. Leave the body alone and keep what the shooting screen gives. */
+    fs_log("screen: recording, not requesting a GUI mode change");
+    fs_log_flush();
+  } else {
     int want = 2;   /* GUIMODE_ML_MENU with LiveView off, per platform/6D.116/consts.h */
     fs_log("screen: requesting Canon menu GUI mode (%d) from mode %d",
            want, get_gui_mode());
     fs_log_flush();
     SetGUIRequestMode(want);
     msleep(200);
+    /* canon_gui_enable_front_buffer() *clears* WINSYS_BMP_DIRTY_BIT_NEG, i.e.
+     * it hands the panel back to Canon; disable() is what takes it away. The
+     * flood has to push disable(), not enable(). */
     for (int i = 0; i < 5; i++) {
-      canon_gui_enable_front_buffer(0);
+      canon_gui_disable_front_buffer();
       msleep(20);
     }
-    fs_took_play = 1;   /* release asks for the shooting screen back */
+    fs_took_mode = 1;   /* release asks for the normal GUI mode back */
   }
-  fs_log("screen: Canon menu mode held (mode=%d disabled=%d lv=%d)",
+  fs_log("screen: Canon menu mode held (mode=%d fb_disabled=%d lv=%d)",
          get_gui_mode(), canon_gui_front_buffer_disabled(), lv ? 1 : 0);
   fs_log_flush();
   gui_uilock(
@@ -3981,7 +3991,7 @@ static void fs_screen_take(void) {
    */
   canon_gui_disable_front_buffer();
   fs_log("screen: Canon's overlay repaint stopped (disabled=%d, lv=%d play=%d)",
-         canon_gui_front_buffer_disabled(), lv ? 1 : 0, fs_took_play);
+         canon_gui_front_buffer_disabled(), lv ? 1 : 0, fs_took_mode);
   fs_log_flush();
   /*
    * Program the chrome entries opaque before anything is drawn with them.
@@ -4038,10 +4048,10 @@ static void fs_screen_release(void) {
   fsg_can_unload(); /* and let go of the artwork file */
   gui_uilock(
       UILOCK_NONE); /* keys belong to Canon again, before we ask for a mode */
-  if (fs_took_play) {
-    /* Back to shooting: the shelf was opened from the shooting screen, and
-     * leaving the camera in playback after MENU would be a surprise. */
-    fs_took_play = 0;
+  if (fs_took_mode) {
+    /* Back to the normal GUI: the shelf was opened from the shooting screen,
+     * and leaving the body on Canon's menu screen after Q would be useless. */
+    fs_took_mode = 0;
     SetGUIRequestMode(0);
     msleep(120);
   }
