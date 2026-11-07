@@ -3524,26 +3524,44 @@ static int fs_pal_last_code;
 static uint32_t fs_pal_last_ms;
 
 static void fs_picture_palette(const int *slots) {
-  /* Programming 170 overlay entries is 340 ENGIO writes; doing that on every
-   * redraw is pointless churn on a bus Canon also uses. Program once per
-   * stock, then refresh periodically in case Canon has restored its own
-   * palette underneath us.
+  /*
+   * Two different jobs, with two different costs.
    *
-   * That refresh used to be "every 8th call", which tied it to the redraw
-   * rate: band repaints make the shelf call this more often, so it would have
-   * increased the ENGIO traffic for nothing. A fixed 250 ms does not depend on
-   * how often the screen is painted. */
-  int code = fs_last_pic_idx;
-
-  if (code == fs_pal_last_code && get_ms_clock() - fs_pal_last_ms < 250)
-    return;
-  fs_pal_last_code = code;
-  fs_pal_last_ms = get_ms_clock();
-
-  if (fsg_can_ready())
+   * A canister photograph carries up to 175 colours, which is 340 ENGIO writes,
+   * so that one is cached per stock and refreshed twice a second in case Canon
+   * has put its own palette back.
+   *
+   * The drawn cassette is fifteen colours -- 30 writes -- and bmp_on() restores
+   * all 256 entries from ML's shadows on every paint, exactly as the comment
+   * above this function warned. Caching that for 250 ms is what left the shelf
+   * showing the *previous* film's cassette colours after a change: the drawing
+   * had already happened, the palette had not. Fifteen entries are cheap enough
+   * to write every time, which is what the note says was the original design.
+   */
+  if (fsg_can_ready()) {
+    int code = fs_last_pic_idx;
+    if (code == fs_pal_last_code && get_ms_clock() - fs_pal_last_ms < 250)
+      return;
+    fs_pal_last_code = code;
+    fs_pal_last_ms = get_ms_clock();
     fsg_can_reprogram();
-  else
-    fsg_pal(slots, FSG_NSLOT);
+    return;
+  }
+  fsg_pal(slots, FSG_NSLOT);
+  /* One line per stock change: the cassette's own colours, so a wrong picture
+   * can be told apart from a wrong palette without another round trip. */
+  {
+    static int told_idx = -2;
+    if (told_idx != fs_last_pic_idx) {
+      told_idx = fs_last_pic_idx;
+      fs_log("picture: cassette palette for idx %d: paper %06x border %06x "
+             "shadow %06x mid %06x tongue %06x", fs_last_pic_idx,
+             (unsigned)slots[FSG_SL_PAPER], (unsigned)slots[FSG_SL_BORDER],
+             (unsigned)slots[FSG_SL_SHADOW], (unsigned)slots[FSG_SL_MID],
+             (unsigned)slots[FSG_SL_TONGUE]);
+      fs_log_flush();
+    }
+  }
 }
 
 /*
