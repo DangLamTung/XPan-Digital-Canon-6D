@@ -105,9 +105,13 @@ void fsg_chrome_reset(void)
 {
   if (!fsg_chrome_saved)
     return;
-  fsg_chrome_saved = 0;
+  /* Clear the flag only once the originals are actually back in the
+   * hardware. Clearing it first meant a reset attempted while the display was
+   * off forgot Canon's values for good, and the next chrome_init() saved our
+   * own opaque entries as the "originals". */
   if (!display_is_on() || !bmp_is_on())
     return;
+  fsg_chrome_saved = 0;
   for (int i = 0; i < FSG_CHROME_N; i++) {
     uint32_t entry = fsg_chrome_orig[i];
     EngDrvOut(LCD_Palette[3 * (FSG_CHROME_BASE + i)], entry);
@@ -139,9 +143,10 @@ void fsg_pal_reset(void)
 {
   if (!fsg_pal_saved)
     return;
-  fsg_pal_saved = 0;
+  /* Same as fsg_chrome_reset(): keep the originals until they are restored. */
   if (!display_is_on() || !bmp_is_on())
     return;
+  fsg_pal_saved = 0;
   for (int i = 0; i < FSG_CHROME_BASE - FSG_PAL_BASE; i++) {
     uint32_t entry = fsg_pal_orig[i];
     EngDrvOut(LCD_Palette[3 * (FSG_PAL_BASE + i)], entry);

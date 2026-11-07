@@ -3884,7 +3884,19 @@ static void fs_gui_keepalive_task(void *unused) {
       int want = FS_GUIMODE_ML_MENU;
       if (want) {
         SetGUIRequestMode(want);
-        canon_gui_disable_front_buffer();
+        /* The request is handled by Canon's GUI task some milliseconds later,
+         * and that is when it can touch the front buffer again. Taking the
+         * buffer back 0 ms after posting caught it mid-flight. */
+        msleep(20);
+        if (!canon_gui_front_buffer_disabled()) {
+          canon_gui_disable_front_buffer();
+          /* A static screen (Darkroom, Creator, WB Shift) has no clock of its
+           * own, so nothing else would repaint it after a wipe. */
+          fs_gui_dirty = 1;
+          fs_darkroom_dirty = 1;
+          fs_creator_dirty = 1;
+          fs_wb_dirty = 1;
+        }
       }
     }
     fs_gui_pokes++;
@@ -5303,6 +5315,7 @@ static MENU_SELECT_FUNC(fs_wb_trigger) { fs_ui_launch(FS_VIEW_WB); }
  */
 static void fs_paint_beads(void (*fn)(void)) {
   uint32_t t0 = get_ms_clock();
+  fs_frame_prep();
   BMP_LOCK(bmp_draw_to_idle(1); fn(); bmp_draw_to_idle(0);
            fs_blit_rows(1, FSG_CREATOR_RING_Y0, FSG_CREATOR_RING_Y1);)
   ml_refresh_display_needed = 1;
@@ -7557,15 +7570,20 @@ static unsigned int fs_keypress_raw_cbr(unsigned int event_ptr) {
    * repaints from its idle buffer instead.
    */
   if (k == MLEV_REDRAW) {
+    /* fs_bath_ui is the develop screen (fs_screen_take + own_screen): it holds
+     * the panel for 20-30 s with none of the other flags set, and a redraw
+     * pass-through there wiped the chemical tank until the next progress tick. */
     if (fs_gui_active || fs_darkroom_active || fs_creator_active ||
-        fs_wb_active || fs_view_active) {
+        fs_wb_active || fs_view_active || fs_bath_ui) {
       fs_gui_dirty = 1;
       fs_darkroom_dirty = 1;
       fs_creator_dirty = 1;
       fs_wb_dirty = 1;
       if (!fs_stat_redraw_swallowed++) {
+        /* Logged, not flushed: this runs on Canon's GuiMainTask, and a
+         * synchronous FIO write here stalls the body. fs_slot_backup_task
+         * writes the ring buffer out within 500 ms. */
         fs_log("rawkey: MLEV_REDRAW swallowed, a module screen owns the panel");
-        fs_log_flush();
       }
       return 0;
     }
@@ -7577,10 +7595,10 @@ static unsigned int fs_keypress_raw_cbr(unsigned int event_ptr) {
    * counted once and then ignored, so a real regression still shows up. */
   if (!ev || k < 0 || k > 0xFF) {
     if (!fs_stat_junk_keys++) {
+      /* No flush here either -- same callback, same reason. */
       fs_log("rawkey: ignoring impossible events (p=%d arg=%d); further ones "
              "are counted only",
              k, ev ? ev->arg : 0);
-      fs_log_flush();
     }
     return 1;
   }
