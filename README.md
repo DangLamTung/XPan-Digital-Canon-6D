@@ -1,6 +1,17 @@
 # XPan Digital — Canon EOS 6D
 
-![Six frames, six film looks](docs/img/promo.jpg)
+![A horse grazing in a sunlit pine grove, 65:24, developed from the raw with the
+Portra 400 recipe](docs/img/promo.jpg)
+
+One frame, one camera, one recipe: the 6D's raw, decoded and graded by this
+module's engine, cropped to the 65:24 window the camera framed. Đà Lạt,
+2 November 2026.
+
+![The same frame through Classic Chrome, Portra 400 and Velvia 50](docs/img/looks.jpg)
+
+The same frame through three shipped recipes. A stock here is a bundle — curve,
+hue axes, split tone, grain — not a colour filter, and the difference between
+these three is the whole product.
 
 > ## Disclaimer — read before installing
 >
@@ -105,7 +116,10 @@ animations are the camera's own springs, stepped frame by frame.
 
 ## 65:24 XPan
 
-![A 65:24 frame through the shipped Portra 400 recipe](docs/img/hero.jpg)
+![Six frames from one morning, 65:24, six stocks](docs/img/roll.jpg)
+
+*The rest of that morning's roll: six frames, six stocks, every one of them
+65:24 in the frame and 5472 px wide in the file.*
 
 `Aspect ▸ 65:24 XPan` frames the panel at 2.708:1 and Develop writes a real
 5472×2020 JPEG — the rows outside the window are never encoded, so the file is
