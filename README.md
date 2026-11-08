@@ -118,13 +118,13 @@ animations are the camera's own springs, stepped frame by frame.
 
 ![Six frames, each on the stock that suits it](docs/img/roll.jpg)
 
-*Six frames off the card, unmodified: a road under deep pines, two people in
-backlight, rock and pine in flare, a Circle K at night, a hazy lake, and the
-lookout at golden hour. Five are the camera's own JPEGs, cropped to the 65:24
-window and resized — no second develop, no colour work. The one exception is
-labelled on the sheet: **9915** on the card is blown (mean luma 180, the haze at
-238), so that cell is the same frame re-developed 1.2 EV under Canon's own
-rendering to bring the haze back into the print.*
+*Six frames off the card. **9914**, **9930** and **9916** are the camera's own
+JPEGs, cropped to the 65:24 window and resized — no second develop, no colour
+work. **0049** (Circle K) and **9937** (the lake) are developed with **Soup
+800**, the Vision3 500T of motion-picture stock, which is what turns the night
+shop's neon into halation and gives the daylight lake its tungsten cast.
+**9915** is **Velvia 50 pulled 1.0 EV under the card's own rendering**, because
+the file on the card is blown there (mean luma 180, haze at 238).*
 
 `Aspect ▸ 65:24 XPan` frames the panel at 2.708:1 and Develop writes a real
 5472×2020 JPEG — the rows outside the window are never encoded, so the file is

@@ -61,14 +61,10 @@ INK = (216, 216, 216)
 # exposure that matches Canon's own render)
 STOCKS = [
     ("IMG_9914", None, "IMG_9914  -  as shot on the card", 0.0),
-    # 9915 is blown on the card -- the camera's own JPEG measures mean luma 180
-    # with the haze sitting at 238, so this is the one cell that is a develop
-    # rather than the file, pulled 1.2 EV under Canon's rendering to bring the
-    # haze back into the print.
-    ("IMG_9915", "portra", "IMG_9915  -  Portra 400, 1.2 EV under the card", -1.2),
+    ("IMG_9915", "velvia", "IMG_9915  -  Velvia 50, 1.0 EV under the card", -1.0),
     ("IMG_9930", None, "IMG_9930  -  as shot on the card", 0.0),
-    ("IMG_0049", None, "IMG_0049  -  Circle K, as shot", 0.0),
-    ("IMG_9937", None, "IMG_9937  -  as shot on the card", 0.0),
+    ("IMG_0049", "soup800", "IMG_0049  -  Soup 800 (Vision3 500T)", 0.0),
+    ("IMG_9937", "soup800", "IMG_9937  -  Soup 800 (Vision3 500T)", 0.0),
     ("IMG_9916", None, "IMG_9916  -  as shot on the card", 0.0),
 ]
 
