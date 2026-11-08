@@ -32,3 +32,7 @@
 DehancerDesktop_Installer*
 gfx100II-*
 gfx100ii_luts/
+
+# Scratch renders used while fitting recipes
+/work/
+*.pdb
