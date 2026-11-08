@@ -1007,18 +1007,10 @@ static void grade_row(const se_look *lk, uint8_t *row, int w)
       bb = y + (((bb - y) * lk->sat) >> 8);
     }
 
-    if (lk->sh[0] | lk->sh[1] | lk->sh[2] | lk->hi[0] | lk->hi[1] | lk->hi[2]) {
-      int y = luma8(clamp8(rr), clamp8(gg), clamp8(bb));
-      int wl = 255 - y; /* shadow weight    */
-      rr += (lk->sh[0] * wl + lk->hi[0] * y) >> 8;
-      gg += (lk->sh[1] * wl + lk->hi[1] * y) >> 8;
-      bb += (lk->sh[2] * wl + lk->hi[2] * y) >> 8;
-    }
-
     /*
-     * Film's own chroma rolloff, applied once to the finished
-     * colour -- see s_chroma. Before the gamut fit, because it
-     * removes most of what would otherwise need fitting.
+     * Film's own chroma rolloff, applied to the scene colour before print
+     * split-toning so SPLIT_HI's warm paper-base tint is preserved at the
+     * highlight shoulder instead of collapsing to monochrome grey.
      */
     {
       int y = (77 * rr + 150 * gg + 29 * bb) >> 8;
@@ -1033,6 +1025,14 @@ static void grade_row(const se_look *lk, uint8_t *row, int w)
         gg = y + (((gg - y) * w) >> 8);
         bb = y + (((bb - y) * w) >> 8);
       }
+    }
+
+    if (lk->sh[0] | lk->sh[1] | lk->sh[2] | lk->hi[0] | lk->hi[1] | lk->hi[2]) {
+      int y = luma8(clamp8(rr), clamp8(gg), clamp8(bb));
+      int wl = 255 - y; /* shadow weight    */
+      rr += (lk->sh[0] * wl + lk->hi[0] * y) >> 8;
+      gg += (lk->sh[1] * wl + lk->hi[1] * y) >> 8;
+      bb += (lk->sh[2] * wl + lk->hi[2] * y) >> 8;
     }
 
     gamut_fit(&rr, &gg, &bb);
@@ -1204,9 +1204,8 @@ static void grain_row(const se_look *lk, uint8_t *row, int w, int y) {
    * as emulsion and started reading as sensor noise, which is the one
    * thing grain must not look like. */
   int amp = (lk->grain * SE_GRAIN_AMP) / 100;
-  /* The two octaves peak at 1.75x what one 16-bit lattice did, so scale the
-   * amplitude once here rather than dividing per pixel. */
-  amp = amp * 4 / 7;
+  /* Keep grain whisper-fine so emulsions never read as digital luminance noise. */
+  amp = amp * 2 / 7;
   if (amp <= 0)
     return;
   /*

@@ -489,6 +489,11 @@ void se_stock_bake_srgb8(const se_stock *s, uint8_t out[3][256])
             float v = (float)i / 255.0f;
             if (gain != 1.0f) {
                 float lin = dec(v) * gain;
+                /* Soft-knee highlight compressor above ~80% IRE (0.60 linear) */
+                if (lin > 0.60f) {
+                    float d = lin - 0.60f;
+                    lin = 0.60f + 0.40f * (d / (d + 0.40f));
+                }
                 if (lin > 1.0f) lin = 1.0f;
                 v = enc(lin);
             }

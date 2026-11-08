@@ -49,22 +49,22 @@ FONT_CHOICES = [
 HERE = os.path.dirname(os.path.abspath(__file__))
 FILM_SIM = os.path.dirname(HERE)
 FILMS = os.path.join(FILM_SIM, "films")
-HOSTTEST = os.path.join(FILM_SIM, "se", "hosttest", "se_cam_test")
+HOSTTEST = os.path.join(FILM_SIM, "se", "hosttest", "rawdev")
 
 # (photo, stock, extra recipe lines, left label, right label)
 ENTRIES = [
-    ("IMG_9937.CR2", "provia.fs", "EXPOSURE  0.6",
-     "IMG_9937   FUJICHROME PROVIA 50  +0.6 EV", "provia.fs   EXPOSURE 0.6"),
-    ("IMG_9920.CR2", "classicneg.fs", "",
-     "IMG_9920   FUJI CLASSIC NEGATIVE  ISO 400", "classicneg.fs"),
-    ("IMG_9923.CR2", "velvia.fs", "",
-     "IMG_9923   FUJICHROME VELVIA 50  ISO 50", "velvia.fs"),
-    ("IMG_9916.CR2", "velvia.fs", "",
-     "IMG_9916   FUJICHROME VELVIA 50  ISO 50", "velvia.fs"),
-    ("IMG_9915.CR2", "classicneg.fs", "SAT       118",
-     "IMG_9915   FUJI CLASSIC NEGATIVE  sat 118", "classicneg.fs   SAT 118"),
-    ("IMG_9914.CR2", "classicneg.fs", "EXPOSURE  1.0",
-     "IMG_9914   FUJI CLASSIC NEGATIVE  +1.0 EV", "classicneg.fs   EXPOSURE 1.0"),
+    ("IMG_9915.CR2", "classicneg.fs", "",
+     "IMG_9915   FUJI CLASSIC NEGATIVE  ISO 125", "classicneg.fs   95%"),
+    ("IMG_9938.CR2", "velvia.fs", "",
+     "IMG_9938   FUJICHROME VELVIA 50   ISO 100", "velvia.fs   95%"),
+    ("IMG_9931.CR2", "velvia.fs", "",
+     "IMG_9931   FUJICHROME VELVIA 50   ISO 400", "velvia.fs   95%"),
+    ("IMG_9934.CR2", "velvia.fs", "",
+     "IMG_9934   FUJICHROME VELVIA 50   ISO 125", "velvia.fs   95%"),
+    ("IMG_9920.CR2", "portra.fs", "",
+     "IMG_9920   KODAK PORTRA 400       ISO 400", "portra.fs   95%"),
+    ("IMG_0048.CR2", "soup800.fs", "",
+     "IMG_0048   CINESTILL 800T NIGHT   ISO 6400", "soup800.fs   95%"),
 ]
 
 
@@ -91,8 +91,8 @@ def variant(stock, extra, tmpdir, tag):
 
 
 def render(cr2, stock, strength, out_jpg):
-    """One frame through the camera's own develop path, at 65:24."""
-    cmd = [HOSTTEST, cr2, stock, out_jpg, "5", "-", str(strength)]
+    """One frame through the camera's own 15-bit CR2 develop path, at 65:24."""
+    cmd = [HOSTTEST, cr2, stock, out_jpg, "2", "5", str(strength), "100"]
     r = subprocess.run(cmd, capture_output=True, text=True)
     if r.returncode != 0 or not os.path.exists(out_jpg):
         raise SystemExit("render failed: %s\n%s%s" % (" ".join(cmd), r.stdout, r.stderr))

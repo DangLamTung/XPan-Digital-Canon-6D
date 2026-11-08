@@ -1584,15 +1584,21 @@ static se_err se_cam_develop_mraw(struct dev *d, const se_cr2_info *info,
      * out loud rather than silently ignored.
      */
     {
-        float g = 65535.0f / 16383.0f;
+        /*
+         * Canon 6D 15-bit mRAW preserves ~1.5 stops of highlight headroom above
+         * diffuse white (~4800 in 0..16383). Lift deep shadows mildly while
+         * rolling off highlights above ~80% sRGB through coupled dye knees.
+         */
+        float white_pt = (st->exposure >= 1.0f) ? 16383.0f : 4800.0f;
+        float g = 65535.0f / white_pt;
         int   c;
         for (c = 0; c < 3; c++) {
             gq[c]   = (int)(g * (float)SE_QONE + 0.5f);
             clip[c] = 65535;
         }
         se_log("mrawdevelop: white balance is Canon's (as-shot %d/%d/%d); "
-               "no second application", (int)info->wb[0], (int)info->wb[1],
-               (int)info->wb[2]);
+               "white_pt=%d", (int)info->wb[0], (int)info->wb[1],
+               (int)info->wb[2], (int)white_pt);
     }
 
     encode = SE_NEW(ar, se_lut1, 1);
@@ -1609,7 +1615,7 @@ static se_err se_cam_develop_mraw(struct dev *d, const se_cr2_info *info,
     if (!band || !rd || !row16 || !row8) { e = SE_E_NOMEM; goto done; }
 
     /* --- look + encoder ----------------------------------------------- */
-    se_look_from_stock(st, 1, &lk);
+    se_look_from_stock(st, 2, &lk);
     se_look_set_strength(&lk, se_strength);
     se_look_set_satboost(&lk, se_satboost);
     se_look_set_grain_size(&lk, se_grainsize);
@@ -1675,14 +1681,52 @@ static se_err se_cam_develop_mraw(struct dev *d, const se_cr2_info *info,
             }
         }
 
-        /* White balance, then the path's own matrix, encode and dither. */
+        /* White balance, highlight recovery, soft-knee shoulder, matrix, encode, dither. */
         for (g = 0; g < bands; g++) {
             const uint16_t *src = band + (size_t)g * W * 3u;
             for (x = 0; x < W; x++) {
+                int rgb_in[3];
                 int c;
+                rgb_in[0] = src[x * 3 + 0];
+                rgb_in[1] = src[x * 3 + 1];
+                rgb_in[2] = src[x * 3 + 2];
+                /*
+                 * 6D mRAW highlight recovery: DIGIC bakes R and B white-balance
+                 * gains into the 15-bit YCbCr stream, so Green hits ADC saturation
+                 * (~9800) while R and B continue up to ~14500, turning clipped
+                 * clouds magenta (R > G and B > G). Reconstruct Green from min(R,B)
+                 * and blend saturated highlights smoothly into neutral white.
+                 */
+                if (rgb_in[0] > rgb_in[1] && rgb_in[2] > rgb_in[1] && rgb_in[1] > 7200) {
+                    int mn_rb = rgb_in[0] < rgb_in[2] ? rgb_in[0] : rgb_in[2];
+                    int t = (rgb_in[1] - 7200) * 256 / 2200;
+                    if (t > 256) t = 256;
+                    rgb_in[1] += ((mn_rb - rgb_in[1]) * t) >> 8;
+                }
+                if (rgb_in[0] > 8800 && rgb_in[1] > 8800 && rgb_in[2] > 8000) {
+                    int mx = rgb_in[0] > rgb_in[1]
+                           ? (rgb_in[0] > rgb_in[2] ? rgb_in[0] : rgb_in[2])
+                           : (rgb_in[1] > rgb_in[2] ? rgb_in[1] : rgb_in[2]);
+                    int t = (rgb_in[1] - 8800) * 256 / 2000;
+                    if (t > 256) t = 256;
+                    /* Roll saturated highlights into warm cream dye density (R > G > B) */
+                    rgb_in[0] += ((mx - rgb_in[0]) * t) >> 8;
+                    rgb_in[1] += (((mx * 252 >> 8) - rgb_in[1]) * t) >> 8;
+                    rgb_in[2] += (((mx * 238 >> 8) - rgb_in[2]) * t) >> 8;
+                }
                 for (c = 0; c < 3; c++) {
-                    int64_t w = ((int64_t)src[x * 3 + c] * gq[c]
+                    static const int knee_c[3] = { 42000, 40500, 38000 };
+                    static const int ceil_c[3] = { 22500, 21500, 19500 };
+                    int kn = knee_c[c];
+                    int64_t w = ((int64_t)rgb_in[c] * gq[c]
                                  + (SE_QONE / 2)) >> SE_Q;
+                    /* Lift deep shadows (<14000); roll off highlights (>kn) */
+                    if (w > kn) {
+                        int64_t dv = w - kn;
+                        w = kn + (dv * ceil_c[c]) / (dv + 32000);
+                    } else if (st->exposure < 1.0f && w > 0 && w < 14000) {
+                        w += (w * (14000 - w)) / 24000;
+                    }
                     if (w > clip[c]) w = clip[c];
                     row16[x * 3 + c] = (uint16_t)w;
                 }
@@ -2106,7 +2150,8 @@ se_err se_cam_grade_jpeg(const char *jpg_path, const char *stock_path,
     se_arena   arena;
     se_jpeg    enc;
     se_jpeg_exif ex;
-    int        ow = 0, oh = 0;
+    int        ow = 0, oh = 0, gscale = SE_DECODE_SCALE;
+    size_t     ga_sz = SE_ARENA * 4;
 
     memset(&d, 0, sizeof d);
     memset(&ji, 0, sizeof ji);
@@ -2121,12 +2166,12 @@ se_err se_cam_grade_jpeg(const char *jpg_path, const char *stock_path,
 
     if (progress) progress(ctx, "Opening", 0);
 
-    mem = malloc(SE_ARENA + SE_OUTBUF + SE_STOCK_MAX);
+    mem = malloc(ga_sz + SE_OUTBUF + SE_STOCK_MAX);
     if (!mem) { se_set_log(NULL, NULL); return SE_E_NOMEM; }
     abuf   = mem;
-    d.obuf[0] = mem + SE_ARENA;
+    d.obuf[0] = mem + ga_sz;
     d.obuf[1] = d.obuf[0] + SE_OUTHALF;
-    stext  = mem + SE_ARENA + SE_OUTBUF;
+    stext  = mem + ga_sz + SE_OUTBUF;
 
     e = read_whole(stock_path, (char *)stext, SE_STOCK_MAX, &got);
     if (e != SE_OK) goto done;
@@ -2149,11 +2194,12 @@ se_err se_cam_grade_jpeg(const char *jpg_path, const char *stock_path,
 
     e = se_jpeg_dec_info(d.in, jlen, &ji);
     if (e != SE_OK) goto done;
-    se_jpeg_scaled_size(ji.width, ji.height, SE_DECODE_SCALE, &ow, &oh);
+    gscale = (ji.width > 2736) ? SE_DECODE_SCALE : 1;
+    se_jpeg_scaled_size(ji.width, ji.height, gscale, &ow, &oh);
 
     se_look_from_stock(&st, SE_DECODE_SCALE, &lk);
     apply_look_options(&lk);
-    se_arena_init(&arena, abuf, SE_ARENA);
+    se_arena_init(&arena, abuf, ga_sz);
     if (se_look_begin(&d.run, &lk, ow, &arena) != SE_OK) {
         e = SE_E_NOMEM;
         goto done;
@@ -2217,9 +2263,9 @@ se_err se_cam_grade_jpeg(const char *jpg_path, const char *stock_path,
     }
 
     if (progress) progress(ctx, "Decoding", 10);
-    /* Must match SE_DECODE_SCALE: the look was built for ow x oh, so decoding
+    /* Must match gscale: the look was built for ow x oh, so decoding
      * full size here feeds it rows twice as wide as it allocated. */
-    if (se_jpeg_decode_scaled(d.in, jlen, SE_DECODE_SCALE, &arena,
+    if (se_jpeg_decode_scaled(d.in, jlen, gscale, &arena,
                               decode_rows, &d, &ji) != SE_OK) {
         e = SE_E_CORRUPT;
         goto done;

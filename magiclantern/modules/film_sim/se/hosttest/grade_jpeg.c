@@ -70,12 +70,14 @@ static void report(const char *path)
 int main(int argc, char **argv)
 {
     if (argc < 4) {
-        fprintf(stderr, "usage: %s photo.jpg stock.fs out.jpg [lut.bin]\n",
+        fprintf(stderr, "usage: %s photo.jpg stock.fs out.jpg [lut.bin] [strength] [satboost]\n",
                 argv[0]);
         return 2;
     }
     /* Before the develop opens the file: the loader caches on this path. */
-    se_cam_lut_path(argc > 4 ? argv[4] : NULL);
+    se_cam_lut_path((argc > 4 && argv[4][0] && argv[4][0] != '-') ? argv[4] : NULL);
+    if (argc > 5) se_cam_set_strength(atoi(argv[5]));
+    if (argc > 6) se_cam_set_satboost(atoi(argv[6]));
     se_err e = se_cam_grade_jpeg(argv[1], argv[2], argv[3], progress, note, NULL);
     printf("%s: %s\n", argv[1], se_strerror(e));
     if (e == SE_OK) report(argv[3]);
