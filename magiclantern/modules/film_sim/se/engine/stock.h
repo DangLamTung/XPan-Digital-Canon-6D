@@ -185,6 +185,12 @@ typedef struct {
     int   matrix[9];
     int   matrix_set;
 
+    /* The same matrix at the white end. The look interpolates between the
+     * two by luma, so one stage carries a luma-shaped crosstalk instead of a
+     * single linear one. 18 multiplies, still no lattice. */
+    int   matrix_hi[9];
+    int   matrix_hi_set;
+
     /* Overrides applied only when developing from the sensor data. */
     se_stock_raw raw;
 } se_stock;
@@ -230,6 +236,7 @@ void se_stock_init(se_stock *s);
  *   SPLIT_SH  -6,0,10
  *   SPLIT_HI  10,4,-6
  *   MATRIX    300,-24,-20, -18,280,-6, -4,-30,290  ; 3x3, 256 = identity
+ *   MATRIX_HI 280,-14,-10, -10,270,-6, -2,-20,272  ; the same at white
  *   HALATION  40 190 14      ; amount, threshold, radius
  *   HAL_TINT  255,70,30
  *

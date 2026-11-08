@@ -86,6 +86,8 @@ typedef struct {
     /* 3x3 colour matrix, 8.8 fixed, row major; mat_any = 0 costs nothing. */
     int      mat[9];
     int      mat_any;
+    int      mat_hi[9];       /* the same matrix at white, lerped by luma */
+    int      mat_hi_any;
 
     /*
      * Saturation per hue sector: R, Y, G, C, B, M, 256 = unchanged,

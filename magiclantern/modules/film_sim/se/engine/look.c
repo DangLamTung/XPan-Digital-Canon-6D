@@ -294,12 +294,15 @@ void se_look_from_stock(const se_stock *s, int scale, se_look *lk) {
 
   /* 3x3 colour matrix: copied and gated, so identity costs nothing. */
   {
-    int i, any = 0;
+    int i, any = 0, any_hi = 0;
     for (i = 0; i < 9; i++) {
       lk->mat[i] = s->matrix[i];
+      lk->mat_hi[i] = s->matrix_hi[i];
       if (s->matrix_set && s->matrix[i] != ((i % 4 == 0) ? 256 : 0)) any = 1;
+      if (s->matrix_hi_set && s->matrix_hi[i] != ((i % 4 == 0) ? 256 : 0)) any_hi = 1;
     }
     lk->mat_any = any;
+    lk->mat_hi_any = any_hi && any;
   }
 
   lk->sat = s->sat_set ? (int)(s->sat * 2.56f + 0.5f) : 256;
@@ -842,10 +845,24 @@ static void grade_row(const se_look *lk, uint8_t *row, int w)
      * crosstalk a film LUT carries at full resolution.
      */
     if (lk->mat_any) {
-      int r2 = (lk->mat[0] * rr + lk->mat[1] * gg + lk->mat[2] * bb) >> 8;
-      int g2 = (lk->mat[3] * rr + lk->mat[4] * gg + lk->mat[5] * bb) >> 8;
-      int b2 = (lk->mat[6] * rr + lk->mat[7] * gg + lk->mat[8] * bb) >> 8;
-      rr = clamp8(r2); gg = clamp8(g2); bb = clamp8(b2);
+      if (lk->mat_hi_any) {
+        /* luma-weighted mix of the two matrices: 18 multiplies, no lattice */
+        int t8 = luma8(clamp8(rr), clamp8(gg), clamp8(bb));
+        int r0 = lk->mat[0] * rr + lk->mat[1] * gg + lk->mat[2] * bb;
+        int g0 = lk->mat[3] * rr + lk->mat[4] * gg + lk->mat[5] * bb;
+        int b0 = lk->mat[6] * rr + lk->mat[7] * gg + lk->mat[8] * bb;
+        int r1 = lk->mat_hi[0] * rr + lk->mat_hi[1] * gg + lk->mat_hi[2] * bb;
+        int g1 = lk->mat_hi[3] * rr + lk->mat_hi[4] * gg + lk->mat_hi[5] * bb;
+        int b1 = lk->mat_hi[6] * rr + lk->mat_hi[7] * gg + lk->mat_hi[8] * bb;
+        rr = clamp8((r0 * (256 - t8) + r1 * t8) >> 16);
+        gg = clamp8((g0 * (256 - t8) + g1 * t8) >> 16);
+        bb = clamp8((b0 * (256 - t8) + b1 * t8) >> 16);
+      } else {
+        int r2 = (lk->mat[0] * rr + lk->mat[1] * gg + lk->mat[2] * bb) >> 8;
+        int g2 = (lk->mat[3] * rr + lk->mat[4] * gg + lk->mat[5] * bb) >> 8;
+        int b2 = (lk->mat[6] * rr + lk->mat[7] * gg + lk->mat[8] * bb) >> 8;
+        rr = clamp8(r2); gg = clamp8(g2); bb = clamp8(b2);
+      }
     }
 
     /*

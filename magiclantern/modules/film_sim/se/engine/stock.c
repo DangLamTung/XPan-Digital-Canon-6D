@@ -11,7 +11,10 @@ void se_stock_init(se_stock *s)
                                           s->hue_lum[i] = 100.0f;
                                           s->hue_rot[i] = 0.0f; }
     /* identity matrix: 256 on the diagonal, zero elsewhere */
-    for (i = 0; i < 9; i++) s->matrix[i] = (i % 4 == 0) ? 256 : 0;
+    for (i = 0; i < 9; i++) {
+        s->matrix[i] = (i % 4 == 0) ? 256 : 0;
+        s->matrix_hi[i] = (i % 4 == 0) ? 256 : 0;
+    }
 }
 
 /* --------------------------------------------- which path is asking --- */
@@ -247,7 +250,7 @@ se_err se_stock_parse(const char *text, size_t len, se_stock *s)
                 key_is(w, "HUE_ROT") || key_is(w, "HUE_LUM") ||
                 key_is(w, "SPLIT_SH") || key_is(w, "SPLIT_HI") ||
                 key_is(w, "HALATION") || key_is(w, "HAL_TINT") ||
-                key_is(w, "MATRIX")) {
+                key_is(w, "MATRIX") || key_is(w, "MATRIX_HI")) {
                 se_log("stock: '%s' cannot work from raw -- it needs all "
                        "three channels at one pixel, and the sensor data "
                        "is mosaiced. Ignoring it inside [RAW].", w);
@@ -294,7 +297,21 @@ se_err se_stock_parse(const char *text, size_t len, se_stock *s)
         else if (key_is(w, "SPLIT_SH")) parse_vec(&t, s->split_sh, 3);
         else if (key_is(w, "SPLIT_HI")) parse_vec(&t, s->split_hi, 3);
         else if (key_is(w, "HAL_TINT")) { parse_vec(&t, s->hal_tint, 3); got_tint = 1; }
-        else if (key_is(w, "MATRIX")) {
+        else if (key_is(w, "MATRIX") || key_is(w, "MATRIX_HI")) {
+            int *dst = key_is(w, "MATRIX_HI") ? s->matrix_hi : s->matrix;
+            int i, ok = 1;
+            for (i = 0; i < 9 && ok; i++) {
+                float v;
+                sc_sp(&t);
+                if (t.p < t.end && (*t.p == ',' || *t.p == ';')) t.p++;
+                sc_sp(&t);
+                if (!sc_float(&t, &v)) { ok = 0; break; }
+                dst[i] = (int)(v >= 0 ? v + 0.5f : v - 0.5f);
+            }
+            if (ok) { if (dst == s->matrix) s->matrix_set = 1; else s->matrix_hi_set = 1; }
+            else se_log("stock: MATRIX needs nine values, using identity");
+        }
+        else if (0) {
             int i, ok = 1;
             for (i = 0; i < 9 && ok; i++) {
                 float v;
