@@ -13,6 +13,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#if defined(_WIN32)
+#include <direct.h>
+#define mkdir(path, mode) _mkdir(path)
+#endif
 #include <time.h>
 
 #include "../../fs_core.h"

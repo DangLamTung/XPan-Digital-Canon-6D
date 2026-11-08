@@ -2,3 +2,8 @@ out/
 dev_out/
 filmsim_sim
 devsim
+look_host
+*.exe
+*.pdb
+*.ppm
+*.tif

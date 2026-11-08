@@ -23,6 +23,11 @@
 #include <time.h>
 #include <sys/stat.h>
 
+#if defined(_WIN32)
+#include <direct.h>
+#define mkdir(path, mode) _mkdir(path)
+#endif
+
 #include "../../fs_core.h"
 
 /* Canon EOS 6D DNG ColorMatrix1 (XYZ -> camera), as n/10000 rationals. */

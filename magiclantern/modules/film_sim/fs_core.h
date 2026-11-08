@@ -33,6 +33,7 @@ enum
     FS_PRESET_CINEMA,           /* Kodak Vision3 / CineStill 800T */
     FS_PRESET_BW,               /* Kodak Tri-X 400 / B&W Classic */
     FS_PRESET_TUNGSTEN,         /* Tungsten 64T */
+    FS_PRESET_KODAK_EKTAR,      /* Kodak Ektar 100 / vivid negative */
     FS_PRESET_COUNT
 };
 
@@ -63,6 +64,7 @@ static const fs_params_t fs_presets[FS_PRESET_COUNT] =
     /* Cinema 800T         */ {  25,  12,  35,  85,  -6,   14, -18,  -10,  14,  45 },
     /* B&W Tri-X 400       */ {  50,  10,  30,   0,   0,    0,   0,    0,   0,   0 },
     /* Tungsten 64T        */ {  18,  14,  30,  80,   8,   12, -14,   -8,  16,  50 },
+    /* Kodak Ektar 100     */ {  30,   4,  12, 128,  -2,   -4,   2,    2,  -3,  10 },
 };
 
 static const char * const fs_preset_names[FS_PRESET_COUNT] =
@@ -77,7 +79,9 @@ static const char * const fs_preset_names[FS_PRESET_COUNT] =
     "Cinema 800T",
     "B&W Tri-X 400",
     "Tungsten 64T",
+    "Kodak Ektar 100",
 };
+
 
 typedef struct
 {
