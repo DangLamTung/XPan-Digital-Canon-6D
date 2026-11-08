@@ -53,6 +53,33 @@ fi
 make -C "$SRC/modules" $MAKEARGS > /dev/null
 
 cd "$SRC/platform/$CAM"
+
+# Ship the film recipes in the zip.
+#
+# Nothing in the build produced ML/FILM. The folder that the v1.2.0 release
+# carried had been left in build/zip by an earlier manual copy, which meant two
+# things: a clean checkout shipped no recipes at all -- every stock fell back to
+# a generated look -- and the copies that did ship were older than
+# modules/film_sim/films/. Measured before fixing: films/soup800.fs was
+# af497d4d, the zip and the card carried 67e7bf11, and four recipes were
+# different (classicneg, portra, soup800, velvia). The staging tree is what the
+# platform make zips, so it is synced here, before make runs.
+FILMS="$SRC/modules/film_sim/films"
+ZIPFILM="build/zip/ML/FILM"
+if [ -d "$FILMS" ]; then
+    mkdir -p "$ZIPFILM"
+    # Only the recipes: prune ones that no longer exist in films/, copy the rest.
+    for f in "$ZIPFILM"/*.fs; do
+        [ -e "$f" ] || continue
+        [ -e "$FILMS/$(basename "$f")" ] || rm -f "$f"
+    done
+    cp -f "$FILMS"/*.fs "$ZIPFILM"/
+    echo "  films: $(ls "$FILMS"/*.fs | wc -l | tr -d ' ') recipes -> $ZIPFILM"
+else
+    echo "  ERROR $FILMS is missing; the zip would ship no film recipes" >&2
+    exit 1
+fi
+
 # shellcheck disable=SC2086
 make -j"$(sysctl -n hw.ncpu)" $MAKEARGS "STAT_CMD=stat -f %N:%z"
 
