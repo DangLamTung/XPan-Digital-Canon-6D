@@ -42,7 +42,10 @@
  * So a file may say which generation it was written for, and the engine
  * says so when it cannot keep up.
  */
-#define SE_STOCK_VERSION 3
+/*
+ *   4  + MATRIX, the 3x3 colour matrix
+ */
+#define SE_STOCK_VERSION 4
 
 #define SE_STOCK_NAME 24
 #define SE_STOCK_DESC 48
@@ -168,6 +171,20 @@ typedef struct {
     float hal_radius;       /* pixels, 1..48, at full decode scale    */
     float hal_tint[3];      /* the glow's colour, 0..255              */
 
+    /*
+     * A 3x3 colour matrix, applied to the three curves' outputs before the
+     * per-hue stage. 8.8 fixed point, 256 = identity, row major.
+     *
+     * This is the cheapest way to say what a curve cannot: that a colour is
+     * pulled toward another channel. A film LUT carries that crosstalk at
+     * full resolution; a matrix carries its linear part, and the per-hue
+     * tables carry the rest. Nine multiplies per pixel, skipped entirely at
+     * identity, which is why it fits the camera's budget where a 3D LUT does
+     * not.
+     */
+    int   matrix[9];
+    int   matrix_set;
+
     /* Overrides applied only when developing from the sensor data. */
     se_stock_raw raw;
 } se_stock;
@@ -212,6 +229,7 @@ void se_stock_init(se_stock *s);
  * on a knot and moves only itself.
  *   SPLIT_SH  -6,0,10
  *   SPLIT_HI  10,4,-6
+ *   MATRIX    300,-24,-20, -18,280,-6, -4,-30,290  ; 3x3, 256 = identity
  *   HALATION  40 190 14      ; amount, threshold, radius
  *   HAL_TINT  255,70,30
  *

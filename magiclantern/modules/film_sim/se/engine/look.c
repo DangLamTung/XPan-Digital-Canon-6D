@@ -292,6 +292,16 @@ void se_look_from_stock(const se_stock *s, int scale, se_look *lk) {
   lk->fx_blue = s->fx_blue >= 2 ? 256
               : (s->fx_blue == 1 ? 128 : 0);
 
+  /* 3x3 colour matrix: copied and gated, so identity costs nothing. */
+  {
+    int i, any = 0;
+    for (i = 0; i < 9; i++) {
+      lk->mat[i] = s->matrix[i];
+      if (s->matrix_set && s->matrix[i] != ((i % 4 == 0) ? 256 : 0)) any = 1;
+    }
+    lk->mat_any = any;
+  }
+
   lk->sat = s->sat_set ? (int)(s->sat * 2.56f + 0.5f) : 256;
   if (lk->sat < 0)
     lk->sat = 0;
@@ -825,6 +835,18 @@ static void grade_row(const se_look *lk, uint8_t *row, int w)
         int rr = lk->map[0][o0];
         int gg = lk->map[1][o1];
         int bb = lk->map[2][o2];
+
+    /*
+     * Colour matrix: nine multiplies, on the curves' output, before every
+     * stage that reads all three channels. This is the linear part of the
+     * crosstalk a film LUT carries at full resolution.
+     */
+    if (lk->mat_any) {
+      int r2 = (lk->mat[0] * rr + lk->mat[1] * gg + lk->mat[2] * bb) >> 8;
+      int g2 = (lk->mat[3] * rr + lk->mat[4] * gg + lk->mat[5] * bb) >> 8;
+      int b2 = (lk->mat[6] * rr + lk->mat[7] * gg + lk->mat[8] * bb) >> 8;
+      rr = clamp8(r2); gg = clamp8(g2); bb = clamp8(b2);
+    }
 
     /*
      * Color Chrome and FX Blue need the hue and the chroma but not the

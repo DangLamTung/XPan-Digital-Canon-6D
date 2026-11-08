@@ -83,6 +83,10 @@ typedef struct {
 
     int      sat;            /* 256 = unchanged, 0 = grey, 512 = double  */
 
+    /* 3x3 colour matrix, 8.8 fixed, row major; mat_any = 0 costs nothing. */
+    int      mat[9];
+    int      mat_any;
+
     /*
      * Saturation per hue sector: R, Y, G, C, B, M, 256 = unchanged,
      * interpolated between neighbours so nothing bands at a boundary.
