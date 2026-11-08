@@ -38,7 +38,12 @@ OUT = os.path.abspath(os.path.join(HERE, "..", "..", "..", "..", "docs", "img"))
 # only frame on the card with a decisive moment, light, depth and subjects that
 # survive a 1600 px reduction -- and it is 65:24, so the module's framing claim
 # survives with it.
-HERO = ("IMG_9916", "portra", "Portra 400")
+#
+# Stock None = the camera's own JPEG, not a develop. This frame needs 2.4 EV of
+# lift to match Canon's rendering as a raw develop, and the result read as
+# over-processed next to the file the camera wrote; the hero shows the camera's
+# own output, cropped to the window it framed.
+HERO = ("IMG_9916", None, "as shot")
 # The strip is the same frame, so "same frame, three stocks" is literally true:
 # sky, foliage and ground all shift differently under each recipe.
 COMPARE = ("IMG_9916", [("classicchrome", "Classic Chrome"),
@@ -117,7 +122,14 @@ def main():
     card = sys.argv[1] if len(sys.argv) > 1 else "/Volumes/EOS_DIGITAL/DCIM/100CANON"
     os.makedirs(OUT, exist_ok=True)
 
-    hero = framed(card, HERO[0], HERO[1], HERO_W)
+    if HERO[1] is None:
+        im = Image.open(os.path.join(card, HERO[0] + ".JPG")).convert("RGB")
+        y0, y1 = window(os.path.join(card, HERO[0] + ".JPG"))
+        im = im.crop((0, y0, im.width, y1))
+        hero = im.resize((HERO_W, round(im.height * HERO_W / im.width)),
+                         Image.LANCZOS)
+    else:
+        hero = framed(card, HERO[0], HERO[1], HERO_W)
     hero_path = os.path.join(OUT, "promo.jpg")
     hero.save(hero_path, quality=90, subsampling=0, optimize=True)
     print("promo.jpg  %-9s %-12s %dx%d  %4.0f KB"

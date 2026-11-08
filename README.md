@@ -1,11 +1,11 @@
 # XPan Digital — Canon EOS 6D
 
-![A group on a lookout terrace at golden hour, 65:24, developed from the raw
-with the Portra 400 recipe](docs/img/promo.jpg)
+![A group on a lookout terrace at golden hour, 65:24, straight off the
+camera](docs/img/promo.jpg)
 
-One frame, one camera, one recipe: the 6D's raw, decoded and graded by this
-module's engine, cropped to the 65:24 window the camera framed. Đà Lạt,
-2 November 2026.
+One frame, one camera, one file: the camera's own JPEG, cropped to the 65:24
+window it framed and resized — nothing developed again, nothing graded here.
+Đà Lạt, 2 November 2026.
 
 ![The same frame through Classic Chrome, Portra 400 and Velvia 50](docs/img/looks.jpg)
 
@@ -118,13 +118,13 @@ animations are the camera's own springs, stepped frame by frame.
 
 ![Six frames, each on the stock that suits it](docs/img/roll.jpg)
 
-*Six frames, each on the stock it would actually have been shot on: **Provia**
-for a road under deep pines, **Gold 200** for two people standing in backlight,
-**Velvia 50** for rock and flare, **Soup 800** (Vision3 500T) for a Circle K at
-night, **Ektachrome 100** for a hazy lake, **Portra 400** for golden hour. Every
-cell is a level-3 raw develop from the camera's own file, cropped to 65:24, and
-exposed to match Canon's own JPEG of the same frame — mean luma within a
-point, no cell clipping where Canon's did not.*
+*Six frames off the card, unmodified: a road under deep pines, two people in
+backlight, rock and pine in flare, a Circle K at night, a hazy lake, and the
+lookout at golden hour. Five are the camera's own JPEGs, cropped to the 65:24
+window and resized — no second develop, no colour work. The one exception is
+labelled on the sheet: **9915** on the card is blown (mean luma 180, the haze at
+238), so that cell is the same frame re-developed 1.2 EV under Canon's own
+rendering to bring the haze back into the print.*
 
 `Aspect ▸ 65:24 XPan` frames the panel at 2.708:1 and Develop writes a real
 5472×2020 JPEG — the rows outside the window are never encoded, so the file is

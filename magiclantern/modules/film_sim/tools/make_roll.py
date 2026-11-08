@@ -44,20 +44,32 @@ COLS = 2
 BG = (12, 12, 12)
 INK = (216, 216, 216)
 
-# Each pairing is the stock that scene would actually have been shot on. The
-# first pass got this wrong in a way worth recording: Classic Chrome was put on
-# the road under dense pines, and Classic Chrome is *selective* -- it drains
-# greens and yellows and keeps only reds, so a green forest comes out almost
-# monochrome (measured 17.9% saturation). The recipe was right; the pairing was
-# not. 400H on the golden-hour lookout did the same thing from the other side:
-# 400H is pastel by design (9.7%). Both were replaced.
+# No re-development here.
+#
+# These cells are the camera's own JPEGs, copied from the card and cropped to
+# the 65:24 window the camera burned in -- not re-rendered on this machine. The
+# raw-develop renders that were here before were the wrong thing to show: 9916
+# needed 2.4 EV of lift to match Canon's render and came out over-processed,
+# 9915 landed brighter than the file the camera wrote, and 9930/9914 were being
+# replaced with a stock's idea of a scene instead of the photograph the camera
+# actually produced. "Is the colour right" has an unambiguous answer when the
+# pixels are the card's: they are the card's.
+#
+# A stock render is still one flag away -- give a frame a stock name instead of
+# None below -- but the sheet as shipped shows what the camera made.
+# (frame, stock or None for the card's JPEG, label, EV offset from the
+# exposure that matches Canon's own render)
 STOCKS = [
-    ("IMG_9914", "provia", "PROVIA  -  shade and road"),
-    ("IMG_9915", "gold", "GOLD 200  -  backlit people"),
-    ("IMG_9930", "velvia", "VELVIA 50  -  rock, pine, flare"),
-    ("IMG_0049", "soup800", "SOUP 800 TUNGSTEN  -  Circle K"),
-    ("IMG_9937", "e100", "EKTACHROME 100  -  hazy lake"),
-    ("IMG_9916", "portra", "PORTRA 400  -  golden hour"),
+    ("IMG_9914", None, "IMG_9914  -  as shot on the card", 0.0),
+    # 9915 is blown on the card -- the camera's own JPEG measures mean luma 180
+    # with the haze sitting at 238, so this is the one cell that is a develop
+    # rather than the file, pulled 1.2 EV under Canon's rendering to bring the
+    # haze back into the print.
+    ("IMG_9915", "portra", "IMG_9915  -  Portra 400, 1.2 EV under the card", -1.2),
+    ("IMG_9930", None, "IMG_9930  -  as shot on the card", 0.0),
+    ("IMG_0049", None, "IMG_0049  -  Circle K, as shot", 0.0),
+    ("IMG_9937", None, "IMG_9937  -  as shot on the card", 0.0),
+    ("IMG_9916", None, "IMG_9916  -  as shot on the card", 0.0),
 ]
 
 FONTS = ["/System/Library/Fonts/SFNSMono.ttf",
@@ -169,7 +181,23 @@ def framed(im, win):
     return im.crop((0, y0, im.width, y0 + want))
 
 
-def cell(card, frame, stock):
+def cell(card, frame, stock, ev_delta=0.0):
+    """The camera's own JPEG if no stock is given, else a raw develop; either
+    way cropped to the 65:24 window the camera framed."""
+    jpg = find(card, frame, ".JPG")
+    win = window(jpg)
+    if stock is None:
+        im = framed(Image.open(jpg).convert("RGB"), win)
+        ref = im
+        ref_clip = clipped(ref)
+        print("  %-10s card JPEG  luma %.0f  clip %.2f%%"
+              % (frame, mean_luma(im), ref_clip))
+        return im.resize((CELL_W, round(im.height * CELL_W / im.width)),
+                         Image.LANCZOS)
+    return _develop_cell(card, frame, stock, jpg, win, ev_delta)
+
+
+def _develop_cell(card, frame, stock, jpg, win, ev_delta):
     """Render, expose to match Canon's own JPEG of the frame, crop to 65:24.
 
     Both are measured on the cropped rectangle. The first version compared the
@@ -178,9 +206,6 @@ def cell(card, frame, stock):
     reference did not, and the exposure was fitted to the wrong number.
     """
     cr2 = find(card, frame, ".CR2")
-    jpg = find(card, frame, ".JPG")
-    win = window(jpg)
-
     ref = framed(Image.open(jpg).convert("RGB"), win)
     target, ref_clip = mean_luma(ref), clipped(ref)
 
@@ -190,6 +215,7 @@ def cell(card, frame, stock):
     ev, im = 0.0, lo
     if l1 > l0 + 1:
         ev = max(EV_MIN, min(EV_MAX, (target - l0) * EXPOSURE_EV / (l1 - l0)))
+        ev = max(EV_MIN, min(EV_MAX, ev + ev_delta))
         im = framed(develop(cr2, stock, ev, "evfit"), win)
 
     # If the develop clips where Canon's rendering did not, back off: a promo
@@ -228,8 +254,8 @@ def main():
     card = sys.argv[1] if len(sys.argv) > 1 else "/Volumes/EOS_DIGITAL/DCIM"
     cells = []
     print("colour of each cell:")
-    for frame, stock, label in STOCKS:
-        im = cell(card, frame, stock)
+    for frame, stock, label, ev_delta in STOCKS:
+        im = cell(card, frame, stock, ev_delta)
         colour(im, frame)
         cells.append((im, label))
 
