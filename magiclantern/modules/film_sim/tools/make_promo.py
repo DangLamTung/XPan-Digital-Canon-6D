@@ -33,13 +33,15 @@ RAWDEV = os.path.abspath(os.path.join(HERE, "..", "se", "hosttest", "rawdev"))
 FILMS = os.path.abspath(os.path.join(HERE, "..", "films"))
 OUT = os.path.abspath(os.path.join(HERE, "..", "..", "..", "..", "docs", "img"))
 
-# Hero: the horse in the pine grove. It has a subject, depth and a light source,
-# which is what makes a thumbnail readable; Portra is the warmest of the three
-# renderings tried and the one where the animal still reads at 500 px.
-HERO = ("IMG_9919", "portra", "Portra 400")
-# Comparison: two people on a road, so there is sky, foliage, tarmac and people
-# in one frame -- three stocks separate visibly here.
-COMPARE = ("IMG_9932", [("classicchrome", "Classic Chrome"),
+# Hero: four people on a viewing terrace, one of them mid-stride, in backlight
+# with layered hills behind. Chosen at full size, not from a thumbnail: it is the
+# only frame on the card with a decisive moment, light, depth and subjects that
+# survive a 1600 px reduction -- and it is 65:24, so the module's framing claim
+# survives with it.
+HERO = ("IMG_9916", "portra", "Portra 400")
+# The strip is the same frame, so "same frame, three stocks" is literally true:
+# sky, foliage and ground all shift differently under each recipe.
+COMPARE = ("IMG_9916", [("classicchrome", "Classic Chrome"),
                         ("portra", "Portra 400"),
                         ("velvia", "Velvia 50")])
 

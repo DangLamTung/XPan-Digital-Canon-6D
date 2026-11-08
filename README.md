@@ -1,7 +1,7 @@
 # XPan Digital — Canon EOS 6D
 
-![A horse grazing in a sunlit pine grove, 65:24, developed from the raw with the
-Portra 400 recipe](docs/img/promo.jpg)
+![A group on a lookout terrace at golden hour, 65:24, developed from the raw
+with the Portra 400 recipe](docs/img/promo.jpg)
 
 One frame, one camera, one recipe: the 6D's raw, decoded and graded by this
 module's engine, cropped to the 65:24 window the camera framed. Đà Lạt,
@@ -9,9 +9,9 @@ module's engine, cropped to the 65:24 window the camera framed. Đà Lạt,
 
 ![The same frame through Classic Chrome, Portra 400 and Velvia 50](docs/img/looks.jpg)
 
-The same frame through three shipped recipes. A stock here is a bundle — curve,
-hue axes, split tone, grain — not a colour filter, and the difference between
-these three is the whole product.
+The same frame through three shipped recipes — cool and muted, warm and open,
+saturated and contrasty. A stock here is a bundle of curve, hue axes, split tone
+and grain, not a colour filter, and the gap between these three is the product.
 
 > ## Disclaimer — read before installing
 >
