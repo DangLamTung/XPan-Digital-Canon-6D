@@ -116,10 +116,15 @@ animations are the camera's own springs, stepped frame by frame.
 
 ## 65:24 XPan
 
-![Six frames from one morning, 65:24, six stocks](docs/img/roll.jpg)
+![Six frames, each on the stock that suits it](docs/img/roll.jpg)
 
-*The rest of that morning's roll: six frames, six stocks, every one of them
-65:24 in the frame and 5472 px wide in the file.*
+*Six frames, each on the stock it would actually have been shot on: **Provia**
+for a road under deep pines, **Gold 200** for two people standing in backlight,
+**Velvia 50** for rock and flare, **Soup 800** (Vision3 500T) for a Circle K at
+night, **Ektachrome 100** for a hazy lake, **Portra 400** for golden hour. Every
+cell is a level-3 raw develop from the camera's own file, cropped to 65:24, and
+exposed to match Canon's own JPEG of the same frame — mean luma within a
+point, no cell clipping where Canon's did not.*
 
 `Aspect ▸ 65:24 XPan` frames the panel at 2.708:1 and Develop writes a real
 5472×2020 JPEG — the rows outside the window are never encoded, so the file is
