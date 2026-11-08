@@ -839,7 +839,7 @@ static int decode_rows(void *ctx, const unsigned char *rgb, int nrows, int width
  * ran only the look, so a cube-carrying stock developed one way through the
  * LJPEG path and another through the sensor path.
  */
-static char     lut_path[64];
+static char     lut_path[512];
 static se_lut3  lut_cube;
 static void    *lut_hold;      /* owns lut_cube.data */
 static int      lut_state;     /* 0 untried, 1 ready, -1 failed */
