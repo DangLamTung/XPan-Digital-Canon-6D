@@ -1,22 +1,14 @@
-# Kodak Portra 160: pale, fine grain, cool skin, soft shoulder.
-#
-# Portra 160 is the cleanest of the three: the finest grain Kodak put in a
-# portrait negative and the flattest contrast, so skin holds detail where 400
-# would already be rolling off.  Every number here is one step gentler than
-# portra.fs: the first curve point is 0,82 rather than 0,84, the shoulder ends
-# at 238, SAT is 92 against 86, and the grain is half.
-#
 VERSION   3
 NAME      PORTRA 160
 DESC      PALE, FINE GRAIN, COOL SKIN, SOFT SHOULDER
 WB        AS_SHOT
-CURVE     0,20 64,82 128,138 192,192 255,238
-CURVE_R   0,14 128,140 255,242
-CURVE_G   0,10 128,129 255,242
-CURVE_B   0,12 64,68 128,126 192,186 255,238
+CURVE     0,0 32,25 64,42 96,80 128,132 160,161 192,177 224,220 255,251
+CURVE_R   0,0 32,20 64,41 96,68 128,98 160,129 192,165 224,210 255,244
+CURVE_G   0,0 32,19 64,42 96,73 128,106 160,138 192,175 224,226 255,255
+CURVE_B   0,0 32,20 64,44 96,82 128,116 160,147 192,178 224,223 255,255
 SAT       92
-HUE_SAT    98,103,108,96,84,90,96,98,100,100,100,99
-HUE_ROT    5,4,3,-3,-9,-6,-3,-2.5,-2,-2,-2,1.5
+HUE_SAT   76,81,108,96,84,90,106,108,100,100,100,99
+HUE_ROT   -17,-18,3,-3,-9,-6,-14,-2.5,-2,-2,-2,1.5
 HUE_LUM    104,105,106,99,92,95,98,98,98,100,102,103
 SPLIT_SH  12,5,-2
 SPLIT_HI  10,6,-4
@@ -24,4 +16,3 @@ HALATION  44 228 15
 HAL_TINT  255,100,50
 GRAIN     12
 GRAIN_SIZE 26
-

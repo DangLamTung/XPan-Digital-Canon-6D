@@ -1,37 +1,15 @@
-# Kodak Gold 200: the gold tint, and the blue underneath it.
-#
-# What everyone remembers about Gold is the warmth. What makes it Gold
-# rather than just "warm" is that the warmth is in the HIGHLIGHTS while the
-# shadows go blue -- the two ends pull in opposite directions, and the
-# picture reads as golden hour because of the contrast between them, not
-# because everything is yellow.
-#
-# That is split toning, and it is not something per-channel curves can
-# express: the tint has to depend on how bright the pixel is, which needs
-# all three channels at once. CURVE_B is deliberately gentler than it was:
-# with SPLIT_HI also pulling blue out of the highlights, the old curve
-# doubled up and the whole frame went sepia instead of golden. The old version warmed the whole frame with a
-# red lift and a blue pull, and came out looking like a tungsten white
-# balance error. SPLIT_SH and SPLIT_HI are doing the work now.
-#
-# The shoulder then had to come down. SPLIT_HI adds to R, so a CURVE_R that
-# ended at 255 meant every highlight above ~236 landed on 255: on a bright
-# frame 37.9% of the image was pure white with no separation left. Both tops
-# now stop short of 255 by more than SPLIT_HI can add -- 240 and 232 with a
-# +18 split -- so the last stop of highlight detail survives while the tint
-# and the overall brightness stay where they were.
 VERSION   3
 NAME      GOLD
 DESC      GOLD HIGHLIGHTS, DARK BLUE SHADOWS, WARM MIDS
 WB        CLOUDY
-CURVE     0,12 64,74 128,136 192,199 255,240
-CURVE_R   0,9 64,79 128,145 192,207 255,232
-CURVE_G   0,5 128,131 255,250
-CURVE_B   0,2 64,58 128,118 192,182 255,238
-SAT       110
-HUE_SAT    110,120,130,105.5,81,86,91,93.5,96,100,104,107
-HUE_ROT    9,8,7,-4,-15,-11,-7,-1,5,3.5,2,5.5
-HUE_LUM    105,109,113,99.5,86,88.5,91,84.5,78,90.5,103,104
+CURVE     0,0 32,32 64,64 96,96 128,128 160,160 192,192 224,224 255,255
+CURVE_R   0,0 32,19 64,38 96,61 128,90 160,121 192,153 224,187 255,217
+CURVE_G   0,0 32,17 64,36 96,62 128,94 160,126 192,158 224,192 255,227
+CURVE_B   0,0 32,13 64,30 96,60 128,88 160,123 192,163 224,198 255,231
+SAT       100
+HUE_SAT   96,100,100,100,100,100,92,92,100,100,100,100
+HUE_ROT   -12,-14,-6,-8,0,0,0,0,0,0,0,0
+HUE_LUM   100,100,100,100,100,100,100,100,100,100,100,100
 SPLIT_SH  -16,-4,26
 SPLIT_HI  18,12,-18
 HALATION  50 226 16

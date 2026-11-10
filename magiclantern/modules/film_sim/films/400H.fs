@@ -1,27 +1,18 @@
-# Fujifilm Pro 400H: pastel, minty greens, light cyan, soft highlights.
-#
-# 400H's party trick is that it barely clips: the shoulder sits at 234 on a
-# curve that is flat across the top, so a wedding dress keeps its folds.  The
-# mint cast is not a global shift -- HUE_SAT 84 on the yellow-green sector with
-# -6 degrees of rotation -- and the blue curve starts at 16, which is where the
-# pale cyan in the shadows comes from.
-#
 VERSION   3
 NAME      PRO 400H
 DESC      PASTEL, MINTY GREENS, LIGHT CYAN, SOFT HIGHLIGHTS
 WB        AS_SHOT
-CURVE     0,10 64,80 128,140 192,196 255,240
-CURVE_R   0,16 128,138 255,240
-CURVE_G   0,12 128,133 255,245
-CURVE_B   0,16 64,72 128,132 192,190 255,240
-SAT      110
-HUE_SAT    96,90,84,95,106,104,102,100,98,99,100,98
-HUE_ROT    -4,-5,-6,0,6,4,2,0,-2,-1,0,-2
-HUE_LUM    102,103,104,99,94,96,98,97,96,99.5,103,102.5
+CURVE     0,0 32,32 64,64 96,96 128,128 160,160 192,192 224,224 255,255
+CURVE_R   0,0 32,17 64,41 96,71 128,104 160,136 192,173 224,212 255,237
+CURVE_G   0,0 32,19 64,41 96,71 128,104 160,136 192,172 224,216 255,250
+CURVE_B   0,0 32,21 64,50 96,81 128,114 160,146 192,177 224,219 255,253
+SAT       100
+HUE_SAT   104,106,100,100,100,100,100,100,100,100,100,100
+HUE_ROT   -4,-3,-7,-9,-4,0,-1,1,0,0,0,0
+HUE_LUM   100,100,100,100,100,100,100,100,100,100,100,100
 SPLIT_SH  2,6,-2
 SPLIT_HI  6,4,-2
 HALATION  60 220 20
 HAL_TINT  255,110,70
 GRAIN     16
 GRAIN_SIZE 30
-

@@ -1,22 +1,13 @@
-# Ilford XP2 Super: smooth chromogenic b&w, gentle, nearly grainless.
-#
-# XP2 is developed in colour chemistry, and the result is the smoothest
-# black and white there is: GRAIN 9, a toe lifted to 10, and a shoulder that
-# comes down to 222 -- the highlights roll off gently instead of holding.
-# That falling shoulder is the single number that separates it from every
-# silver film here.
-#
 VERSION   3
 NAME      XP2 SUPER
 DESC      SMOOTH CHROMOGENIC B&W, GENTLE, NEARLY GRAINLESS
 WB        AS_SHOT
-CURVE     0,10 48,38 112,110 176,172 232,222 255,240
-CURVE_R   0,0 128,128 255,255
-CURVE_G   0,0 128,128 255,255
-CURVE_B   0,0 128,128 255,255
+CURVE     0,0 32,32 64,64 96,96 128,128 160,160 192,192 224,224 255,255
+CURVE_R   0,0 32,9 64,31 96,65 128,107 160,153 192,193 224,220 255,242
+CURVE_G   0,0 32,10 64,36 96,70 128,113 160,160 192,195 224,221 255,243
+CURVE_B   0,0 32,13 64,42 96,81 128,119 160,159 192,191 224,213 255,242
 SAT       0
 HALATION  34 232 14
 HAL_TINT  255,255,255
 GRAIN     9
 GRAIN_SIZE 10
-

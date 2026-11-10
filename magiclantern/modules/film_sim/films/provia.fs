@@ -1,24 +1,15 @@
-# Fujichrome Provia 100F: the restrained one.
-#
-# Provia exists because Velvia is unusable on skin. It is slide film that
-# tries to be accurate -- moderate saturation, smooth gradation through the
-# midtones, clean neutral whites, no colour opinion to speak of. The
-# temptation with a stock like this is to give it nothing and let it be
-# STANDARD with a different name. What makes it read as transparency film
-# rather than as "off" is the highlight shoulder and the very slightly cool
-# neutral: slide film holds its whites and does not warm them.
 VERSION   3
 NAME      PROVIA
 DESC      NATURAL SLIDE FILM, CLEAN WHITES, REAL BLACKS
 WB        DAYLIGHT
-CURVE     0,0 40,34 128,130 208,212 255,252
-CURVE_R   0,0 128,128 255,254
-CURVE_G   0,0 128,129 255,254
-CURVE_B   0,2 128,130 255,252
-SAT       120
-HUE_SAT    102,100,98,101,104,104,104,107,110,105,100,101
-HUE_ROT    0,-1,-2,0,2,2,2,3,4,2,0,0
-HUE_LUM    100,99,98,97,96,97,98,96,94,97,100,100
+CURVE     0,0 32,32 64,64 96,96 128,128 160,162 192,196 224,228 255,257
+CURVE_R   0,0 32,14 64,32 96,57 128,90 160,127 192,166 224,201 255,227
+CURVE_G   0,0 32,18 64,37 96,62 128,92 160,126 192,159 224,190 255,217
+CURVE_B   0,0 32,22 64,43 96,68 128,98 160,132 192,167 224,201 255,228
+SAT       100
+HUE_SAT   100,100,100,100,100,100,100,100,100,100,100,100
+HUE_ROT   2,1,-3,-4,-4,0,4,3,0,0,0,0
+HUE_LUM   100,100,100,100,100,100,100,100,100,100,100,100
 HALATION  34 234 12
 HAL_TINT  255,74,34
 GRAIN     8
