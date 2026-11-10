@@ -102,6 +102,16 @@ typedef struct {
     se_curve r, g, b;       /* then each channel on its own    */
 
     /*
+     * CURVE_Y, applied after the three per-channel curves: a curve on the
+     * pixel's luma, with the colour ratios preserved. It exists because the
+     * per-channel curves cannot separate "how bright" from "how warm" -- a
+     * move on B to cool the shadows also cools every midtone, and the
+     * sky/water regions end up fighting the skin. n < 2 means identity, so
+     * every recipe written before this key behaves exactly as it did.
+     */
+    se_curve luma;
+
+    /*
      * Everything below is applied by engine/look.c on the JPEG path, where
      * all three channels are present at every pixel. The raw path cannot
      * use any of it: it rewrites MOSAICED samples, one colour per pixel,

@@ -355,6 +355,7 @@ se_err se_stock_parse(const char *text, size_t len, se_stock *s)
         else if (key_is(w, "CURVE_R")) parse_curve(&t, &s->r);
         else if (key_is(w, "CURVE_G")) parse_curve(&t, &s->g);
         else if (key_is(w, "CURVE_B")) parse_curve(&t, &s->b);
+        else if (key_is(w, "CURVE_Y")) parse_curve(&t, &s->luma);
         else {
             /* Collected rather than logged one at a time, so the report
              * below can name them beside the version that explains them. */

@@ -81,6 +81,20 @@
 typedef struct {
     uint8_t  map[3][256];    /* the per-channel curves, baked            */
 
+    /*
+     * CURVE_Y: chroma scaled by luma, with luma itself left alone. At a pixel
+     * whose luma is y the curve value c(y) sets a multiplier k(y) = c(y) / y,
+     * and the channels move toward or away from y by that factor. An identity
+     * curve gives k = 1 everywhere, and luma_any = 0 skips the stage entirely,
+     * so a recipe without this key is unchanged.
+     *
+     * A curve that scales all three channels (the obvious reading of "curve on
+     * luma") cannot do this job: it desaturates and darkens together, and the
+     * master curve that puts the level back puts the saturation back with it.
+     */
+    int16_t  luma_map[256];   /* k in 1/256ths, 256 = unchanged */
+    int      luma_any;
+
     int      sat;            /* 256 = unchanged, 0 = grey, 512 = double  */
 
     /* 3x3 colour matrix, 8.8 fixed, row major; mat_any = 0 costs nothing. */

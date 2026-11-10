@@ -259,6 +259,23 @@ void se_look_from_stock(const se_stock *s, int scale, se_look *lk) {
   tables_init();
   se_stock_bake_srgb8(s, lk->map);
 
+  /* CURVE_Y: k(y) = curve(y) / y, in 1/256ths, so the pixel loop needs one
+   * lookup and one multiply per channel. An identity curve gives k = 256 and
+   * the stage is skipped by luma_any, so recipes without the key are untouched. */
+  lk->luma_any = s->luma.n >= 2;
+  if (lk->luma_any) {
+    int i;
+    for (i = 0; i < 256; i++) {
+      float x = (float)i / 255.0f;
+      float c = se_curve_eval(&s->luma, x);
+      float k = (i > 0) ? (c / x) : 1.0f;
+      int   v = (int)(k * 256.0f + 0.5f);
+      if (v < 0)   v = 0;
+      if (v > 512) v = 512;
+      lk->luma_map[i] = (int16_t)v;
+    }
+  }
+
   for (c = 0; c < SE_HUE_SECTORS; c++) {
     lk->hue_sat[c] = (int)(s->hue_sat[c] * 2.56f + 0.5f);
     if (lk->hue_sat[c] < 0)
@@ -838,6 +855,24 @@ static void grade_row(const se_look *lk, uint8_t *row, int w)
         int rr = lk->map[0][o0];
         int gg = lk->map[1][o1];
         int bb = lk->map[2][o2];
+
+    /*
+     * CURVE_Y, right after the per-channel curves and before anything that
+     * reads all three channels: scale each channel's distance from the pixel's
+     * luma, leaving that luma where it is. This is a saturation control that
+     * only acts on the brightness range the curve marks out -- it is how a
+     * stock can lose chroma in foliage without going dark, which the master
+     * curve cannot express because restoring the level restores the colour.
+     */
+    if (lk->luma_any) {
+      int y  = luma8(clamp8(rr), clamp8(gg), clamp8(bb));
+      int k  = lk->luma_map[clamp8(y)];
+      if (k != 256) {
+        rr = clamp8(y + ((rr - y) * k + 128) / 256);
+        gg = clamp8(y + ((gg - y) * k + 128) / 256);
+        bb = clamp8(y + ((bb - y) * k + 128) / 256);
+      }
+    }
 
     /*
      * Colour matrix: nine multiplies, on the curves' output, before every
