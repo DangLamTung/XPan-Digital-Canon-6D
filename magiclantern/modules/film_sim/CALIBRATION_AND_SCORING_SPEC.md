@@ -134,3 +134,4 @@ A recipe is certified for production deployment when:
 3. **Green Foliage $\Delta E_{00} \le 2.5$** on landscape foliage (`008`).
 4. **Grayscale Row 4 Neutrality:** $\|R - B\| \le 1.0$ across all mid-to-high neutral patches.
 5. **No Specular Highlight Flattening:** Specular peak reaches $Y \ge 245$ without flat-topping or unnatural yellow shifts.
+

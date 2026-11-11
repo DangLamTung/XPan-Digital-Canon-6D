@@ -237,37 +237,47 @@ def format_recipe(x):
     p_curve_hi_b = x[10]
     p_split_hi_r = int(round(x[11]))
     p_split_hi_b = int(round(x[12]))
+    p_cyn_lum = x[13]
+    p_sky_lum = x[14]
+    p_skin_lum = x[15]
 
     # Initialize 48 sectors
     sat = [100.0] * 48
     rot = [0.0] * 48
     lum = [100.0] * 48
 
+    # Skin (Sectors 1..4)
     for s in range(1, 5):
-        sat[s] = float(np.clip(p_skin_sat, 50.0, 150.0))
-        rot[s] = float(np.clip(p_skin_rot, -30.0, 30.0))
+        sat[s] = float(np.clip(p_skin_sat, 65.0, 115.0))
+        rot[s] = float(np.clip(p_skin_rot, -15.0, 15.0))
+        lum[s] = float(np.clip(p_skin_lum, 90.0, 115.0))
 
+    # Foliage (Sectors 14..20)
     for s in range(14, 21):
-        sat[s] = float(np.clip(p_grn_sat, 60.0, 180.0))
-        rot[s] = float(np.clip(p_grn_rot, -35.0, 35.0))
+        sat[s] = float(np.clip(p_grn_sat, 80.0, 160.0))
+        rot[s] = float(np.clip(p_grn_rot, -25.0, 25.0))
+        lum[s] = 97.0
 
+    # Cyan Sea (Sectors 23..27)
     for s in range(23, 28):
-        sat[s] = float(np.clip(p_cyn_sat, 50.0, 160.0))
-        rot[s] = float(np.clip(p_cyn_rot, -35.0, 35.0))
+        sat[s] = float(np.clip(p_cyn_sat, 70.0, 140.0))
+        rot[s] = float(np.clip(p_cyn_rot, -15.0, 25.0))
+        lum[s] = float(np.clip(p_cyn_lum, 75.0, 115.0))
 
+    # Sky Blue (Sectors 28..33)
     for s in range(28, 34):
-        sat[s] = float(np.clip(p_sky_sat, 50.0, 160.0))
-        rot[s] = float(np.clip(p_sky_rot, -30.0, 30.0))
+        sat[s] = float(np.clip(p_sky_sat, 70.0, 140.0))
+        rot[s] = float(np.clip(p_sky_rot, -20.0, 20.0))
+        lum[s] = float(np.clip(p_sky_lum, 75.0, 115.0))
 
     def fmt_arr(label, arr):
         return f"{label}   " + ",".join(f"{v:+.1f}" if label == "HUE_ROT" else f"{v:.1f}" for v in arr)
 
     # Master and Channel curves
-    # Midtone lift p_curve_mid allows adjusting dermis brightness to match Dehancer
-    y_m = [0, 26, 54, int(round(88 + p_curve_mid * 0.6)), int(round(128 + p_curve_mid)), int(round(162 + p_curve_mid * 0.7)), 188, 218, 244]
-    y_r = [0, 24, 50, int(round(84 + p_curve_mid * 0.6)), int(round(124 + p_curve_mid)), int(round(160 + p_curve_mid * 0.7)), 186, 192, int(round(p_curve_hi_r))]
-    y_g = [0, 22, 48, int(round(82 + p_curve_mid * 0.6)), int(round(122 + p_curve_mid)), int(round(158 + p_curve_mid * 0.7)), 186, 218, 244]
-    y_b = [0, 20, 46, int(round(80 + p_curve_mid * 0.6)), int(round(120 + p_curve_mid)), int(round(156 + p_curve_mid * 0.7)), 186, 231, int(round(p_curve_hi_b))]
+    y_m = [0, 26, 54, int(round(88 + p_curve_mid * 0.5)), int(round(126 + p_curve_mid)), int(round(158 + p_curve_mid * 0.7)), 188, 218, 244]
+    y_r = [0, 24, 50, int(round(84 + p_curve_mid * 0.5)), int(round(122 + p_curve_mid)), int(round(156 + p_curve_mid * 0.7)), 186, 196, int(round(p_curve_hi_r))]
+    y_g = [0, 22, 48, int(round(82 + p_curve_mid * 0.5)), int(round(120 + p_curve_mid)), int(round(154 + p_curve_mid * 0.7)), 186, 218, 244]
+    y_b = [0, 20, 46, int(round(80 + p_curve_mid * 0.5)), int(round(118 + p_curve_mid)), int(round(152 + p_curve_mid * 0.7)), 186, 230, int(round(p_curve_hi_b))]
 
     knots_x = [0, 32, 64, 96, 128, 160, 192, 224, 255]
     def fmt_curve(label, y_vals):
@@ -522,13 +532,15 @@ def main():
     build_segmented_canvas()
 
     x0 = np.array([
-        92.0, +0.0,
-        120.0, -8.0,
-        85.0, +8.0,
-        90.0, -2.0,
-        +3.5,
+        88.0, +1.0,
+        125.0, -4.0,
+        105.0, +12.0,
+        110.0, -2.0,
+        +2.5,
         214.0, 260.0,
-        -4.0, +4.0
+        -16.0, +8.0,
+        88.0, 86.0,
+        100.0
     ], dtype=float)
 
     print("\nInitial Baseline Evaluation:")
@@ -547,7 +559,8 @@ def main():
     names = [
         "Skin Sat", "Skin Rot", "Green Sat", "Green Rot",
         "Cyan Sat", "Cyan Rot", "Sky Sat", "Sky Rot",
-        "Curve Mid", "Curve Hi R", "Curve Hi B", "Split Hi R", "Split Hi B"
+        "Curve Mid", "Curve Hi R", "Curve Hi B", "Split Hi R", "Split Hi B",
+        "Cyan Lum", "Sky Lum", "Skin Lum"
     ]
     for n, v in zip(names, res.x):
         print(f"  {n:12s}: {v:+.1f}")
