@@ -172,10 +172,10 @@ def build_segmented_canvas():
             src_im = src_im.transpose({6: Image.Transpose.ROTATE_270, 8: Image.Transpose.ROTATE_90, 3: Image.Transpose.ROTATE_180}[orient])
         
         ref_im = Image.open(ref_p)
-        w, h = ref_im.size
-        # Left half = original ML crop, Right half = Dehancer reference
-        deh_im = ref_im.crop((w // 2, 0, w, h))
-        src_resized = src_im.resize((w // 2, h), Image.Resampling.LANCZOS)
+        w, _ = ref_im.size
+        # Active picture area is 700x466 (rows 466-484 are black border bars)
+        deh_im = ref_im.crop((w // 2, 0, w, 466))
+        src_resized = src_im.resize((w // 2, 466), Image.Resampling.LANCZOS)
         return src_resized, deh_im
 
     # 1. Skin 001 (forehead/cheek)
@@ -427,8 +427,9 @@ def generate_proof_artifacts():
             continue
 
         ref_im = Image.open(ref_path)
-        w, h = ref_im.size
+        w, _ = ref_im.size
         half = w // 2
+        h = 466  # Active picture height, excluding 18px black bottom border
         deh_ref = ref_im.crop((half, 0, w, h))
 
         # Rotate raw camera image according to EXIF and resize to match reference
@@ -457,11 +458,41 @@ def generate_proof_artifacts():
         p90_de = float(np.percentile(de_map, 90))
 
         # Build Side-by-Side Board (Row 1: ML Graded | Dehancer Target, Row 2: Heatmap | Crops)
-        norm_de = np.clip(de_map / 8.0, 0.0, 1.0)
-        r_map = np.clip(2.0 * norm_de - 0.5, 0.0, 1.0)
-        g_map = np.clip(1.0 - 2.0 * np.abs(norm_de - 0.5), 0.0, 1.0)
-        b_map = np.clip(1.0 - 2.0 * norm_de, 0.0, 1.0)
-        heatmap_img = Image.fromarray((np.stack([r_map, g_map, b_map], axis=-1) * 255.0).astype(np.uint8))
+        # Standard CIEDE2000 perceptual heatmap:
+        # 0..3: Navy to Cyan (sub-perceptual / excellent)
+        # 3..6: Cyan to Green (good photographic parity)
+        # 6..9: Green to Yellow (moderate visible difference)
+        # 9..12+: Yellow to Red (severe mismatch)
+        v = np.clip(de_map / 12.0, 0.0, 1.0)
+        r_map = np.zeros_like(v)
+        g_map = np.zeros_like(v)
+        b_map = np.zeros_like(v)
+
+        m1 = v <= 0.25
+        t1 = v[m1] / 0.25
+        r_map[m1] = 0.0
+        g_map[m1] = t1 * 180.0
+        b_map[m1] = 80.0 + t1 * 140.0
+
+        m2 = (v > 0.25) & (v <= 0.50)
+        t2 = (v[m2] - 0.25) / 0.25
+        r_map[m2] = t2 * 30.0
+        g_map[m2] = 180.0 + t2 * 30.0
+        b_map[m2] = 220.0 * (1.0 - t2)
+
+        m3 = (v > 0.50) & (v <= 0.75)
+        t3 = (v[m3] - 0.50) / 0.25
+        r_map[m3] = 30.0 + t3 * 210.0
+        g_map[m3] = 210.0
+        b_map[m3] = 0.0
+
+        m4 = v > 0.75
+        t4 = np.clip((v[m4] - 0.75) / 0.25, 0.0, 1.0)
+        r_map[m4] = 240.0
+        g_map[m4] = 210.0 * (1.0 - t4)
+        b_map[m4] = 0.0
+
+        heatmap_img = Image.fromarray((np.stack([r_map, g_map, b_map], axis=-1)).astype(np.uint8))
 
         # Detailed Zoom Crop (200x200 crop scaled 2x to 400x400)
         cx1, cy1, cx2, cy2 = crop_box
@@ -497,8 +528,8 @@ def generate_proof_artifacts():
         board.paste(zoom_panel, (half, 75 + h))
         draw.line([(half, 75 + h), (half, 75 + 2 * h)], fill=(60, 60, 65), width=2)
 
-        draw.rectangle([15, 85 + h, 260, 115 + h], fill=(0, 0, 0))
-        draw.text((25, 92 + h), "CIEDE2000 Error Heatmap (0..8)", fill=(240, 240, 240))
+        draw.rectangle([15, 85 + h, 420, 115 + h], fill=(0, 0, 0))
+        draw.text((25, 92 + h), "CIEDE2000 Error Heatmap (Navy=0, Cyan=3, Green=6, Red=12+)", fill=(240, 240, 240))
         draw.rectangle([half + 15, 85 + h, half + 260, 115 + h], fill=(0, 0, 0))
         draw.text((half + 25, 92 + h), "Zoom Split: ML (left) | Dehancer (right)", fill=(255, 220, 80))
 
