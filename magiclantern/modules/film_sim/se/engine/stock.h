@@ -77,12 +77,11 @@ typedef struct {
 } se_stock_raw;
 
 /*
- * Hue sectors per stock: twelve, 30 degrees apart, so every bead on a
- * 12-colour wheel has a knot of its own. A file that writes six values is
- * expanded on load (see parse_hue_vec in stock.c), so nothing already on a
- * card changes meaning.
+ * Hue sectors per stock: forty-eight, 7.5 degrees apart, so skin, blush,
+ * lips, foliage, and skies have dedicated knots. A file that writes 6, 12,
+ * or 24 values is expanded smoothly on load (see parse_hue_vec in stock.c).
  */
-#define SE_HUE_SECTORS 12
+#define SE_HUE_SECTORS 48
 
 typedef struct {
     /* The format generation this file asked for; 0 when it did not say,
@@ -155,9 +154,10 @@ typedef struct {
     float hue_lum[SE_HUE_SECTORS];
 
     /* Split tone, signed, in 0..255 output units at full weight. The
-     * shadow triple is weighted by (255 - luma), the highlight triple by
-     * luma, so a warm-highlight/cool-shadow stock is two lines. */
+     * shadow, midtone, and highlight triples form a 3-way color grading
+     * wheel partitioned around luma 128. */
     float split_sh[3];
+    float split_mid[3];
     float split_hi[3];
 
     /* Halation: light scattering off the film base and back up through the

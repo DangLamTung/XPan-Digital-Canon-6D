@@ -50,7 +50,7 @@ int main(void)
 #define CHECK(vec, field, label) do {                                        \
         for (i = 0; i < FS_CREATOR_WEDGES; i++) {                            \
             int want = c.field[i];                                           \
-            float f  = st.vec[i];                                            \
+            float f  = st.vec[i * (SE_HUE_SECTORS / FS_CREATOR_WEDGES)];     \
             int got  = (int)(f >= 0.0f ? f + 0.5f : f - 0.5f);               \
             if (got != want) {                                               \
                 printf("FAIL: %s[%d] wrote %d, engine read %d\n",             \

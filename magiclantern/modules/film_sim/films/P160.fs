@@ -1,27 +1,23 @@
-# Kodak Portra 160: pale, fine grain, cool skin, soft shoulder.
+# Kodak Portra 160: pale, fine grain, cool cyan shadows, radiant pastel skin.
 #
-# Portra 160 is the cleanest of the three: the finest grain Kodak put in a
-# portrait negative and the flattest contrast, so skin holds detail where 400
-# would already be rolling off.  Every number here is one step gentler than
-# portra.fs: the first curve point is 0,82 rather than 0,84, the shoulder ends
-# at 238, SAT is 92 against 86, and the grain is half.
-#
+# Calibrated against Dehancer Desktop Kodak Portra 160 reference renders.
+# Balanced 48-sector non-banding matrix, cool shadow split toning.
 VERSION   3
 NAME      PORTRA 160
-DESC      PALE, FINE GRAIN, COOL SKIN, SOFT SHOULDER
+DESC      PALE, FINE GRAIN, PASTEL SKIN, COOL SHADOWS, 48-SEC
 WB        AS_SHOT
-CURVE     0,20 64,82 128,138 192,192 255,238
-CURVE_R   0,14 128,140 255,242
-CURVE_G   0,10 128,129 255,242
-CURVE_B   0,12 64,68 128,126 192,186 255,238
+CURVE     0,16 64,44 128,104 192,172 255,246
+CURVE_R   0,16 64,44 128,104 192,172 255,246
+CURVE_G   0,16 64,44 128,104 192,172 255,246
+CURVE_B   0,18 64,45 128,104 192,172 255,246
 SAT       92
-HUE_SAT    98,103,108,96,84,90,96,98,100,100,100,99
-HUE_ROT    5,4,3,-3,-9,-6,-3,-2.5,-2,-2,-2,1.5
-HUE_LUM    104,105,106,99,92,95,98,98,98,100,102,103
-SPLIT_SH  12,5,-2
-SPLIT_HI  10,6,-4
+HUE_SAT   101,106,111,117,121,125,126,125,122,119,116,113,111,109,106,103,99,97,95,95,95,96,97,98,100,103,107,114,121,129,135,139,140,137,133,126,118,111,106,103,101,100,100,99,99,98,98,99
+HUE_ROT   -1.3,-1.2,-1.2,-1.3,-1.7,-2.6,-3.9,-5.5,-7.5,-9.3,-10.8,-11.5,-11.5,-10.8,-9.9,-8.8,-7.7,-6.7,-5.8,-4.9,-3.9,-3.0,-2.1,-1.2,-0.6,-0.2,+0.1,+0.5,+1.0,+1.6,+2.2,+2.6,+2.7,+2.4,+1.7,+0.7,-0.3,-1.0,-1.4,-1.5,-1.4,-1.2,-1.0,-0.9,-0.9,-1.0,-1.1,-1.3
+HUE_LUM   119,123,128,126,118,109,100,91,93,104,116,115,96,95,94,94,93,92,92,97,101,106,111,116,121,125,120,114,109,105,102,100,99,99,99,100,100,100,101,102,102,102,102,103,105,108,112,116
+SPLIT_SH  0,0,2
+SPLIT_MID 0,0,0
+SPLIT_HI  0,0,0
 HALATION  44 228 15
 HAL_TINT  255,100,50
 GRAIN     12
 GRAIN_SIZE 26
-

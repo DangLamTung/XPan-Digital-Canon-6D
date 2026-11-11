@@ -1,27 +1,22 @@
-# CineStill CineStill 50D: daylight cine, fine, neutral, low saturation.
-#
-# The daylight CineStill is a motion-picture stock, and a motion-picture
-# stock is graded later, so it arrives nearly neutral: black at 4, mid at 131,
-# saturation 96.  What makes it cine rather than flat is the shoulder at 250 --
-# it holds highlights almost to white -- and GRAIN 7, as low as this engine
-# goes without looking digital.
-#
+# CineStill 50D (24-sector precision analog film match)
+# Calibrated against Dehancer Desktop CineStill 50D ColorChecker
 VERSION   3
-NAME      CINESTILL 50D
-DESC      DAYLIGHT CINE, FINE, NEUTRAL, LOW SATURATION
+NAME      50D 24SEC
+DESC      CINESTILL 50D (PRECISION DEHANCER MATCH)
 WB        DAYLIGHT
-CURVE     0,4 64,66 128,131 192,200 255,250
-CURVE_R   0,2 128,130 255,250
-CURVE_G   0,2 128,129 255,250
-CURVE_B   0,0 128,129 255,248
-SAT      108
-HUE_SAT    102,101,100,102,104,103,102,103,104,102,100,101
-HUE_ROT    0,-0.5,-1,0.5,2,1.5,1,0,-1,-0.5,0,0
-HUE_LUM    100,100,100,98,96,97,98,96,94,97,100,100
-SPLIT_SH  1,1,1
-SPLIT_HI  2,1,-2
+EXPOSURE  0.00
+CURVE     0,0 52,34 85,61 115,81 128,119 160,151 200,187 243,233 255,246
+CURVE_R   0,0 128,128 255,236
+CURVE_G   0,0 128,128 255,244
+CURVE_B   0,0 128,128 255,242
+SAT       114
+HUE_SAT   81,92,99,101,99,94,91,87,83,80,77,76,74,73,72,71,70,70,70,70,69,69,68,67,69,73,78,84,90,95,98,100,102,103,102,97,91,83,77,71,66,62,59,58,58,60,65,71
+HUE_ROT   +5.0,+3.3,+1.4,-0.5,-2.2,-3.8,-5.2,-6.1,-6.7,-7.0,-7.2,-7.3,-7.5,-7.7,-8.0,-8.1,-7.7,-6.8,-5.4,-3.8,-2.0,-0.2,+1.3,+2.4,+2.9,+3.0,+2.8,+2.5,+2.1,+1.2,-0.1,-1.7,-3.2,-4.3,-5.0,-5.5,-5.8,-5.6,-4.7,-3.0,-0.8,+1.4,+3.4,+5.0,+6.0,+6.6,+6.7,+6.2
+HUE_LUM   110,106,105,100,95,86,92,101,97,94,92,96,100,96,93,91,88,90,91,92,94,96,98,96,94,104,102,102,102,103,107,107,97,94,96,98,101,104,106,107,108,108,108,108,109,110,115,110
+SPLIT_SH  2,1,0
+SPLIT_MID -1,0,1
+SPLIT_HI  -29,3,15
 HALATION  28 236 12
 HAL_TINT  255,100,60
 GRAIN     7
 GRAIN_SIZE 10
-

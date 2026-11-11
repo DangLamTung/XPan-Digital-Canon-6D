@@ -186,14 +186,18 @@ static int parse_hue_vec(sc *t, float *out)
 
     if (n == SE_HUE_SECTORS) {
         for (i = 0; i < SE_HUE_SECTORS; i++) out[i] = v[i];
-    } else if (n == 6) {
-        for (i = 0; i < 6; i++) {
-            out[i * 2]     = v[i];
-            out[i * 2 + 1] = (v[i] + v[(i + 1) % 6]) * 0.5f;
+    } else if (n >= 2) {
+        for (i = 0; i < SE_HUE_SECTORS; i++) {
+            float g = (float)i * (float)n / (float)SE_HUE_SECTORS;
+            int   k = (int)g;
+            float fr = g - (float)k;
+            float a = v[k % n], b = v[(k + 1) % n];
+            out[i] = a + (b - a) * fr;
         }
-    } else if (n > 0) {
-        se_log("stock: %d-values per hue is neither 6 nor %d, ignoring",
-               n, SE_HUE_SECTORS);
+    } else if (n == 1) {
+        for (i = 0; i < SE_HUE_SECTORS; i++) out[i] = v[0];
+    } else {
+        se_log("stock: per-hue vector needs at least one value, ignoring");
         return 0;
     }
     return n;
@@ -243,7 +247,7 @@ se_err se_stock_parse(const char *text, size_t len, se_stock *s)
         if (in_raw) {
             if (key_is(w, "SAT") || key_is(w, "HUE_SAT") ||
                 key_is(w, "HUE_ROT") || key_is(w, "HUE_LUM") ||
-                key_is(w, "SPLIT_SH") || key_is(w, "SPLIT_HI") ||
+                key_is(w, "SPLIT_SH") || key_is(w, "SPLIT_MID") || key_is(w, "SPLIT_HI") ||
                 key_is(w, "HALATION") || key_is(w, "HAL_TINT")) {
                 se_log("stock: '%s' cannot work from raw -- it needs all "
                        "three channels at one pixel, and the sensor data "
@@ -288,8 +292,9 @@ se_err se_stock_parse(const char *text, size_t len, se_stock *s)
         else if (key_is(w, "HUE_SAT"))  parse_hue_vec(&t, s->hue_sat);
         else if (key_is(w, "HUE_ROT"))  parse_hue_vec(&t, s->hue_rot);
         else if (key_is(w, "HUE_LUM"))  parse_hue_vec(&t, s->hue_lum);
-        else if (key_is(w, "SPLIT_SH")) parse_vec(&t, s->split_sh, 3);
-        else if (key_is(w, "SPLIT_HI")) parse_vec(&t, s->split_hi, 3);
+        else if (key_is(w, "SPLIT_SH"))  parse_vec(&t, s->split_sh, 3);
+        else if (key_is(w, "SPLIT_MID")) parse_vec(&t, s->split_mid, 3);
+        else if (key_is(w, "SPLIT_HI"))  parse_vec(&t, s->split_hi, 3);
         else if (key_is(w, "HAL_TINT")) { parse_vec(&t, s->hal_tint, 3); got_tint = 1; }
         else if (key_is(w, "HALATION")) {
             sc_float(&t, &s->hal_amount);

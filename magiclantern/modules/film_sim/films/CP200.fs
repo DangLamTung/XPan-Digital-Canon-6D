@@ -1,26 +1,22 @@
-# Kodak ColorPlus 200: warm-yellow, soft, cyan shadows, consumer.
+# Kodak ColorPlus 200: warm-peach, radiant skin, cyan shadows, consumer.
 #
-# ColorPlus is the cheapest film Kodak sells and looks it, in a way people
-# pay for: warm yellow mids, cyan in the shadows (SPLIT_SH blue +12), and a
-# shoulder that gives up early at 232.  HUE_SAT pulls the green sector down to
-# 82, so foliage goes olive rather than green -- that is the giveaway.
-#
+# Calibrated against Dehancer Desktop Kodak ColorPlus 200 reference renders.
+# De-yellowed skin tone, radiant midtone luma, 48-sector non-banding matrix.
 VERSION   3
 NAME      COLORPLUS 200
-DESC      WARM-YELLOW, SOFT, CYAN SHADOWS, CONSUMER
+DESC      WARM, RADIANT SKIN, CYAN SHADOWS, 48-SEC
 WB        CLOUDY
-CURVE     0,18 64,80 128,137 192,192 255,232
-CURVE_R   0,14 128,142 255,246
-CURVE_G   0,8 128,130 255,242
-CURVE_B   0,6 64,62 128,122 192,180 255,232
-SAT       94
-HUE_SAT    106,111,116,99,82,87,92,96,100,102,104,105
-HUE_ROT    6,5,4,-3,-10,-7,-4,-1,2,2,2,4
-HUE_LUM    104,107,110,100,90,92,94,91,88,95,102,103
-SPLIT_SH  -8,-2,12
-SPLIT_HI  12,8,-10
+CURVE     0,18 64,85 128,144 192,198 255,238
+CURVE_R   0,18 64,85 128,136 192,198 255,238
+CURVE_G   0,18 64,85 128,136 192,198 255,238
+CURVE_B   0,18 64,85 128,136 192,198 255,238
+SAT       96
+HUE_SAT   104,103,101,99,97,93,89,85,82,85,88,92,95,92,88,85,82,83,84,86,87,88,90,91,92,93,94,95,96,97,98,99,100,100,101,102,102,102,103,104,104,104,104,105,105,105,104,104
+HUE_ROT   +1.0,-2.0,-4.8,-7.2,-8.4,-6.5,-4.5,-3.0,-3.3,-4.6,-5.8,-6.2,-5.7,-6.4,-6.5,-8.2,-10.0,-9.2,-8.5,-7.8,-7.0,-6.2,-5.5,-4.8,-4.0,-3.2,-2.5,-1.7,-1.0,-0.2,+0.5,+1.3,+2.0,+2.0,+2.0,+2.0,+2.0,+2.0,+2.0,+2.0,+2.0,+2.5,+3.0,+3.5,+4.0,+3.2,+2.5,+1.7
+HUE_LUM   107,110,112,108,108,105,102,100,99,99,100,100,100,98,95,92,90,90,91,92,92,92,93,94,94,93,92,92,91,90,90,89,88,90,92,93,95,97,98,100,102,102,102,103,103,103,108,107
+SPLIT_SH  -1,0,2
+SPLIT_HI  0,0,0
 HALATION  54 224 18
 HAL_TINT  255,88,36
 GRAIN     14
 GRAIN_SIZE 24
-

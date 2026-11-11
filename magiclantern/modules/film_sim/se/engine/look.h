@@ -63,7 +63,7 @@
 /* Chroma at which the per-hue stage reaches full strength. It used to be 40,
  * but a real landscape sits at a mean chroma of ~18, so that knee was fading
  * nearly the whole frame out -- see the note at the fade in look.c. */
-#define SE_HUE_FULL 20
+#define SE_HUE_FULL 8
 
 /*
  * Grain amplitude, as a percentage of full range at GRAIN 100.
@@ -136,9 +136,9 @@ typedef struct {
     int      fx_blue;        /* 0 = off, only hues around blue */
 
     /* Split tone. Signed per channel, in 0..255 units at full strength.
-     * The shadow tint is weighted by (255 - luma) and the highlight tint
-     * by luma, so they meet in the middle rather than fighting. */
+     * 3-zone color grading wheel (shadows, midtones, highlights). */
     int      sh[3];
+    int      mid[3];
     int      hi[3];
 
     /* Halation. amount 0 disables it and costs nothing. */

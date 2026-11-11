@@ -299,8 +299,9 @@ void se_look_from_stock(const se_stock *s, int scale, se_look *lk) {
     lk->sat = 1024;
 
   for (c = 0; c < 3; c++) {
-    lk->sh[c] = (int)s->split_sh[c];
-    lk->hi[c] = (int)s->split_hi[c];
+    lk->sh[c]  = (int)s->split_sh[c];
+    lk->mid[c] = (int)s->split_mid[c];
+    lk->hi[c]  = (int)s->split_hi[c];
   }
 
   lk->grain = (int)(s->grain + 0.5f);
@@ -855,15 +856,16 @@ static void grade_row(const se_look *lk, uint8_t *row, int w)
           amt = (lk->chrome * w) >> 8;
         }
 
-        /* FX Blue is the same statement on blue hues only: the 12-sector
-         * wheel puts blue at 8, so weight by distance from it. */
+        /* FX Blue is the same statement on blue hues only: blue is at 240 degrees. */
         if (lk->fx_blue) {
           int sec = h / (1536 / SE_HUE_SECTORS);
-          int d = sec > 8 ? sec - 8 : 8 - sec;
+          int blue_sec = 8 * SE_HUE_SECTORS / 12;
+          int span = 2 * SE_HUE_SECTORS / 12;
+          int d = sec > blue_sec ? sec - blue_sec : blue_sec - sec;
           if (d > SE_HUE_SECTORS / 2) d = SE_HUE_SECTORS - d;
-          /* full at blue, zero two sectors away */
-          if (d < 2) {
-            int bw = d == 0 ? 256 : 128;
+          /* full at blue, zero outside span */
+          if (d < span) {
+            int bw = (span - d) * 256 / span;
             /* the same chroma weight as Color Chrome: a pale sky should not
              * be pushed as hard as a saturated one */
             int w = chroma > 96 ? 256 : (chroma * 256) / 96;
@@ -959,14 +961,14 @@ static void grade_row(const se_look *lk, uint8_t *row, int w)
 
         if (mrot) {
           int cs = SE_COS(mrot), sn = SE_SIN(mrot);
-          int u2 = (u * cs - v * sn) >> 8;
-          int v2 = (u * sn + v * cs) >> 8;
+          int u2 = (u * cs - v * sn + 128) >> 8;
+          int v2 = (u * sn + v * cs + 128) >> 8;
           u = u2;
           v = v2;
         }
         if (msat != 256) {
-          u = (u * msat) >> 8;
-          v = (v * msat) >> 8;
+          u = (u * msat + 128) >> 8;
+          v = (v * msat + 128) >> 8;
         }
         if (mlum != 256)
           y = (y * mlum) >> 8;
@@ -1027,12 +1029,23 @@ static void grade_row(const se_look *lk, uint8_t *row, int w)
       }
     }
 
-    if (lk->sh[0] | lk->sh[1] | lk->sh[2] | lk->hi[0] | lk->hi[1] | lk->hi[2]) {
+    if (lk->sh[0] | lk->sh[1] | lk->sh[2] |
+        lk->mid[0] | lk->mid[1] | lk->mid[2] |
+        lk->hi[0] | lk->hi[1] | lk->hi[2]) {
       int y = luma8(clamp8(rr), clamp8(gg), clamp8(bb));
-      int wl = 255 - y; /* shadow weight    */
-      rr += (lk->sh[0] * wl + lk->hi[0] * y) >> 8;
-      gg += (lk->sh[1] * wl + lk->hi[1] * y) >> 8;
-      bb += (lk->sh[2] * wl + lk->hi[2] * y) >> 8;
+      int w_sh, w_mid, w_hi;
+      if (y <= 128) {
+        w_sh  = 256 - 2 * y;
+        w_mid = 2 * y;
+        w_hi  = 0;
+      } else {
+        w_sh  = 0;
+        w_mid = 2 * (255 - y);
+        w_hi  = 256 - w_mid;
+      }
+      rr += (lk->sh[0] * w_sh + lk->mid[0] * w_mid + lk->hi[0] * w_hi) >> 8;
+      gg += (lk->sh[1] * w_sh + lk->mid[1] * w_mid + lk->hi[1] * w_hi) >> 8;
+      bb += (lk->sh[2] * w_sh + lk->mid[2] * w_mid + lk->hi[2] * w_hi) >> 8;
     }
 
     gamut_fit(&rr, &gg, &bb);
