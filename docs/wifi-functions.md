@@ -457,6 +457,18 @@ as *base register + immediate index*, and the index scheme has not been
 recovered. So the SSID/key/channel structures behind "start an AP" cannot be
 sized from here by this method.
 
+### Why a run leaves no evidence: printf does not reach the card
+
+`modules/mlwifi` originally logged with `printf()`. That goes to ML's console
+buffer and is never written to the card, so a camera run left nothing behind —
+confirmed by reading the card on 2026-11-12: `mlwifi.mo` was present and
+hash-correct, `ML/LOGS/FILMSIM.LOG` showed a boot at 19:17 the same evening, and
+**no mlwifi line existed anywhere**, because nothing was ever written.
+
+The module now has its own logger writing `ML/LOGS/MLWIFI.LOG` through
+`FIO_CreateFileOrAppend` / `FIO_WriteFile` / `FIO_CloseFile` — the same approach
+`film_sim` uses for `FILMSIM.LOG`. Read that file after a run, not `FILMSIM.LOG`.
+
 ### Not found at all
 
 - WLAN join / scan request with a usable entry point (`NT_*` names exist only as

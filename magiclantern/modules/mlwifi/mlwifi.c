@@ -30,9 +30,45 @@
 #include "config.h"
 #include "property.h"
 #include "notify_box.h"
+#include "fio-ml.h"
 
 /* Off by default: turning this to 1 is the only way the call below can run. */
 CONFIG_INT("mlwifi.allow_call", mlw_allow_call, 0);
+
+/* printf() in ML goes to the console buffer and never reaches the card, so
+ * every line here is also appended to ML/LOGS/MLWIFI.LOG. That file is the
+ * only evidence that survives a power cycle, and without it a run leaves
+ * nothing to read. Only call this from a task, never from a menu handler:
+ * it opens and closes a file. */
+static void mlw_log(const char *fmt, ...)
+{
+    char line[220];
+    int pos = snprintf(line, sizeof(line), "[%7dms][mlwifi] ", get_ms_clock());
+    if (pos < 0)
+        pos = 0;
+    if (pos < (int)sizeof(line) - 2)
+    {
+        va_list ap;
+        va_start(ap, fmt);
+        int n = vsnprintf(line + pos, sizeof(line) - pos - 1, fmt, ap);
+        va_end(ap);
+        if (n > 0)
+            pos += n;
+        if (pos >= (int)sizeof(line) - 1)
+            pos = sizeof(line) - 2;
+    }
+    line[pos++] = '\n';
+    line[pos] = 0;
+
+    printf("%s", line);
+
+    FILE *f = FIO_CreateFileOrAppend("ML/LOGS/MLWIFI.LOG");
+    if (f)
+    {
+        FIO_WriteFile(f, line, pos);
+        FIO_CloseFile(f);
+    }
+}
 
 /* The network property block. Every id is registered as its own handler through
  * the module's own property table: ML unregisters those on module unload
@@ -297,21 +333,21 @@ static void mlw_probe_task(void *unused)
     };
     int i, ok = 0;
 
-    printf("probe: begin");
+    mlw_log("probe: begin");
     for (i = 0; i < COUNT(t); i++) {
         if (!mlw_readable(t[i].addr)) {
-            printf("probe: %s 0x%08x outside the flash window", t[i].name, t[i].addr);
+            mlw_log("probe: %s 0x%08x outside the flash window", t[i].name, t[i].addr);
             continue;
         }
         /* first word of each function: the ARM prologue. 0xE92Dxxxx is
          * `push {..., lr}`, which is what every one of these starts with. */
         uint32_t w = mlw_first_word(t[i].addr);
         int prologue = (w & 0x0FFF0000u) == 0x092D0000u && (w & 0x4000u);
-        printf("probe: %-16s 0x%08x first word 0x%08x %s",
+        mlw_log("probe: %-16s 0x%08x first word 0x%08x %s",
                 t[i].name, t[i].addr, w, prologue ? "prologue" : "NOT a prologue");
         if (prologue) ok++;
     }
-    printf("probe: %d of %d look like functions; logging routine at 0x%08x",
+    mlw_log("probe: %d of %d look like functions; logging routine at 0x%08x",
             ok, COUNT(t), MLW_LOG_CALL);
     NotifyBox(2000, "mlwifi: %d/%d WiFi functions found", ok, COUNT(t));
 }
@@ -333,23 +369,23 @@ static void mlw_call_task(void *unused)
     (void)unused;
 
     if (!mlw_readable(MLW_NWCOM_INIT)) {
-        printf("call: NWCOM Init 0x%08x is outside the flash window", MLW_NWCOM_INIT);
+        mlw_log("call: NWCOM Init 0x%08x is outside the flash window", MLW_NWCOM_INIT);
         NotifyBox(3000, "mlwifi: address not in flash");
         return;
     }
 
     uint32_t w = mlw_first_word(MLW_NWCOM_INIT);
-    printf("call: NWCOM Init 0x%08x first word 0x%08x", MLW_NWCOM_INIT, w);
+    mlw_log("call: NWCOM Init 0x%08x first word 0x%08x", MLW_NWCOM_INIT, w);
     if (((w & 0x0FFF0000u) != 0x092D0000u) || !(w & 0x4000u)) {
-        printf("call: refused, first word is not an ARM prologue");
+        mlw_log("call: refused, first word is not an ARM prologue");
         NotifyBox(4000, "mlwifi: 0x%x is not a function entry", MLW_NWCOM_INIT);
         return;
     }
 
-    printf("call: entering NWCOM Init with r0-r3 = 0");
+    mlw_log("call: entering NWCOM Init with r0-r3 = 0");
     mlw_fn4 fn = (mlw_fn4)MLW_NWCOM_INIT;
     int rc = fn(0, 0, 0, 0);
-    printf("call: NWCOM Init returned 0x%08x", (uint32_t)rc);
+    mlw_log("call: NWCOM Init returned 0x%08x", (uint32_t)rc);
     NotifyBox(4000, "NWCOM Init -> 0x%x", (uint32_t)rc);
 }
 
@@ -377,12 +413,12 @@ static void mlw_watch_task(void *unused)
     for (k = 0; k < MLW_NIDS; k++)
         shadow[k] = *mlw_ptrs[k];
 
-    printf("watch: begin, %d ids, block 0x80030000..0x8003003f + 0x80010000", MLW_NIDS);
+    mlw_log("watch: begin, %d ids, block 0x80030000..0x8003003f + 0x80010000", MLW_NIDS);
 
     for (k = 0; k < MLW_NIDS; k++)
     {
         if (shadow[k])
-            printf("state: 0x%x = %d", (int)mlw_ids[k], (int)shadow[k]);
+            mlw_log("state: 0x%x = %d", (int)mlw_ids[k], (int)shadow[k]);
     }
 
     for (i = 0; i < 30; i++)
@@ -392,14 +428,14 @@ static void mlw_watch_task(void *unused)
         {
             if (*mlw_ptrs[k] != shadow[k])
             {
-                printf("change: 0x%x %d -> %d",
+                mlw_log("change: 0x%x %d -> %d",
                        (int)mlw_ids[k], (int)shadow[k], (int)*mlw_ptrs[k]);
                 shadow[k] = *mlw_ptrs[k];
             }
         }
     }
 
-    printf("watch: done");
+    mlw_log("watch: done");
 }
 
 static void mlw_watch(void *priv, int delta)
