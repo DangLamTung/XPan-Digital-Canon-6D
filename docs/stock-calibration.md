@@ -29,15 +29,15 @@ Every stock is measured with the same system the 50D audit used:
 | Acros 100 | 6.62 | 2.23 | 2.22 | 101/101 | 0.07 / 2.49 |
 | Ektachrome E100 | 6.48 | 4.56 | 4.42 | 25/101 | 0.08 / 0.62 |
 | Velvia 50 | 5.31 | 5.43 | 5.32 | 15/101 | 0.26 / 0.30 |
-| PORTRA 160NC | 4.54 | — | — | — | — |
-| CINESTILL 800T | 4.45 | — | — | — | — |
 | XP2 Super | 4.38 | 1.78 | 1.66 | 100/101 | 0.02 / 0.73 |
-| VELVIA 100 | 4.32 | — | — | — | — |
-| PORTRA 160VC | 4.16 | — | — | — | — |
 
 Every stock with a Dehancer corpus improved. Largest moves: Portra 800 12.73 → 3.66,
 ColorPlus 200 13.69 → 3.94, Gold 200 12.50 → 3.96, Pro 400H 12.00 → 3.97,
 XP2 Super 4.38 → 1.78 (100/101 at ≤4.0).
+| Portra 160Nc (new) | — | 4.54 | 4.50 | 33/101 | 10.53 / 8.71 |
+| Cinestill 800T (new) | — | 4.45 | 4.34 | 29/101 | 0.13 / 0.43 |
+| Velvia 100 (new) | — | 4.32 | 4.20 | 39/101 | 0.73 / 3.00 |
+| Portra 160Vc (new) | — | 4.16 | 4.06 | 49/101 | 8.31 / 5.96 |
 
 ## Method that worked
 
@@ -58,5 +58,6 @@ XP2 Super 4.38 → 1.78 (100/101 at ≤4.0).
 
 - **Monochrome stocks have no per-hue stage** (HP5 5.89, Acros 4.41): their residual is
   tone/contrast only, so it needs curve work, not the matrix.
-- **Four corpora have no recipe**: CineStill-800T, Portra-160NC, Portra-160VC, Velvia-100.
+- **Four corpora now have first-pass recipes** (800T 4.45, 160NC 4.54, 160VC 4.16, Velvia 100 4.32);
+  they need the per-hue group pass before they are finished.
 - **ColorChecker parity only certified for 50D** — other stocks need a Dehancer chart export.
