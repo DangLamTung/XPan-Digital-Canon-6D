@@ -4960,15 +4960,20 @@ static void fs_frame_apply(const char *stock_path) {
   f.brand_colour[2] = 0x00;
   snprintf(f.model, sizeof f.model, "%s", base);
   snprintf(f.stock, sizeof f.stock, "%s", film->name);
-  f.brand_i = fs_frame_brand(film->name, f.brand_fg);
-  if (f.brand_i < 0) {
-    art = fs_frame_art(film->name, &aw, &ah);
-    if (art) {
-      f.sprite = art;
-      f.sprite_w = aw;
-      f.sprite_h = ah;
-      f.sprite_scale = 2;
-    }
+  /*
+   * Per stock first: the canister in CANS.DAT is that stock's own artwork.
+   * The brand mark is the fallback, for a card with no art file or a stock
+   * the artwork does not cover.
+   */
+  art = fs_frame_art(film->name, &aw, &ah);
+  if (art) {
+    f.sprite = art;
+    f.sprite_w = aw;
+    f.sprite_h = ah;
+    f.sprite_scale = 2;
+    f.brand_i = -1;
+  } else {
+    f.brand_i = fs_frame_brand(film->name, f.brand_fg);
   }
   se_frame_layout(&f);
   fs_frame_exposure(&f);
