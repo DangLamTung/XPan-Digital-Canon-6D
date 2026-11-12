@@ -42,10 +42,14 @@ camera on the left and the exposure on the right.
   mask and drawn 1:1 in Canon red `#CC0000`. The mark is a Canon trademark and
   is used here only to label photographs the camera took; it is not part of
   this project's licence.
-- **Type**: rasterised Arial, proportional and baseline-aligned, 12 px at
-  scale 1 — not a 5x7 glyph grid, which reads as a camera overlay rather than
-  as print. Two tables are baked into `frame.c`: the wordmark bitmap and the
-  per-glyph bitmaps with their widths and advances.
+- **Stock icon**: the film's canister from `ML/FILMSIM/CANS.DAT` — the same
+  art the shelf shows (`fsg_can_thumb`), drawn at 2x in the middle of the
+  band. If artwork is disabled (`film.sim.art=0`) or the file is missing, the
+  stock name is drawn as text instead.
+- **Type**: anti-aliased coverage from Helvetica Neue, proportional and
+  baseline-aligned, 28 px — not a thresholded 5x7 grid, which reads as a
+  camera overlay rather than as print. The glyph table stores 8-bit coverage
+  and the compositor blends it into the paper.
 
 ## Where it lives
 

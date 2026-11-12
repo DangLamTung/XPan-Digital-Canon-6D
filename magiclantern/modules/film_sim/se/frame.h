@@ -34,6 +34,9 @@ typedef struct {
     uint8_t      dim[3];       /* model line and column labels */
     uint8_t      brand_colour[3];  /* wordmark; a brand colour, or fg */
     char         model[SE_FRAME_LINE];   /* "EOS 6D" */
+    char         stock[SE_FRAME_LINE];   /* fallback text when there is no art */
+    const uint8_t *sprite;    /* stock canister, RGB, sprite_w x sprite_h */
+    int          sprite_w, sprite_h, sprite_scale;
     char         label[3][8];            /* "f", "SS", "ISO" */
     char         value[3][12];           /* "2.8", "1/200", "400" */
 } se_frame;

@@ -4895,9 +4895,30 @@ static void fs_frame_exposure(se_frame *f) {
 
 /* Apply the film frame, or clear it, before a develop. Opt-in: the config
  * defaults to off, and a null frame leaves the file exactly as before. */
+/* The stock's canister from CANS.DAT, the same art the shelf shows. */
+static const unsigned char *fs_frame_art(const char *name, int *w, int *h) {
+  static int tried;
+  int idx;
+
+  if (!film_sim_art) return NULL;
+  if (!tried) {
+    tried = 1;
+    if (!fsg_can_load(FSG_CAN_PATH))
+      fsg_can_load(FSG_CAN_PATH2);
+    fsg_can_thumbs();
+  }
+  idx = fs_can_index(name);
+  if (idx < 0) return NULL;
+  return fsg_can_thumb(idx, w, h);
+}
+
 static void fs_frame_apply(const char *stock_path) {
   se_frame f;
   const char *base;
+  int count = (film_active_count > 0) ? film_active_count : FILM_COUNT;
+  const film_xml_t *film = &film_active_table[fs_develop_stock_index(count)];
+  int aw = 0, ah = 0;
+  const unsigned char *art;
 
   (void)stock_path;
   if (!film_sim_frame) { se_cam_set_frame(NULL); return; }
@@ -4914,6 +4935,15 @@ static void fs_frame_apply(const char *stock_path) {
   f.brand_colour[1] = 0x00;
   f.brand_colour[2] = 0x00;
   snprintf(f.model, sizeof f.model, "%s", base);
+  snprintf(f.stock, sizeof f.stock, "%s", film->name);
+  art = fs_frame_art(film->name, &aw, &ah);
+  if (art) {
+    f.sprite = art;
+    f.sprite_w = aw;
+    f.sprite_h = ah;
+    f.sprite_scale = 2;
+  }
+  se_frame_layout(&f);
   fs_frame_exposure(&f);
   se_cam_set_frame(&f);
 }
