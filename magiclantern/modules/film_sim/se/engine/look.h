@@ -66,6 +66,18 @@
 #define SE_HUE_FULL 8
 
 /*
+ * Chroma at which the per-hue LUMA stage reaches full strength.
+ *
+ * Wider than SE_HUE_FULL because luma, unlike saturation and rotation, is
+ * visible on a near-neutral patch: a white shirt at 8% saturation still shows
+ * a 10% brightness modulation as blotches, while the same modulation on a
+ * saturated sea or a skin tone is the shaping we want. Fading luma only below
+ * this threshold keeps the per-hue lift on real colour and drops it on the
+ * near-greys that cannot carry it.
+ */
+#define SE_HUE_LUM_FULL 32
+
+/*
  * Grain amplitude, as a percentage of full range at GRAIN 100.
  *
  * Shared rather than written twice because tools/lookcheck.c computes the

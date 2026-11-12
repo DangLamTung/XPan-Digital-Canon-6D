@@ -155,6 +155,7 @@ static int hue1536(int r, int g, int b, int *chroma) {
 /* (chroma * 256) / SE_HUE_FULL for every chroma: the hue fade is per pixel and
  * a divide costs ~100 cycles on these bodies. */
 static uint16_t s_fade[SE_HUE_FULL + 1];
+static uint16_t s_lfade[SE_HUE_LUM_FULL + 1];
 static int s_fade_ready;
 
 static void fade_init(void) {
@@ -162,6 +163,8 @@ static void fade_init(void) {
     return;
   for (int i = 0; i <= SE_HUE_FULL; i++)
     s_fade[i] = (uint16_t)((i * 256) / SE_HUE_FULL);
+  for (int i = 0; i <= SE_HUE_LUM_FULL; i++)
+    s_lfade[i] = (uint16_t)((i * 256) / SE_HUE_LUM_FULL);
   s_fade_ready = 1;
 }
 
@@ -955,8 +958,16 @@ static void grade_row(const se_look *lk, uint8_t *row, int w)
         if (chroma < SE_HUE_FULL) {
           int wt = s_fade[chroma]; /* (chroma * 256) / SE_HUE_FULL */
           msat = 256 + (((msat - 256) * wt) >> 8);
-          mlum = 256 + (((mlum - 256) * wt) >> 8);
           mrot = (mrot * wt) >> 8;
+        }
+        /*
+         * Luma fades out over a wider chroma range than saturation and
+         * rotation: a near-neutral highlight cannot carry a per-hue
+         * brightness step, and at 8% saturation it reads as blotches.
+         */
+        if (chroma < SE_HUE_LUM_FULL) {
+          int wl = s_lfade[chroma]; /* (chroma * 256) / SE_HUE_LUM_FULL */
+          mlum = 256 + (((mlum - 256) * wl) >> 8);
         }
 
         if (mrot) {
