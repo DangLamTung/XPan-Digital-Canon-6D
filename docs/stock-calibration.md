@@ -13,16 +13,16 @@ Every stock is measured with the same system the 50D audit used:
 
 ## Standings
 
-| Stock | Baseline | Now | Median | ≤4.0 | Blown % (ours / Dehancer) |
+| Stock | Baseline | Verified | Median | ≤4.0 | Blown % (ours / Dehancer) |
 |---|---|---|---|---|---|
 | Velvia 50 | 8.31 | 4.87 | 4.76 | 25/101 | 0.11 / 0.30 |
 | Kodachrome 64 | 11.76 | 4.84 | 4.81 | 13/101 | 0.23 / 3.87 |
 | Portra 160 | 6.94 | 4.46 | 4.42 | 33/101 | 6.73 / 6.84 |
 | Ektar 100 | 10.95 | 4.40 | 4.29 | 41/101 | 0.07 / 2.81 |
 | CineStill 800T | new | 4.17 | 4.14 | 46/101 | 0.05 / 0.43 |
-| Cinestill 50D | 4.51 | 4.12 | 3.56 | 44/101 | 0.07 / 2.52 |
+| Cinestill 50D | 4.51 | 4.14 | 4.11 | 45/101 | 0.08 / 2.57 |
 | Portra 160NC | new | 4.06 | 4.04 | 50/101 | 9.06 / 8.71 |
-| Pro 400H | 12.00 | 3.98 | 3.98 | 53/101 | 0.22 / 3.79 |
+| Pro 400H | 12.00 | 3.97 | 4.00 | 51/101 | 0.15 / 3.79 |
 | Velvia 100 | new | 3.94 | 3.85 | 61/101 | 0.58 / 3.00 |
 | Portra 160VC | new | 3.73 | 3.58 | 68/101 | 6.82 / 5.96 |
 | Portra 800 | 12.73 | 3.66 | 3.67 | 73/101 | 0.03 / 2.03 |
@@ -35,7 +35,7 @@ Every stock is measured with the same system the 50D audit used:
 | Acros 100 | 6.62 | 2.23 | 2.22 | 101/101 | 0.07 / 2.49 |
 | XP2 Super | 4.38 | 1.78 | 1.66 | 100/101 | 0.02 / 0.73 |
 
-Every stocked corpus improved. Largest moves: Portra 800 12.73 → 3.66,
+Every verified corpus improved. Largest moves: Portra 800 12.73 → 3.66,
 ColorPlus 200 13.69 → 3.94, Gold 200 12.50 → 3.52, Pro 400H 12.00 → 3.97,
 XP2 Super 4.38 → 1.78 (100/101 ≤4.0), Provia 100F 9.23 → 2.96.
 
