@@ -60,6 +60,13 @@ The table above is regenerated from a **verification run**: every row re-rendere
 committed `.fs` file into `renders/stocks/verify-<corpus>/`, not from a tuning copy. Numbers
 match the tuning history to within 0.02.
 
+## Shipping to the camera
+
+The calibrated recipes and the engine change are built into the firmware by
+`ci/release-build.sh` and deployed to the card by `install-sd.sh`, which copies
+`magiclantern/modules/film_sim/films/*.fs` into `ML/FILM/` and verifies every
+file by SHA-256. See `docs/firmware-release.md`.
+
 ## Still open
 
 - **Ektar 100 / Ektachrome E100**: saturation fixed (SAT 100 / 95); if the owner still prefers
