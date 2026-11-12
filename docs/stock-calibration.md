@@ -15,7 +15,7 @@ Every stock is measured with the same system the 50D audit used:
 
 | Stock | Baseline | Now | Median | ≤4.0 | Blown % (ours / Dehancer) |
 |---|---|---|---|---|---|
-| Kodachrome 64 | 11.76 | 5.75 | 5.76 | 2/101 | 3.37 / 3.87 |
+| Kodachrome 64 | 11.76 | 5.41 | 5.35 | 2/101 | 3.41 / 3.87 |
 | Velvia 50 | 8.31 | 5.31 | 5.24 | 19/101 | 0.18 / 0.30 |
 | Ektar 100 | 10.95 | 4.93 | 4.84 | 21/101 | 0.13 / 2.81 |
 | Ektachrome E100 | 6.48 | 4.56 | 4.42 | 25/101 | 0.08 / 0.62 |
