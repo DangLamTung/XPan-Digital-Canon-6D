@@ -37,8 +37,11 @@ camera on the left and the exposure on the right.
 - **Paper**: white (`#FFFFFF`) with a dark keyline where the border meets the
   picture. The text colours derive from the paper's luma, so the same layout
   works if the paper colour is changed.
-- **Wordmark**: the `Canon` wordmark is a baked 1-bit bitmap (115x26) drawn in
-  Canon red `#CC0000`; at scale 2 it is 230 px wide on a 2736 px develop.
+- **Wordmark**: the official `Canon` wordmark — sourced from Wikimedia Commons
+  (`Canon_wordmark.svg`, a PD-textlogo file), rasterised to a 240x50 1-bit
+  mask and drawn 1:1 in Canon red `#CC0000`. The mark is a Canon trademark and
+  is used here only to label photographs the camera took; it is not part of
+  this project's licence.
 - **Type**: rasterised Arial, proportional and baseline-aligned, 12 px at
   scale 1 — not a 5x7 glyph grid, which reads as a camera overlay rather than
   as print. Two tables are baked into `frame.c`: the wordmark bitmap and the
