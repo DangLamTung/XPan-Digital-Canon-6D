@@ -54,11 +54,30 @@ XP2 Super 4.38 → 1.78 (100/101 ≤4.0), Provia 100F 9.23 → 2.96.
 5. **Fit on panes, score on the production path.** Parameters fitted on 16-20 frames at pane
    geometry, then the full 101-frame corpus rendered at 3000×2000.
 
+## Verification
+
+The table above is regenerated from a **verification run**: every row re-rendered from the
+committed `.fs` file into `renders/stocks/verify-<corpus>/`, not from a tuning copy. Numbers
+match the tuning history to within 0.02.
+
 ## Still open
 
-- **Ektar 100 / Ektachrome E100**: the calibrated versions measure closer to Dehancer
-  (4.93 / 4.56 vs 10.95 / 6.48) but the owner prefers the original look; decision pending.
-- **Kodachrome 64** (5.75) is the last stock above 5. Its residual is saturated-blue and
-  green-hue behaviour, not tone.
-- **Portra 160NC/VC** clip above their reference (10.5/8.3 % vs 8.7/6.0 %).
-- **ColorChecker parity** is only certified for 50D; other stocks need a Dehancer chart export.
+- **Ektar 100 / Ektachrome E100**: saturation fixed (SAT 100 / 95); if the owner still prefers
+  the original *tone*, reverting either is a one-command checkout.
+- **Portra 160NC/VC** clip marginally above their reference (9.06/6.82 % vs 8.71/5.96 %);
+  capping the curve costs 0.1-0.2 dE, so it was left alone deliberately.
+- **ColorChecker parity** is certified only for 50D. The other 18 stocks get the QA pass
+  (neutral chroma, grayscale ladder, clipping) but need a Dehancer chart export per stock
+  before 24-patch parity can be scored.
+- **Monochrome stocks** (HP5, Acros, XP2) have no per-hue matrix; their remaining error is
+  tone and tint only.
+
+## Reproduce one stock
+
+```bash
+P=/Users/tungdl/.cache/probe-venv/bin/python3
+cd /Users/tungdl/Documents/MagicLatern
+$P magiclantern/modules/film_sim/tools/calib/stock_eval.py \
+   --stock "Velvia 50" --fs magiclantern/modules/film_sim/films/velvia.fs \
+   --corpus xpan_comparisons/stocks/Velvia-50 --out /tmp/velvia-check
+```
