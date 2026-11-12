@@ -28,7 +28,12 @@ Every stock is measured with the same system the 50D audit used:
 | Portra 160 | 6.94 | 4.46 | 4.42 | 33/101 | 6.73 / 6.84 |
 | Acros 100 | 6.62 | 2.23 | 2.22 | 101/101 | 0.07 / 2.49 |
 | Ektachrome E100 | 6.48 | 4.56 | 4.42 | 25/101 | 0.08 / 0.62 |
+| Velvia 50 | 5.31 | 5.43 | 5.32 | 15/101 | 0.26 / 0.30 |
+| PORTRA 160NC | 4.54 | — | — | — | — |
+| CINESTILL 800T | 4.45 | — | — | — | — |
 | XP2 Super | 4.38 | 1.78 | 1.66 | 100/101 | 0.02 / 0.73 |
+| VELVIA 100 | 4.32 | — | — | — | — |
+| PORTRA 160VC | 4.16 | — | — | — | — |
 
 Every stock with a Dehancer corpus improved. Largest moves: Portra 800 12.73 → 3.66,
 ColorPlus 200 13.69 → 3.94, Gold 200 12.50 → 3.96, Pro 400H 12.00 → 3.97,
