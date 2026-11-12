@@ -23,7 +23,7 @@ HUE_ROT   -1.1,-0.9,-0.9,-1.2,-1.7,-2.3,-2.7,-3.0,-3.1,-3.0,-2.8,-2.3,-1.6,-0.9,
 HUE_LUM   102,102,102,102,102,102,102,102,100,100,100,100,100,100,100,100,94,94,94,94,96,96,96,96,99,99,99,99,101,101,101,101,99,99,99,99,103,103,103,103,104,104,104,104,104,104,104,104
 SPLIT_SH  4,2,-1
 SPLIT_HI  0,0,0
-HALATION  95 206 20
+HALATION  95 200 36
 HAL_TINT  255,96,48
 # 14, not 20: at 20 the grain read as blotches on a smooth subject, which is
 # not what a 400-speed colour negative does. Measured on a flat patch, the
