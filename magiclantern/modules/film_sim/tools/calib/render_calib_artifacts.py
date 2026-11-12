@@ -276,3 +276,4 @@ def render_real_frames_artifacts():
 if __name__ == "__main__":
     render_colorchecker_artifact()
     render_real_frames_artifacts()
+
