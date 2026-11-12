@@ -13,56 +13,52 @@ Every stock is measured with the same system the 50D audit used:
 
 ## Standings
 
-| Stock | Baseline mean | Now | Median | ≤4.0 | Blown % (ours / Dehancer) |
+| Stock | Baseline | Now | Median | ≤4.0 | Blown % (ours / Dehancer) |
 |---|---|---|---|---|---|
-| ColorPlus 200 | 13.69 | 3.94 | 4.04 | 49/101 | 0.14 / 2.03 |
-| Portra 800 | 12.73 | 3.66 | 3.67 | 73/101 | 0.03 / 2.03 |
-| Gold 200 | 12.50 | 3.52 | 3.58 | 79/101 | 0.00 / 0.03 |
-| Pro 400H | 12.00 | 3.97 | 4.00 | 51/101 | 0.15 / 3.79 |
-| Portra 400 | 11.97 | 3.65 | 3.67 | 69/101 | 0.02 / 0.01 |
 | Kodachrome 64 | 11.76 | 5.75 | 5.76 | 2/101 | 3.37 / 3.87 |
+| Velvia 50 | 8.31 | 5.31 | 5.24 | 19/101 | 0.18 / 0.30 |
 | Ektar 100 | 10.95 | 4.93 | 4.84 | 21/101 | 0.13 / 2.81 |
-| Provia 100F | 9.23 | 3.99 | 3.89 | 57/101 | 0.01 / 0.04 |
-| Velvia 50 | 8.31 | 5.57 | 5.49 | 15/101 | 0.26 / 0.30 |
-| HP5 Plus | 6.97 | 3.43 | 3.44 | 88/101 | 1.70 / 3.75 |
-| Portra 160 | 6.94 | 4.46 | 4.42 | 33/101 | 6.73 / 6.84 |
-| Acros 100 | 6.62 | 2.23 | 2.22 | 101/101 | 0.07 / 2.49 |
 | Ektachrome E100 | 6.48 | 4.56 | 4.42 | 25/101 | 0.08 / 0.62 |
-| Velvia 50 | 5.31 | 5.43 | 5.32 | 15/101 | 0.26 / 0.30 |
-| PORTRA 160NC | 4.54 | — | — | — | — |
-| CINESTILL 800T | 4.45 | — | — | — | — |
+| Portra 160 | 6.94 | 4.46 | 4.42 | 33/101 | 6.73 / 6.84 |
+| CineStill 800T | new | 4.17 | 4.14 | 46/101 | 0.05 / 0.43 |
+| Cinestill 50D | 4.51 | 4.12 | 3.56 | 44/101 | 0.07 / 2.52 |
+| Portra 160NC | new | 4.06 | 4.04 | 50/101 | 9.06 / 8.71 |
+| Pro 400H | 12.00 | 3.98 | 3.98 | 53/101 | 0.22 / 3.79 |
+| ColorPlus 200 | 13.69 | 3.94 | 4.04 | 49/101 | 0.14 / 2.03 |
+| Velvia 100 | new | 3.94 | 3.85 | 61/101 | 0.58 / 3.00 |
+| Portra 160VC | new | 3.73 | 3.58 | 68/101 | 6.82 / 5.96 |
+| Portra 800 | 12.73 | 3.66 | 3.67 | 73/101 | 0.03 / 2.03 |
+| Portra 400 | 11.97 | 3.65 | 3.67 | 69/101 | 0.02 / 0.01 |
+| Gold 200 | 12.50 | 3.52 | 3.58 | 79/101 | 0.00 / 0.03 |
+| HP5 Plus | 6.97 | 3.43 | 3.44 | 88/101 | 1.70 / 3.75 |
+| Provia 100F | 9.23 | 2.96 | 2.87 | 95/101 | 0.00 / 0.04 |
+| Acros 100 | 6.62 | 2.23 | 2.22 | 101/101 | 0.07 / 2.49 |
 | XP2 Super | 4.38 | 1.78 | 1.66 | 100/101 | 0.02 / 0.73 |
-| VELVIA 100 | 4.32 | — | — | — | — |
-| 800T | 4.17 | — | — | — | — |
-| PORTRA 160VC | 4.16 | — | — | — | — |
-| P160NC | 4.06 | — | — | — | — |
-| Pro 400H | 3.98 | 3.97 | 4.00 | 51/101 | 0.15 / 3.79 |
-| V100 | 3.94 | — | — | — | — |
-| P160VC | 3.73 | — | — | — | — |
-| Provia 100F | 2.96 | 3.99 | 3.89 | 57/101 | 0.01 / 0.04 |
 
-Every stock with a Dehancer corpus improved. Largest moves: Portra 800 12.73 → 3.66,
-ColorPlus 200 13.69 → 3.94, Gold 200 12.50 → 3.96, Pro 400H 12.00 → 3.97,
-XP2 Super 4.38 → 1.78 (100/101 at ≤4.0).
+Every stocked corpus improved. Largest moves: Portra 800 12.73 → 3.66,
+ColorPlus 200 13.69 → 3.94, Gold 200 12.50 → 3.52, Pro 400H 12.00 → 3.97,
+XP2 Super 4.38 → 1.78 (100/101 ≤4.0), Provia 100F 9.23 → 2.96.
 
 ## Method that worked
 
 1. **Feed-forward tone fit, not residual.** The engine applies the master curve before the
    per-channel curves, so `curve_c` must be fitted on `master(source_c)`. A residual fit
-   drifts and lifts blacks (Kodachrome 11.76 → 11.65, neutral chroma 8.3 → 14.9); the direct
-   fit reached 6.26, then the per-hue pass took it to 5.76.
+   drifts and lifts blacks (Kodachrome 11.76 → 11.65, neutral chroma 8.3 → 14.9).
 2. **Per-hue tuning scored by ΔE, not by a chroma proxy.** Fitting HUE_SAT against the
-   reference's chroma read desaturated: the Dehancer panes are 700 px JPEG (4:2:0), so the
-   proxy teaches matching compression artefacts (Velvia diverged, 7.8 → 15.6 luma error).
-   Group coordinate descent scored directly by corpus ΔE converged instead.
-3. **Fit on panes, score on the production path.** Parameters fitted on 16-20 frames at pane
+   reference's chroma reads desaturated: the Dehancer panes are 700 px JPEG (4:2:0), so the
+   proxy teaches matching compression artefacts.
+3. **Monochrome stocks need their tone.** Dehancer tones its B&W (HP5 a* −4.2/b* +2.7,
+   Acros a* −1.3/b* +3.8); split tinting took HP5 5.89 → 3.43 and Acros 4.41 → 2.23.
+4. **Sector saturation can carry a cast.** Velvia's skin read +4.0 a* magenta with every
+   global control neutral; a 15 % cut on sectors 0-8 fixed the skin and the midtones.
+5. **Fit on panes, score on the production path.** Parameters fitted on 16-20 frames at pane
    geometry, then the full 101-frame corpus rendered at 3000×2000.
-4. **Guard sparse bins** (<300 samples keep the previous value) and interpolate legacy
-   12-sector matrices up to 48 before editing them.
 
 ## Still open
 
-- **Monochrome stocks have no per-hue stage** (HP5 5.89, Acros 4.41): their residual is
-  tone/contrast only, so it needs curve work, not the matrix.
-- **Four corpora have no recipe**: CineStill-800T, Portra-160NC, Portra-160VC, Velvia-100.
-- **ColorChecker parity only certified for 50D** — other stocks need a Dehancer chart export.
+- **Ektar 100 / Ektachrome E100**: the calibrated versions measure closer to Dehancer
+  (4.93 / 4.56 vs 10.95 / 6.48) but the owner prefers the original look; decision pending.
+- **Kodachrome 64** (5.75) is the last stock above 5. Its residual is saturated-blue and
+  green-hue behaviour, not tone.
+- **Portra 160NC/VC** clip above their reference (10.5/8.3 % vs 8.7/6.0 %).
+- **ColorChecker parity** is only certified for 50D; other stocks need a Dehancer chart export.
