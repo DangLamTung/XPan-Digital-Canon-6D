@@ -16,9 +16,7 @@ static const int cc_in[N_TARGETS][3] = {
   {115,82,68},{194,150,130},{98,122,157},{87,108,67},{133,128,177},{103,189,170},
   {214,126,44},{80,91,166},{193,90,99},{94,60,108},{157,188,64},{224,163,46},
   {56,61,150},{70,148,73},{175,54,60},{231,199,31},{187,86,149},{8,133,161},
-  {243,243,242},{200,200,200},{160,160,160},{122,122,121},{85,85,85},{52,52,52},
-  {201, 87, 86}, // 25. Real Upper Lip Highlight
-  {166, 51, 48}  // 26. Real Lower Lip Vermilion
+  {243,243,242},{200,200,200},{160,160,160},{122,122,121},{85,85,85},{52,52,52}
 };
 
 static const int deh_out[N_TARGETS][3] = {
@@ -45,17 +43,14 @@ static const int deh_out[N_TARGETS][3] = {
   {140, 148, 150},// 21. Neutral 6.5
   {101, 100, 97}, // 22. Neutral 5
   {63, 55, 52},   // 23. Neutral 3.5
-  {35, 28, 24},   // 24. Black 2
-  {222, 126, 112},// 25. Target Real Upper Lip
-  {184,  87,  71} // 26. Target Real Lower Lip
+  {35, 28, 24}    // 24. Black 2
 };
 
 static const char *patch_names[N_TARGETS] = {
   "Dark Skin", "Light Skin", "Blue Sky", "Foliage", "Blue Flower", "Bluish Green",
   "Orange", "Purplish Blue", "Moderate Red", "Purple", "Yellow Green", "Orange Yellow",
   "Blue", "Green", "Red", "Yellow", "Magenta", "Cyan",
-  "White 9.5", "Neutral 8", "Neutral 6.5", "Neutral 5", "Neutral 3.5", "Black 2",
-  "Upper Lip", "Lower Lip"
+  "White 9.5", "Neutral 8", "Neutral 6.5", "Neutral 5", "Neutral 3.5", "Black 2"
 };
 
 static void rgb2lab(double r, double g, double b, double *L, double *A, double *B)
@@ -188,6 +183,11 @@ int main(int argc, char **argv)
 
   double best_score = eval_stock(&best_st, des, rgbs);
   printf("Starting Score: %f\n", best_score);
+  for (int i = 0; i < N_TARGETS; i++) {
+    printf("Initial %2d. %-15s Deh=(%3d,%3d,%3d) ML=(%3d,%3d,%3d) dE00=%.2f\n",
+           i+1, patch_names[i], deh_out[i][0], deh_out[i][1], deh_out[i][2],
+           rgbs[i][0], rgbs[i][1], rgbs[i][2], des[i]);
+  }
 
   cur_st = best_st;
 
@@ -247,6 +247,8 @@ int main(int argc, char **argv)
       }
     }
 
+    // Curves and Split Toning remain locked to locked neutral calibrations
+#if 0
     // 2. Fine-tune master curve interior knots
     for (k = 1; k < cur_st.master.n - 1; k++) {
       uint8_t orig_y = cur_st.master.y[k];
@@ -305,6 +307,7 @@ int main(int argc, char **argv)
         }
       }
     }
+#endif
 
     if (!improved) break;
   }
@@ -319,7 +322,6 @@ int main(int argc, char **argv)
            rgbs[i][0], rgbs[i][1], rgbs[i][2], des[i]);
   }
   printf("ColorChecker 24-Patch Mean dE00: %.2f\n", sum_chart_de / 24.0);
-  printf("Upper Lip dE00: %.2f | Lower Lip dE00: %.2f\n", des[24], des[25]);
 
   // Write new recipe
   FILE *out_f = fopen("../../films/50D_24sec.fs", "w");
