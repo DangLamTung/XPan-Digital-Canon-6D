@@ -322,6 +322,7 @@ void se_look_from_stock(const se_stock *s, int scale, se_look *lk) {
     lk->mat_hi_any = any_hi && any;
   }
 
+  lk->hsl = s->hsl_set;
   lk->sat = s->sat_set ? (int)(s->sat * 2.56f + 0.5f) : 256;
   if (lk->sat < 0)
     lk->sat = 0;
@@ -1003,18 +1004,43 @@ static void grade_row(const se_look *lk, uint8_t *row, int w)
          * bead every 30 degrees sits ON a knot instead of halfway between
          * two, which is the whole reason for the count.
          */
-        int sec = h / (1536 / SE_HUE_SECTORS);
-        int f   = h % (1536 / SE_HUE_SECTORS);
-        int nx  = (sec + 1) % SE_HUE_SECTORS;
-        int msat = lk->hue_sat[sec] +
-                   (((lk->hue_sat[nx] - lk->hue_sat[sec]) * f)
-                    / (1536 / SE_HUE_SECTORS));
-        int mlum = lk->hue_lum[sec] +
-                   (((lk->hue_lum[nx] - lk->hue_lum[sec]) * f)
-                    / (1536 / SE_HUE_SECTORS));
-        int mrot = lk->hue_rot[sec] +
-                   (((lk->hue_rot[nx] - lk->hue_rot[sec]) * f)
-                    / (1536 / SE_HUE_SECTORS));
+        int msat, mlum, mrot;
+        if (lk->hsl) {
+          /*
+           * Lightroom's eight bands: Red 0, Orange 30, Yellow 60, Green 120,
+           * Aqua 180, Blue 240, Purple 270, Magenta 300, with triangular
+           * falloff between the centres. A colour halfway between two bands
+           * gets half of each, which is what the eye expects from those
+           * sliders and what the 96-knot table could not express: its knots
+           * only move one neighbouring step, so a band had almost no reach.
+           */
+          static const int cent[8] = { 0, 128, 256, 512, 768, 1024, 1152, 1280 };
+          int i = 7, k, c0, c1, span, fr, i0, i1;
+          for (k = 0; k < 8; k++)
+            if (h >= cent[k]) i = k;
+          c0 = cent[i];
+          c1 = (i == 7) ? 1536 : cent[i + 1];
+          span = c1 - c0;
+          fr = (span > 0) ? (((h - c0) * 256) / span) : 0;
+          i0 = (i * SE_HUE_SECTORS) / 8;
+          i1 = (((i + 1) & 7) * SE_HUE_SECTORS) / 8;
+          msat = lk->hue_sat[i0] + (((lk->hue_sat[i1] - lk->hue_sat[i0]) * fr) >> 8);
+          mlum = lk->hue_lum[i0] + (((lk->hue_lum[i1] - lk->hue_lum[i0]) * fr) >> 8);
+          mrot = lk->hue_rot[i0] + (((lk->hue_rot[i1] - lk->hue_rot[i0]) * fr) >> 8);
+        } else {
+          int sec = h / (1536 / SE_HUE_SECTORS);
+          int f   = h % (1536 / SE_HUE_SECTORS);
+          int nx  = (sec + 1) % SE_HUE_SECTORS;
+          msat = lk->hue_sat[sec] +
+                 (((lk->hue_sat[nx] - lk->hue_sat[sec]) * f)
+                  / (1536 / SE_HUE_SECTORS));
+          mlum = lk->hue_lum[sec] +
+                 (((lk->hue_lum[nx] - lk->hue_lum[sec]) * f)
+                  / (1536 / SE_HUE_SECTORS));
+          mrot = lk->hue_rot[sec] +
+                 (((lk->hue_rot[nx] - lk->hue_rot[sec]) * f)
+                  / (1536 / SE_HUE_SECTORS));
+        }
         int y = luma8(rr, gg, bb);
         int u = bb - y, v = rr - y;
 

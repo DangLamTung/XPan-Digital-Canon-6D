@@ -165,15 +165,15 @@ static int sc_level(sc *t)
 }
 
 /*
- * A per-hue vector, honouring the older six-value form.
+ * A per-hue vector, honouring any shorter form.
  *
  * Six values used to mean R, Y, G, C, B, M with the engine interpolating in
- * between; now there are twelve knots at half that spacing. Expanding by
- * inserting the average of each neighbouring pair reproduces the old curve,
- * because that is exactly what the old interpolation did between its knots.
- * Verified against all 25 hue vectors shipped under films/: worst deviation
- * 0.5 percent of saturation over 3600 angles, which is integer rounding, not
- * a change of shape.
+ * between; twelve knots at half that spacing came next; there are now 96, one
+ * every 3.75 degrees. Rather than special-case each, the values read are
+ * resampled onto the 96 knots with linear interpolation around the circle,
+ * which is exactly what the engine did between its knots before -- so a
+ * six-value or twelve-value recipe produces the same table it always did, and
+ * only a recipe that actually writes 96 values gains the extra resolution.
  */
 static int parse_hue_vec(sc *t, float *out)
 {
@@ -191,14 +191,18 @@ static int parse_hue_vec(sc *t, float *out)
 
     if (n == SE_HUE_SECTORS) {
         for (i = 0; i < SE_HUE_SECTORS; i++) out[i] = v[i];
-    } else if (n == 6) {
-        for (i = 0; i < 6; i++) {
-            out[i * 2]     = v[i];
-            out[i * 2 + 1] = (v[i] + v[(i + 1) % 6]) * 0.5f;
+    } else if (n >= 2) {
+        for (i = 0; i < SE_HUE_SECTORS; i++) {
+            float g = (float)i * (float)n / (float)SE_HUE_SECTORS;
+            int   k = (int)g;
+            float fr = g - (float)k;
+            float a = v[k % n], b = v[(k + 1) % n];
+            out[i] = a + (b - a) * fr;
         }
-    } else if (n > 0) {
-        se_log("stock: %d-values per hue is neither 6 nor %d, ignoring",
-               n, SE_HUE_SECTORS);
+    } else if (n == 1) {
+        for (i = 0; i < SE_HUE_SECTORS; i++) out[i] = v[0];
+    } else {
+        se_log("stock: per-hue vector needs at least one value, ignoring");
         return 0;
     }
     return n;
@@ -356,6 +360,11 @@ se_err se_stock_parse(const char *text, size_t len, se_stock *s)
         else if (key_is(w, "CURVE_G")) parse_curve(&t, &s->g);
         else if (key_is(w, "CURVE_B")) parse_curve(&t, &s->b);
         else if (key_is(w, "CURVE_Y")) parse_curve(&t, &s->luma);
+        else if (key_is(w, "HSL")) {
+            sc_sp(&t);
+            s->hsl_set = (t.p < t.end && *t.p == '1');
+            sc_line(&t);
+        }
         else {
             /* Collected rather than logged one at a time, so the report
              * below can name them beside the version that explains them. */

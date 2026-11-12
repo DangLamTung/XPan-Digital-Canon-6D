@@ -85,7 +85,7 @@ typedef struct {
  * expanded on load (see parse_hue_vec in stock.c), so nothing already on a
  * card changes meaning.
  */
-#define SE_HUE_SECTORS 12
+#define SE_HUE_SECTORS 96
 
 typedef struct {
     /* The format generation this file asked for; 0 when it did not say,
@@ -110,6 +110,8 @@ typedef struct {
      * every recipe written before this key behaves exactly as it did.
      */
     se_curve luma;
+
+    int   hsl_set;          /* HSL 1: eight Lightroom bands instead of 96 knots */
 
     /*
      * Everything below is applied by engine/look.c on the JPEG path, where

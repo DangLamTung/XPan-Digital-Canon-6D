@@ -95,6 +95,16 @@ typedef struct {
     int16_t  luma_map[256];   /* k in 1/256ths, 256 = unchanged */
     int      luma_any;
 
+    /*
+     * HSL mode: Lightroom's eight hue bands instead of a knot every 3.75 degrees.
+     * The band centres are Red 0, Orange 30, Yellow 60, Green 120, Aqua 180,
+     * Blue 240, Purple 270, Magenta 300, with triangular falloff between them,
+     * and luminance moves with a chroma compensation so brightening a colour
+     * does not wash it out -- which is the one thing the plain luma+chroma
+     * stage cannot do, and why fitting saturated blues and reds fought itself.
+     */
+    int      hsl;
+
     int      sat;            /* 256 = unchanged, 0 = grey, 512 = double  */
 
     /* 3x3 colour matrix, 8.8 fixed, row major; mat_any = 0 costs nothing. */
