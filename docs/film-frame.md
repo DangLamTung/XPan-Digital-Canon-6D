@@ -26,8 +26,11 @@ camera on the left and the exposure on the right.
 └──────────────────────────────────────────────┘
 ```
 
-- **Left**: brand line in the main text colour, camera model under it in a
-  dimmed grey — `CANON` / `EOS 6D`, the model from ML's `camera_model`.
+- **Left**: the film brand's own mark in a 96x96 square — Kodak red,
+  Fujifilm green, Ilford black — baked as 8-bit coverage. Stocks without a
+  mark (CineStill, Lomography, Foma) fall back to the canister from CANS.DAT.
+- **Centre**: the Canon wordmark, with the camera model under it in a dimmed
+  grey (`EOS 6D`, from `camera_model`).
 - **Right**: three columns, each a small label (`f`, `SS`, `ISO`) centred over
   its value.
 - **Values** are decoded from the same tables ML uses for its own display:

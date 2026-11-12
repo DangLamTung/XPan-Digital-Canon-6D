@@ -82,6 +82,13 @@ int main(int argc, char **argv)
     snprintf(f.value[0], sizeof f.value[0], "%s", argv[8]);
     snprintf(f.value[1], sizeof f.value[1], "%s", argv[9]);
     snprintf(f.value[2], sizeof f.value[2], "%s", argv[10]);
+    if (argc > 11) {
+        f.brand_i = atoi(argv[11]);
+        f.brand_fg[0] = argc > 14 ? atoi(argv[12]) : 0xED;
+        f.brand_fg[1] = argc > 14 ? atoi(argv[13]) : 0x00;
+        f.brand_fg[2] = argc > 14 ? atoi(argv[14]) : 0x00;
+        if (f.brand_i >= 0) f.sprite = NULL;
+    }
 
     canvas = malloc((size_t)W * (size_t)(H + f.top + f.bottom) * 3);
     row = malloc((size_t)W * 3);

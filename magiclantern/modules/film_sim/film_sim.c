@@ -4895,6 +4895,30 @@ static void fs_frame_exposure(se_frame *f) {
 
 /* Apply the film frame, or clear it, before a develop. Opt-in: the config
  * defaults to off, and a null frame leaves the file exactly as before. */
+/* Brand mark for a stock: 0 Kodak, 1 Fujifilm, 2 Ilford, -1 none (canister). */
+static int fs_frame_brand(const char *name, uint8_t rgb[3]) {
+  if (strstr(name, "PORTRA") || strstr(name, "GOLD") ||
+      strstr(name, "COLORPLUS") || strstr(name, "EKTAR") ||
+      strstr(name, "ULTRAMAX") || strstr(name, "KODACHROME") ||
+      strstr(name, "EKTACHROME") || strstr(name, "TRI-X") ||
+      strstr(name, "T-MAX")) {
+    rgb[0] = 0xED; rgb[1] = 0x00; rgb[2] = 0x00;   /* Kodak red */
+    return 0;
+  }
+  if (strstr(name, "PROVIA") || strstr(name, "VELVIA") ||
+      strstr(name, "ACROS") || strstr(name, "SUPERIA") ||
+      strstr(name, "C200") || strstr(name, "ASTIA")) {
+    rgb[0] = 0x00; rgb[1] = 0x84; rgb[2] = 0x3D;   /* Fujifilm green */
+    return 1;
+  }
+  if (strstr(name, "HP5") || strstr(name, "DELTA") ||
+      strstr(name, "PANF") || strstr(name, "XP2")) {
+    rgb[0] = 0x10; rgb[1] = 0x10; rgb[2] = 0x10;   /* Ilford black */
+    return 2;
+  }
+  return -1;
+}
+
 /* The stock's canister from CANS.DAT, the same art the shelf shows. */
 static const unsigned char *fs_frame_art(const char *name, int *w, int *h) {
   static int tried;
@@ -4936,12 +4960,15 @@ static void fs_frame_apply(const char *stock_path) {
   f.brand_colour[2] = 0x00;
   snprintf(f.model, sizeof f.model, "%s", base);
   snprintf(f.stock, sizeof f.stock, "%s", film->name);
-  art = fs_frame_art(film->name, &aw, &ah);
-  if (art) {
-    f.sprite = art;
-    f.sprite_w = aw;
-    f.sprite_h = ah;
-    f.sprite_scale = 2;
+  f.brand_i = fs_frame_brand(film->name, f.brand_fg);
+  if (f.brand_i < 0) {
+    art = fs_frame_art(film->name, &aw, &ah);
+    if (art) {
+      f.sprite = art;
+      f.sprite_w = aw;
+      f.sprite_h = ah;
+      f.sprite_scale = 2;
+    }
   }
   se_frame_layout(&f);
   fs_frame_exposure(&f);

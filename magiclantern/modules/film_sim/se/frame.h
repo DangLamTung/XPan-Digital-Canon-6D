@@ -37,6 +37,9 @@ typedef struct {
     char         stock[SE_FRAME_LINE];   /* fallback text when there is no art */
     const uint8_t *sprite;    /* stock canister, RGB, sprite_w x sprite_h */
     int          sprite_w, sprite_h, sprite_scale;
+    const uint8_t *brand;     /* brand mark, BRAND_SZ x BRAND_SZ, 8-bit coverage */
+    int          brand_i;     /* index into the baked brand table, -1 = none */
+    uint8_t      brand_fg[3]; /* the mark's own colour */
     char         label[3][8];            /* "f", "SS", "ISO" */
     char         value[3][12];           /* "2.8", "1/200", "400" */
 } se_frame;
