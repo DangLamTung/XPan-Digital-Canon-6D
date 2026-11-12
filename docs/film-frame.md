@@ -37,8 +37,12 @@ camera on the left and the exposure on the right.
 - **Paper**: white (`#FFFFFF`) with a dark keyline where the border meets the
   picture. The text colours derive from the paper's luma, so the same layout
   works if the paper colour is changed.
-- **Type**: 5x7 pixel font, column-major, scaled x3 on a full-size develop:
-  brand and values at 21 px, model and labels smaller.
+- **Wordmark**: the `Canon` wordmark is a baked 1-bit bitmap (115x26) drawn in
+  Canon red `#CC0000`; at scale 2 it is 230 px wide on a 2736 px develop.
+- **Type**: rasterised Arial, proportional and baseline-aligned, 12 px at
+  scale 1 — not a 5x7 glyph grid, which reads as a camera overlay rather than
+  as print. Two tables are baked into `frame.c`: the wordmark bitmap and the
+  per-glyph bitmaps with their widths and advances.
 
 ## Where it lives
 

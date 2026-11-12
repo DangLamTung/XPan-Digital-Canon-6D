@@ -14,17 +14,16 @@
 int main(int argc, char **argv)
 {
     int W = 1600, H = 1067;
-    int scale = argc > 2 ? atoi(argv[2]) : 3;
+    int scale = argc > 2 ? atoi(argv[2]) : 2;
     unsigned bg = argc > 3 ? (unsigned)strtoul(argv[3], 0, 16) : 0xFFFFFF;
-    const char *brand = argc > 4 ? argv[4] : "CANON";
-    const char *model = argc > 5 ? argv[5] : "EOS 6D";
+    const char *model = argc > 4 ? argv[4] : "EOS 6D";
     se_frame f;
     unsigned char *img, *row;
     int y, x, i;
     FILE *o;
 
     if (argc < 2) {
-        fprintf(stderr, "usage: frameprev out.ppm [scale] [bg] [brand] [model]\n");
+        fprintf(stderr, "usage: frameprev out.ppm [scale] [bg] [model]\n");
         return 2;
     }
 
@@ -39,8 +38,8 @@ int main(int argc, char **argv)
     f.dim[0] = (uint8_t)((f.fg[0] + f.bg[0]) / 2);
     f.dim[1] = (uint8_t)((f.fg[1] + f.bg[1]) / 2);
     f.dim[2] = (uint8_t)((f.fg[2] + f.bg[2]) / 2);
-    snprintf(f.brand, sizeof f.brand, "%s", brand);
     snprintf(f.model, sizeof f.model, "%s", model);
+    f.brand_colour[0] = 0xCC; f.brand_colour[1] = 0x00; f.brand_colour[2] = 0x00;
     snprintf(f.label[0], sizeof f.label[0], "f");
     snprintf(f.label[1], sizeof f.label[1], "SS");
     snprintf(f.label[2], sizeof f.label[2], "ISO");

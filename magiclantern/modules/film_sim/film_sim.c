@@ -4905,12 +4905,14 @@ static void fs_frame_apply(const char *stock_path) {
   base = camera_model[0] ? camera_model : "EOS 6D";
   memset(&f, 0, sizeof f);
   f.on = 1;
-  f.scale = 3;
+  f.scale = 2;
   se_frame_layout(&f);
   f.bg[0] = f.bg[1] = f.bg[2] = 255;      /* paper white */
   se_frame_contrast(f.bg, f.fg);
   f.dim[0] = f.dim[1] = f.dim[2] = 120;   /* model line and labels */
-  snprintf(f.brand, sizeof f.brand, "CANON");
+  f.brand_colour[0] = 0xCC;               /* Canon red */
+  f.brand_colour[1] = 0x00;
+  f.brand_colour[2] = 0x00;
   snprintf(f.model, sizeof f.model, "%s", base);
   fs_frame_exposure(&f);
   se_cam_set_frame(&f);

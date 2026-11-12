@@ -26,13 +26,13 @@
 
 typedef struct {
     int          on;
-    int          scale;        /* glyph scale for the brand and values: 1..4 */
+    int          scale;        /* bitmap scale for wordmark and text: 1..4 */
     int          top;          /* margin above the picture, rows */
     int          bottom;       /* band below the picture, rows */
     uint8_t      bg[3];        /* paper colour */
     uint8_t      fg[3];        /* main text */
     uint8_t      dim[3];       /* model line and column labels */
-    char         brand[SE_FRAME_LINE];   /* "CANON" */
+    uint8_t      brand_colour[3];  /* wordmark; a brand colour, or fg */
     char         model[SE_FRAME_LINE];   /* "EOS 6D" */
     char         label[3][8];            /* "f", "SS", "ISO" */
     char         value[3][12];           /* "2.8", "1/200", "400" */
