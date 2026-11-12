@@ -108,6 +108,18 @@ void prop_add_handler (uint32_t property, void *handler)
 #if defined(POSITION_INDEPENDENT)
     handler[entry].handler = PIC_RESOLVE(handler[entry].handler);
 #endif
+    /* Bounds check: property_handlers[] is a fixed 256-entry array and this
+     * write had none. A module registering enough properties walked off the
+     * end of it -- 149 core handlers + 129 from one module = 278 entries,
+     * 22 past the array, on every boot. That is silent memory corruption
+     * that looks like "ML became unstable", with nothing in the log to say
+     * which module caused it. Refuse the excess and name the property. */
+    if (actual_num_handlers >= (int)COUNT(property_handlers))
+    {
+        DryosDebugMsg(0, 15, "prop handler table full, dropping 0x%x", property);
+        return;
+    }
+
     property_handlers[actual_num_handlers].handler = handler;
     property_handlers[actual_num_handlers].property = property;
     actual_num_handlers++;

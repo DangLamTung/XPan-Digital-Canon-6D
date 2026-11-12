@@ -469,6 +469,150 @@ The module now has its own logger writing `ML/LOGS/MLWIFI.LOG` through
 `FIO_CreateFileOrAppend` / `FIO_WriteFile` / `FIO_CloseFile` — the same approach
 `film_sim` uses for `FILMSIM.LOG`. Read that file after a run, not `FILMSIM.LOG`.
 
+### Boot logging (so a run cannot be ambiguous)
+
+A card read on 2026-11-12 showed the trap: `ML/SETTINGS/mlwifi.en` dated
+**11-11 19:16**, the logging build copied at **11-12 01:34**, and no boot in
+between — so a "successful" test had used the build that could not log. Nothing
+in the log could have distinguished "module did nothing" from "module never ran".
+
+`mlwifi` now logs at load as well as on demand:
+
+```
+boot: mlwifi loaded, 65 ids watched (0x80030000..0x8003003f + 0x80010000)
+boot: 0x8003000e = 0
+boot: 0 of 65 ids non-zero
+```
+
+The boot task sleeps 2 s first, because FIO calls made during module init fail
+silently — the card filesystem is not up yet. An empty `MLWIFI.LOG` with a fresh
+`mlwifi.mo` now means "the module did not load", not "it ran and saw nothing".
+
+`WiFi → Dump State` logs the same thing on demand and pops a box with
+`0x8003000e` and `0x80030016`, so the result is visible on the LCD even if file
+output fails.
+
+## First on-camera run (2026-11-12)
+
+`ML/LOGS/MLWIFI.LOG`, first real evidence from the body (archived as
+`film_eval/mlwifi-run-2026-11-12.log`):
+
+```
+[   3374ms][mlwifi] boot: mlwifi loaded, 65 ids watched (0x80030000..0x8003003f + 0x80010000)
+[   3384ms][mlwifi] boot: 0 of 65 ids non-zero
+[  16277ms][mlwifi] watch: begin, 65 ids, block 0x80030000..0x8003003f + 0x80010000
+[  16284ms][mlwifi] state: 0x80030014 = 151
+[  16290ms][mlwifi] state: 0x8003001d = 1
+[  23865ms][mlwifi] probe: -16s 0xff261714 first word 0xe92d407c prologue
+... (all nine)
+[  23928ms][mlwifi] probe: 9 of 9 look like functions; logging routine at 0x000067c8
+```
+
+**What this proves**
+
+| claim | status |
+|---|---|
+| the module loads and its logger reaches the card | **proven** |
+| `prop_register_slave`-free module handlers receive real values | **proven** — `0x80030014` is `PROP_EFIC_TEMP` (property.h:204) and `0x8003001d` is `PROP_BAT_INFO` (property.h:36), so the handler is delivering genuine camera data |
+| all nine NWCOM addresses are real function entries | **proven** — 9 of 9 carry an ARM prologue, first run of rung 1 in this project |
+
+**What it does not prove**
+
+- the WiFi block was **silent**: no `change:` line at all, and no `watch: done`
+  either — the task was cut off by power-off, so "nothing changed" is
+  inconclusive rather than negative.
+- `boot: 0 of 65 ids non-zero` means the block is quiet at boot, which is
+  expected for a radio that is off. It says nothing about WiFi being on.
+
+**Instrument fixes made after reading it**
+
+1. `probe: -16s` — ML's `printf` does not honour the `-` flag or a width on
+   `%s`. The format was `%-16s`; now plain `%s`. The line proves the data was
+   right but the padding leaked into the output.
+2. the watch is now **3 minutes** with a heartbeat every 10 s and a final dump,
+   so a short run can no longer be mistaken for a silent block.
+
+### Second run: property bridge confirmed, WiFi still silent
+
+Four boots in `MLWIFI.LOG` (archived as `film_eval/mlwifi-run-2026-11-12-runs2-4.log`).
+Everything the block delivered:
+
+| id | ML name | value | when |
+|---|---|---|---|
+| `0x80030014` | `PROP_EFIC_TEMP` | 149 / 151 | ~40 s and ~90 s after boot |
+| `0x8003001d` | `PROP_BAT_INFO` | 1 | early, and once more later |
+| `0x80030024` | **`PROP_ICU_AUTO_POWEROFF`** | 4 | ~37 s and ~63 s after boot |
+
+All three are camera housekeeping. **Nothing WiFi-related moved.** The heartbeat
+lines prove the watch task ran (`watch: alive, 50 s, 3 changes`), so this is a
+real negative for those ids, not a dead task — though the runs never reached
+`watch: done` (180 s), so a late change would still have been missed.
+
+Instrument changes made because of that read:
+
+1. **block widened** from `0x80030000..0x3F` to `0x80030000..0x8003007F` (129 ids) —
+   `0x80030024` proved interesting ids live above `0x3F`.
+2. **per-id delivery counters** (`mlw_hits[]`). A value that never changes is
+   invisible to a change-only diff, and "never delivered" looked identical to
+   "delivered but constant". The log now ends with
+   `delivered: 0x8003001d hits=2 last=1`, separating the two.
+3. **build tag in the boot line** (`=== boot: mlwifi build 2026-11-12b ===`), so a
+   log holding several boots can be attributed to a build without guessing.
+
+## The 129-id build corrupted ML: a real bug I introduced
+
+Reading the card after the widened build showed `mlwifi_init` running **twice in
+one boot** — two identical `=== boot … 129 ids …` lines at 3462 ms and 3468 ms.
+That is a symptom, and the cause is arithmetic:
+
+ML keeps handlers in a fixed array with **no bounds check**:
+
+```c
+static struct prop_handler property_handlers[256];
+...
+property_handlers[actual_num_handlers].handler = handler;
+property_handlers[actual_num_handlers].property = property;
+actual_num_handlers++;            /* nothing stops this passing 256 */
+```
+
+| build | ML core | mlwifi | total | result |
+|---|---|---|---|---|
+| 65 ids | 149 | 65 | 214 | fits — stable |
+| **129 ids** | **149** | **129** | **278** | **22 entries past the array, every boot** |
+
+So widening the watch from 65 to 129 ids wrote past the end of a static array.
+That is corruption of whatever follows in `.bss`, and it presents as "ML became
+unstable" with nothing in any log naming the cause.
+
+**Both sides fixed.**
+
+1. `modules/mlwifi` cut to **49 ids** (`0x80030000..0x2F` + `0x80010000`), which
+   covers every id the firmware dispatcher and the live logs have shown. Budget
+   is written into the source: core 149 + module 49 = **198 of 256**, leaving 58
+   slots for another module.
+2. `src/property.c` now refuses the excess instead of writing past the array,
+   and names the property:
+
+```c
+if (actual_num_handlers >= (int)COUNT(property_handlers))
+{
+    DryosDebugMsg(0, 15, "prop handler table full, dropping 0x%x", property);
+    return;
+}
+```
+
+Verified in the built object rather than by reading the source:
+
+```
+dc: ldr  r0, [r2, #0xc04]      @ actual_num_handlers
+e8: cmp  r0, #255
+ec: ble  100                   @ proceed
+f0: … DryosDebugMsg(0,15,"prop handler table full, dropping 0x%x"); return
+```
+
+The lesson worth keeping: a property *id range* is not free. Each id costs a
+handler in a 256-entry table shared with ML core, and the cost is paid at boot.
+
 ### Not found at all
 
 - WLAN join / scan request with a usable entry point (`NT_*` names exist only as

@@ -84,73 +84,80 @@ static void mlw_log(const char *fmt, ...)
  *
  * PROP_INT only assigns -- no logging, no sleeping, safe in PropMgrTask.
  */
-#define MLW_NIDS 65u
+#define MLW_PROP_LOGICAL_CONNECT 0x8003000Eu
+#define MLW_PROP_CONNECT_TARGET  0x80030016u
 
-PROP_INT(0x80030000u, mlw_v0)
-PROP_INT(0x80030001u, mlw_v1)
-PROP_INT(0x80030002u, mlw_v2)
-PROP_INT(0x80030003u, mlw_v3)
-PROP_INT(0x80030004u, mlw_v4)
-PROP_INT(0x80030005u, mlw_v5)
-PROP_INT(0x80030006u, mlw_v6)
-PROP_INT(0x80030007u, mlw_v7)
-PROP_INT(0x80030008u, mlw_v8)
-PROP_INT(0x80030009u, mlw_v9)
-PROP_INT(0x8003000Au, mlw_v10)
-PROP_INT(0x8003000Bu, mlw_v11)
-PROP_INT(0x8003000Cu, mlw_v12)
-PROP_INT(0x8003000Du, mlw_v13)
-PROP_INT(0x8003000Eu, mlw_v14)
-PROP_INT(0x8003000Fu, mlw_v15)
-PROP_INT(0x80030010u, mlw_v16)
-PROP_INT(0x80030011u, mlw_v17)
-PROP_INT(0x80030012u, mlw_v18)
-PROP_INT(0x80030013u, mlw_v19)
-PROP_INT(0x80030014u, mlw_v20)
-PROP_INT(0x80030015u, mlw_v21)
-PROP_INT(0x80030016u, mlw_v22)
-PROP_INT(0x80030017u, mlw_v23)
-PROP_INT(0x80030018u, mlw_v24)
-PROP_INT(0x80030019u, mlw_v25)
-PROP_INT(0x8003001Au, mlw_v26)
-PROP_INT(0x8003001Bu, mlw_v27)
-PROP_INT(0x8003001Cu, mlw_v28)
-PROP_INT(0x8003001Du, mlw_v29)
-PROP_INT(0x8003001Eu, mlw_v30)
-PROP_INT(0x8003001Fu, mlw_v31)
-PROP_INT(0x80030020u, mlw_v32)
-PROP_INT(0x80030021u, mlw_v33)
-PROP_INT(0x80030022u, mlw_v34)
-PROP_INT(0x80030023u, mlw_v35)
-PROP_INT(0x80030024u, mlw_v36)
-PROP_INT(0x80030025u, mlw_v37)
-PROP_INT(0x80030026u, mlw_v38)
-PROP_INT(0x80030027u, mlw_v39)
-PROP_INT(0x80030028u, mlw_v40)
-PROP_INT(0x80030029u, mlw_v41)
-PROP_INT(0x8003002Au, mlw_v42)
-PROP_INT(0x8003002Bu, mlw_v43)
-PROP_INT(0x8003002Cu, mlw_v44)
-PROP_INT(0x8003002Du, mlw_v45)
-PROP_INT(0x8003002Eu, mlw_v46)
-PROP_INT(0x8003002Fu, mlw_v47)
-PROP_INT(0x80030030u, mlw_v48)
-PROP_INT(0x80030031u, mlw_v49)
-PROP_INT(0x80030032u, mlw_v50)
-PROP_INT(0x80030033u, mlw_v51)
-PROP_INT(0x80030034u, mlw_v52)
-PROP_INT(0x80030035u, mlw_v53)
-PROP_INT(0x80030036u, mlw_v54)
-PROP_INT(0x80030037u, mlw_v55)
-PROP_INT(0x80030038u, mlw_v56)
-PROP_INT(0x80030039u, mlw_v57)
-PROP_INT(0x8003003Au, mlw_v58)
-PROP_INT(0x8003003Bu, mlw_v59)
-PROP_INT(0x8003003Cu, mlw_v60)
-PROP_INT(0x8003003Du, mlw_v61)
-PROP_INT(0x8003003Eu, mlw_v62)
-PROP_INT(0x8003003Fu, mlw_v63)
-PROP_INT(0x80010000u, mlw_v64)
+/* Budget, not a guess. ML keeps handlers in property_handlers[256] and
+ * prop_add_handler() had no bounds check (fixed in src/property.c so it can
+ * never happen again). ML core already registers 149, so a module may add 107.
+ * The 129-id version this replaced pushed the total to 278 and corrupted memory
+ * past the array on every boot. 49 ids keeps the total at 198, with room for
+ * another module to grow.
+ *
+ * 0x80030000..0x2F covers everything the firmware's network dispatcher
+ * (0xFF284FA0) and the live log have shown so far: 0x0E, 0x0F, 0x16, plus the
+ * housekeeping ids 0x14, 0x1D, 0x24. */
+#define MLW_NIDS 49u
+#define MLW_BUDGET_OK 1
+
+/* One handler per id, registered through the module's property table so ML can
+ * unregister them on unload (prop_unregister_slave is not exported). Each body
+ * is one assignment plus one increment: this runs in PropMgrTask. */
+#define MLW_PROP_INT(id, name, idx) \
+    static volatile uint32_t name; \
+    PROP_HANDLER(id) { name = buf ? buf[0] : 0; mlw_hits[idx]++; }
+
+static volatile uint32_t mlw_hits[MLW_NIDS];
+
+MLW_PROP_INT(0x80030000u, mlw_v0, 0)
+MLW_PROP_INT(0x80030001u, mlw_v1, 1)
+MLW_PROP_INT(0x80030002u, mlw_v2, 2)
+MLW_PROP_INT(0x80030003u, mlw_v3, 3)
+MLW_PROP_INT(0x80030004u, mlw_v4, 4)
+MLW_PROP_INT(0x80030005u, mlw_v5, 5)
+MLW_PROP_INT(0x80030006u, mlw_v6, 6)
+MLW_PROP_INT(0x80030007u, mlw_v7, 7)
+MLW_PROP_INT(0x80030008u, mlw_v8, 8)
+MLW_PROP_INT(0x80030009u, mlw_v9, 9)
+MLW_PROP_INT(0x8003000Au, mlw_v10, 10)
+MLW_PROP_INT(0x8003000Bu, mlw_v11, 11)
+MLW_PROP_INT(0x8003000Cu, mlw_v12, 12)
+MLW_PROP_INT(0x8003000Du, mlw_v13, 13)
+MLW_PROP_INT(0x8003000Eu, mlw_v14, 14)
+MLW_PROP_INT(0x8003000Fu, mlw_v15, 15)
+MLW_PROP_INT(0x80030010u, mlw_v16, 16)
+MLW_PROP_INT(0x80030011u, mlw_v17, 17)
+MLW_PROP_INT(0x80030012u, mlw_v18, 18)
+MLW_PROP_INT(0x80030013u, mlw_v19, 19)
+MLW_PROP_INT(0x80030014u, mlw_v20, 20)
+MLW_PROP_INT(0x80030015u, mlw_v21, 21)
+MLW_PROP_INT(0x80030016u, mlw_v22, 22)
+MLW_PROP_INT(0x80030017u, mlw_v23, 23)
+MLW_PROP_INT(0x80030018u, mlw_v24, 24)
+MLW_PROP_INT(0x80030019u, mlw_v25, 25)
+MLW_PROP_INT(0x8003001Au, mlw_v26, 26)
+MLW_PROP_INT(0x8003001Bu, mlw_v27, 27)
+MLW_PROP_INT(0x8003001Cu, mlw_v28, 28)
+MLW_PROP_INT(0x8003001Du, mlw_v29, 29)
+MLW_PROP_INT(0x8003001Eu, mlw_v30, 30)
+MLW_PROP_INT(0x8003001Fu, mlw_v31, 31)
+MLW_PROP_INT(0x80030020u, mlw_v32, 32)
+MLW_PROP_INT(0x80030021u, mlw_v33, 33)
+MLW_PROP_INT(0x80030022u, mlw_v34, 34)
+MLW_PROP_INT(0x80030023u, mlw_v35, 35)
+MLW_PROP_INT(0x80030024u, mlw_v36, 36)
+MLW_PROP_INT(0x80030025u, mlw_v37, 37)
+MLW_PROP_INT(0x80030026u, mlw_v38, 38)
+MLW_PROP_INT(0x80030027u, mlw_v39, 39)
+MLW_PROP_INT(0x80030028u, mlw_v40, 40)
+MLW_PROP_INT(0x80030029u, mlw_v41, 41)
+MLW_PROP_INT(0x8003002Au, mlw_v42, 42)
+MLW_PROP_INT(0x8003002Bu, mlw_v43, 43)
+MLW_PROP_INT(0x8003002Cu, mlw_v44, 44)
+MLW_PROP_INT(0x8003002Du, mlw_v45, 45)
+MLW_PROP_INT(0x8003002Eu, mlw_v46, 46)
+MLW_PROP_INT(0x8003002Fu, mlw_v47, 47)
+MLW_PROP_INT(0x80010000u, mlw_v48, 48)
 
 static volatile uint32_t *const mlw_ptrs[MLW_NIDS] =
 {
@@ -202,23 +209,7 @@ static volatile uint32_t *const mlw_ptrs[MLW_NIDS] =
     &mlw_v45,
     &mlw_v46,
     &mlw_v47,
-    &mlw_v48,
-    &mlw_v49,
-    &mlw_v50,
-    &mlw_v51,
-    &mlw_v52,
-    &mlw_v53,
-    &mlw_v54,
-    &mlw_v55,
-    &mlw_v56,
-    &mlw_v57,
-    &mlw_v58,
-    &mlw_v59,
-    &mlw_v60,
-    &mlw_v61,
-    &mlw_v62,
-    &mlw_v63,
-    &mlw_v64
+    &mlw_v48
 };
 
 static const unsigned mlw_ids[MLW_NIDS] =
@@ -271,22 +262,6 @@ static const unsigned mlw_ids[MLW_NIDS] =
     0x8003002Du,
     0x8003002Eu,
     0x8003002Fu,
-    0x80030030u,
-    0x80030031u,
-    0x80030032u,
-    0x80030033u,
-    0x80030034u,
-    0x80030035u,
-    0x80030036u,
-    0x80030037u,
-    0x80030038u,
-    0x80030039u,
-    0x8003003Au,
-    0x8003003Bu,
-    0x8003003Cu,
-    0x8003003Du,
-    0x8003003Eu,
-    0x8003003Fu,
     0x80010000u
 };
 
@@ -343,7 +318,7 @@ static void mlw_probe_task(void *unused)
          * `push {..., lr}`, which is what every one of these starts with. */
         uint32_t w = mlw_first_word(t[i].addr);
         int prologue = (w & 0x0FFF0000u) == 0x092D0000u && (w & 0x4000u);
-        mlw_log("probe: %-16s 0x%08x first word 0x%08x %s",
+        mlw_log("probe: %s 0x%08x first word 0x%08x %s",
                 t[i].name, t[i].addr, w, prologue ? "prologue" : "NOT a prologue");
         if (prologue) ok++;
     }
@@ -399,29 +374,31 @@ static void mlw_call(void *priv, int delta)
     task_create("mlw_call", 0x1e, 0x2000, mlw_call_task, 0);
 }
 
-/* Report only what changed. Dumping 65 values every two seconds would bury the
- * one line that matters, so each tick compares against a shadow copy and prints
- * a line per transition: "change: 0x8003003a 0 -> 1". Turn WiFi on and off in
- * Canon's menu while this runs and the switch identifies itself. */
+/* Report only what changed, and prove the task ran to completion.
+ *
+ * A previous run left no "watch: done" line, so it was impossible to tell a
+ * silent block from a task killed by power-off. Every 10th tick now logs a
+ * heartbeat, and the loop always ends with a full dump of non-zero values. */
 static void mlw_watch_task(void *unused)
 {
     (void)unused;
     uint32_t shadow[MLW_NIDS];
     unsigned k;
-    int i;
+    int i, changes = 0;
 
     for (k = 0; k < MLW_NIDS; k++)
         shadow[k] = *mlw_ptrs[k];
 
-    mlw_log("watch: begin, %d ids, block 0x80030000..0x8003003f + 0x80010000", MLW_NIDS);
+    mlw_log("watch: begin, %d ids, %d already non-zero",
+            MLW_NIDS, 0);
 
     for (k = 0; k < MLW_NIDS; k++)
     {
         if (shadow[k])
-            mlw_log("state: 0x%x = %d", (int)mlw_ids[k], (int)shadow[k]);
+            mlw_log("watch: initial 0x%x = %d", (int)mlw_ids[k], (int)shadow[k]);
     }
 
-    for (i = 0; i < 30; i++)
+    for (i = 0; i < 90; i++)           /* 90 x 2 s = 3 minutes */
     {
         msleep(2000);
         for (k = 0; k < MLW_NIDS; k++)
@@ -429,13 +406,22 @@ static void mlw_watch_task(void *unused)
             if (*mlw_ptrs[k] != shadow[k])
             {
                 mlw_log("change: 0x%x %d -> %d",
-                       (int)mlw_ids[k], (int)shadow[k], (int)*mlw_ptrs[k]);
+                        (int)mlw_ids[k], (int)shadow[k], (int)*mlw_ptrs[k]);
                 shadow[k] = *mlw_ptrs[k];
+                changes++;
             }
         }
+        if (i % 5 == 4)
+            mlw_log("watch: alive, %d s, %d changes", (i + 1) * 2, changes);
     }
 
-    mlw_log("watch: done");
+    for (k = 0; k < MLW_NIDS; k++)
+    {
+        if (mlw_hits[k])
+            mlw_log("delivered: 0x%x hits=%d last=%d",
+                    (int)mlw_ids[k], (int)mlw_hits[k], (int)*mlw_ptrs[k]);
+    }
+    mlw_log("watch: done, %d changes total", changes);
 }
 
 static void mlw_watch(void *priv, int delta)
@@ -444,16 +430,96 @@ static void mlw_watch(void *priv, int delta)
     task_create("mlw_watch", 0x1e, 0x1000, mlw_watch_task, 0);
 }
 
+/* Runs once at load. Reads nothing, writes only a log line and the current
+ * property values, so a boot always leaves evidence on the card even if nobody
+ * opens the menu. The delay lets the card filesystem come up: FIO calls made
+ * during module init fail silently, which is how an earlier attempt produced
+ * an empty log. */
+static void mlw_boot_task(void *unused)
+{
+    (void)unused;
+    unsigned k;
+    int nz = 0;
+
+    msleep(2000);
+    mlw_log("=== boot: mlwifi build 2026-11-12c, %d ids watched (0x80030000..0x8003002f + 0x80010000) ===",
+            MLW_NIDS);
+
+    for (k = 0; k < MLW_NIDS; k++)
+    {
+        if (*mlw_ptrs[k])
+        {
+            mlw_log("boot: 0x%x = %d", (int)mlw_ids[k], (int)*mlw_ptrs[k]);
+            nz++;
+        }
+    }
+    mlw_log("boot: %d of %d ids non-zero", nz, MLW_NIDS);
+}
+
+/* Look a property id up in the watched tables. Returns 0 when the id is not
+ * watched, which is distinguishable because index 0 is 0x80030000 and no
+ * caller asks for it. */
+static int mlw_index_of(unsigned id)
+{
+    unsigned k;
+    for (k = 0; k < MLW_NIDS; k++)
+        if (mlw_ids[k] == id)
+            return (int)k;
+    return -1;
+}
+
+static void mlw_dump_task(void *unused)
+{
+    (void)unused;
+    unsigned k;
+    int nz = 0, i_log = mlw_index_of(MLW_PROP_LOGICAL_CONNECT);
+    int i_ct  = mlw_index_of(MLW_PROP_CONNECT_TARGET);
+
+    mlw_log("state: on demand");
+    for (k = 0; k < MLW_NIDS; k++)
+    {
+        if (*mlw_ptrs[k])
+        {
+            mlw_log("state: 0x%x = %d", (int)mlw_ids[k], (int)*mlw_ptrs[k]);
+            nz++;
+        }
+    }
+    mlw_log("state: %d non-zero", nz);
+
+    NotifyBox(3000, "nz=%d log=%d ct=0x%x",
+              nz,
+              i_log >= 0 ? (int)*mlw_ptrs[i_log] : -1,
+              i_ct >= 0 ? (int)*mlw_ptrs[i_ct] : -1);
+}
+
+/* Menu handlers must return immediately: no file I/O here. */
+static void mlw_state_dump(void *priv, int delta)
+{
+    (void)priv; (void)delta;
+    task_create("mlw_dump", 0x1e, 0x1000, mlw_dump_task, 0);
+}
+
 static struct menu_entry mlwifi_menu[] = {
     {
-        .name = "Watch Props 60s",
+        .name = "Watch Props 3min",
         .select = mlw_watch,
         .icon_type = IT_ACTION,
-        .help = "Log the four network property ids every 2 s for a minute. "
+        .help = "Watch the whole network block for three minutes: one line per "
+                "change, a heartbeat every 10 s, and a final dump. "
                 "Turn WiFi on or off in Canon's menu while it runs: the id "
                 "whose value changes is the switch ML would have to write. "
                 "Subscribing and logging write nothing, so this cannot harm "
                 "the camera.",
+    },
+    {
+        .name = "Dump State",
+        .select = mlw_state_dump,
+        .icon_type = IT_ACTION,
+        .help = "Log every non-zero value in the network property block and pop "
+                "a box with the two ids already tied to names: 0x8003000e "
+                "(logical connect) and 0x80030016 (connect target; bit 0x40 = "
+                "connected). Read-only. Lines go to ML/LOGS/MLWIFI.LOG and to "
+                "the console.",
     },
     {
         .name = "Probe WiFi",
@@ -480,6 +546,7 @@ static struct menu_entry mlwifi_menu[] = {
 
 static unsigned int mlwifi_init(void)
 {
+    task_create("mlw_boot", 0x1e, 0x1000, mlw_boot_task, 0);
     menu_add("WiFi", mlwifi_menu, COUNT(mlwifi_menu) - 1);
     return 0;
 }
@@ -538,22 +605,6 @@ MODULE_PROPHANDLERS_START()
     MODULE_PROPHANDLER(0x8003002Du)
     MODULE_PROPHANDLER(0x8003002Eu)
     MODULE_PROPHANDLER(0x8003002Fu)
-    MODULE_PROPHANDLER(0x80030030u)
-    MODULE_PROPHANDLER(0x80030031u)
-    MODULE_PROPHANDLER(0x80030032u)
-    MODULE_PROPHANDLER(0x80030033u)
-    MODULE_PROPHANDLER(0x80030034u)
-    MODULE_PROPHANDLER(0x80030035u)
-    MODULE_PROPHANDLER(0x80030036u)
-    MODULE_PROPHANDLER(0x80030037u)
-    MODULE_PROPHANDLER(0x80030038u)
-    MODULE_PROPHANDLER(0x80030039u)
-    MODULE_PROPHANDLER(0x8003003Au)
-    MODULE_PROPHANDLER(0x8003003Bu)
-    MODULE_PROPHANDLER(0x8003003Cu)
-    MODULE_PROPHANDLER(0x8003003Du)
-    MODULE_PROPHANDLER(0x8003003Eu)
-    MODULE_PROPHANDLER(0x8003003Fu)
     MODULE_PROPHANDLER(0x80010000u)
 MODULE_PROPHANDLERS_END()
 
