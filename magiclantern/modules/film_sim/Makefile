@@ -11,6 +11,7 @@ MODULE_NAME = film_sim
 SE_ENGINE_SRC = se cr2 jpeg_dec jpeg_enc look stock color lut wb grade debayer pipeline
 
 SE_OBJS = $(addprefix $(BUILD_DIR)/se_,$(addsuffix .o,$(SE_ENGINE_SRC))) \
+          $(BUILD_DIR)/se_frame.o \
           $(BUILD_DIR)/se_se_cam.o \
           $(BUILD_DIR)/se_libgcc.o
 
@@ -42,6 +43,9 @@ $(BUILD_DIR)/se_%.o: se/engine/%.c | $(BUILD_DIR)
 
 # The screens: one implementation of the drawing, two of the primitives.
 $(BUILD_DIR)/gui_%.o: gui/%.c | $(BUILD_DIR)
+	$(CC) $(CFLAGS) $(CDEPS_FLAGS) -c -o $@ $<
+
+$(BUILD_DIR)/se_frame.o: se/frame.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(CDEPS_FLAGS) -c -o $@ $<
 
 $(BUILD_DIR)/se_se_cam.o: se/se_cam.c | $(BUILD_DIR)

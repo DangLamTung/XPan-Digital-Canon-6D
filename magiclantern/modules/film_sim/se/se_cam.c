@@ -14,6 +14,7 @@
 #include <mem.h>
 
 #include "se_cam.h"
+#include "frame.h"
 #include "engine/se.h"
 #include "engine/se_libc.h"
 #include "engine/cr2.h"
@@ -387,6 +388,41 @@ void se_cam_set_aspect(int mode) { se_aspect_mode = mode; }
  * sheet of an XPan roll looks like anyway. */
 static int se_pad_32 = 0;
 void se_cam_set_pad32(int on) { se_pad_32 = on ? 1 : 0; }
+
+/* The frame drawn around developed files. Static: one develop runs at a time
+ * and the caller sets it immediately before the call. */
+static se_frame g_frame;
+void se_cam_set_frame(const se_frame *f) {
+    if (f) g_frame = *f;
+    else memset(&g_frame, 0, sizeof g_frame);
+}
+
+/*
+ * Write one frame band: `rows` rows of the band colour, the text inside it,
+ * and a keyline on the side that meets the picture (`edge_first` for the
+ * bottom band, last row for the top one). Returns 0, or -1 if the arena or
+ * the encoder refuses.
+ */
+static int write_band(se_jpeg *enc, se_arena *ar, int width,
+                      const se_frame *f, const char *text,
+                      int rows, int edge_first) {
+    unsigned char *row = SE_NEW(ar, unsigned char, (size_t)width * 3);
+    int y, ytop;
+    if (!row || rows <= 0) return -1;
+    ytop = se_frame_text_top(rows, f->scale);
+    for (y = 0; y < rows; y++) {
+        int edge = edge_first ? (y == 0) : (y == rows - 1);
+        if (edge) {
+            se_frame_edge_row(row, width, f);
+        } else {
+            se_frame_fill_row(row, width, f);
+            se_frame_text_row(row, width, f, y, ytop,
+                              edge_first ? f->line2 : f->line1);
+        }
+        if (se_jpeg_write_rows(enc, row, 1) != SE_OK) return -1;
+    }
+    return 0;
+}
 
 /* Strength of the look, 0..100. The menu has offered this slider all along and
  * only the LiveView path honoured it; a developed file was always 100%. */
@@ -1035,6 +1071,7 @@ se_err se_cam_develop(const char *cr2_path, const char *stock_path,
     size_t    lookcost;
     int       out_w = 0, out_h = 0;
     int       pad_h = 0, pad_top = 0;
+    int       frm_top = 0, frm_bot = 0;
     se_jpeg_exif ex;
     static se_jpeg enc;      /* ~5 KB, keep it off this task's stack */
 
@@ -1256,8 +1293,22 @@ se_err se_cam_develop(const char *cr2_path, const char *stock_path,
             if (want_h > out_h)
                 pad_h = want_h - out_h;   /* extra rows, not the total */
         }
-        if (se_jpeg_begin(&enc, out_w, out_h + pad_h, d.tgt_w ? 92 : 88, strip,
+        /*
+         * Film frame: bands above and below the picture. The reduced-size
+         * develop (thumbnail / preview, d.tgt_w set) skips them -- a frame
+         * belongs on the file that is kept, not on a 400 px preview.
+         */
+        if (g_frame.on && !d.tgt_w) {
+            frm_top = g_frame.top > 0 ? g_frame.top : 0;
+            frm_bot = g_frame.bottom > 0 ? g_frame.bottom : 0;
+        }
+        if (se_jpeg_begin(&enc, out_w, out_h + pad_h + frm_top + frm_bot, d.tgt_w ? 92 : 88, strip,
                           &ex, jpeg_out, &d) != SE_OK) {
+            e = SE_E_IO;
+            goto done;
+        }
+        if (frm_top > 0 &&
+            write_band(&enc, &arena, out_w, &g_frame, g_frame.line1, frm_top, 0) != 0) {
             e = SE_E_IO;
             goto done;
         }
@@ -1321,11 +1372,15 @@ se_err se_cam_develop(const char *cr2_path, const char *stock_path,
             failed = 1;
         }
     }
+    if (frm_bot > 0 && !failed) {
+        if (write_band(&enc, &arena, out_w, &g_frame, g_frame.line2, frm_bot, 1) != 0)
+            failed = 1;
+    }
     se_jpeg_end(&enc);
     d.enc = &enc;             /* still valid: the patch only needs the FILE* */
     if (out_flush(&d) != 0 || se_out_drain(d.out) != 0) e = SE_E_IO;
     if (e == SE_OK && d.thumb && d.out)
-        se_attach_thumb(&d, &ex, out_w, out_h + pad_h);
+        se_attach_thumb(&d, &ex, out_w, out_h + pad_h + frm_top + frm_bot);
     d.enc = NULL;
 
     if (failed) e = SE_E_IO;

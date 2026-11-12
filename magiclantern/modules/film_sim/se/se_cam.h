@@ -16,6 +16,7 @@
 #define SE_CAM_H_INCLUDED
 
 #include "engine/se.h"
+#include "frame.h"
 
 /*
  * Framing applied to the file the develop writes, indexed as in
@@ -27,6 +28,13 @@ void se_cam_set_aspect(int mode);
 
 /* Letterbox framings wider than 3:2 (16:9, 65:24, 2.39:1) into a 3:2 frame. */
 void se_cam_set_pad32(int on);
+
+/*
+ * Film frame: bands top and bottom carrying the stock name and the camera
+ * line, drawn by se/frame.c. NULL or frame->on == 0 draws nothing. Not
+ * applied to the reduced-size develops (thumbnail/preview paths).
+ */
+void se_cam_set_frame(const se_frame *f);
 
 /* How much of the stock to apply to a developed file, 0..100 (100 = as written). */
 void se_cam_set_strength(int s);

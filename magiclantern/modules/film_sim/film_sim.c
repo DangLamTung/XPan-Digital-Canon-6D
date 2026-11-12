@@ -37,6 +37,8 @@
 
 #include "../film_table.h"
 #include "film_xml.h"
+#include "se/frame.h"
+#include <propvalues.h>
 #include "fs_core.h"
 #include "fs_yuvhook.h"
 #include "fs_yuvlook.h"
@@ -156,6 +158,9 @@ static CONFIG_INT("film.sim.aspect", film_sim_aspect, 0);
  * framed.
  */
 static CONFIG_INT("film.sim.pad", film_sim_pad, 1);
+/* Film frame: a rebate band top and bottom with the stock and camera line.
+ * Off by default -- it changes the file the camera writes, so it is opt-in. */
+static CONFIG_INT("film.sim.frame", film_sim_frame, 0);
 #define FS_ASPECT_MAX 6
 
 /* Off by default: this patches two firmware entry points to look at the frame
@@ -4852,6 +4857,66 @@ static void fs_develop_note(void *ctx, const char *msg) {
   fs_log("  engine: %s", msg);
 }
 
+/*
+ * Brand colour for the frame band. The stock name is what the camera has; a
+ * brand table would need the film_t entry plumbed into the develop, and the
+ * file name already carries the brand.
+ */
+static unsigned fs_frame_colour(const char *name) {
+  if (strstr(name, "CINESTILL")) return 0xB0181E;                 /* red */
+  if (strstr(name, "PORTRA") || strstr(name, "GOLD") ||
+      strstr(name, "COLORPLUS") || strstr(name, "EKTAR") ||
+      strstr(name, "ULTRAMAX") || strstr(name, "KODACHROME") ||
+      strstr(name, "EKTACHROME") || strstr(name, "TRI-X") ||
+      strstr(name, "T-MAX"))
+    return 0xE0A000;                                              /* Kodak */
+  if (strstr(name, "PROVIA") || strstr(name, "VELVIA") ||
+      strstr(name, "ACROS") || strstr(name, "SUPERIA") ||
+      strstr(name, "C200") || strstr(name, "ASTIA"))
+    return 0x0A6B3A;                                              /* Fuji */
+  if (strstr(name, "HP5") || strstr(name, "DELTA") ||
+      strstr(name, "PANF") || strstr(name, "XP2"))
+    return 0x141414;                                              /* Ilford */
+  return 0x1A1A1A;
+}
+
+/* Apply the film frame, or clear it, before a develop. Opt-in: the config
+ * defaults to off, and a null frame leaves the file exactly as before. */
+static void fs_frame_apply(const char *stock_path) {
+  se_frame f;
+  const char *base;
+  unsigned rgb;
+  static int frame_no;
+  char label[SE_FRAME_LINE];
+  int i, n = 0;
+
+  if (!film_sim_frame) { se_cam_set_frame(NULL); return; }
+
+  base = strrchr(stock_path, '/');
+  base = base ? base + 1 : stock_path;
+
+  memset(&f, 0, sizeof f);
+  f.on = 1;
+  f.scale = 3;
+  f.top = 7 * f.scale + 9 * f.scale;
+  f.bottom = f.top;
+  rgb = fs_frame_colour(base);
+  f.bg[0] = (uint8_t)((rgb >> 16) & 0xFF);
+  f.bg[1] = (uint8_t)((rgb >> 8) & 0xFF);
+  f.bg[2] = (uint8_t)(rgb & 0xFF);
+  se_frame_contrast(f.bg, f.fg);
+
+  for (i = 0; base[i] && base[i] != '.' && n < SE_FRAME_LINE - 6; i++) {
+    char c = base[i];
+    label[n++] = (c >= 'a' && c <= 'z') ? (char)(c - 'a' + 'A') : c;
+  }
+  label[n] = 0;
+  frame_no = (frame_no % 999) + 1;
+  snprintf(f.line1, sizeof f.line1, "%s  %03d", label, frame_no);
+  snprintf(f.line2, sizeof f.line2, "%s", camera_model[0] ? camera_model : "EOS 6D");
+  se_cam_set_frame(&f);
+}
+
 static void fs_develop_run(void) {
   if (fs_develop_active)
     return;
@@ -5020,6 +5085,7 @@ static void fs_develop_run(void) {
   uint32_t t0 = get_ms_clock();
   se_cam_set_aspect(film_sim_aspect);
   se_cam_set_pad32(film_sim_pad);
+  fs_frame_apply(stk);
   se_cam_set_strength(film_sim_strength);
   se_cam_set_satboost(film_sim_satboost);
   se_cam_set_grainsize(film_sim_grainsize);
@@ -6466,6 +6532,7 @@ static void fs_develop_batch(void) {
     } else if (film_sim_level == FS_LEVEL_RAW) {
       se_cam_set_aspect(film_sim_aspect);
       se_cam_set_pad32(film_sim_pad);
+      fs_frame_apply(stock);
       se_cam_set_strength(film_sim_strength);
       se_cam_set_satboost(film_sim_satboost);
   se_cam_set_grainsize(film_sim_grainsize);
@@ -8396,6 +8463,15 @@ static struct menu_entry fs_menu_settings[] = {
         .help = "Framings wider than 3:2 (16:9, 65:24 XPan, 2.39:1) are written "
                 "into a 3:2 frame with black bars, so the body shows the whole "
                 "frame instead of something that is not what you composed.",
+    },
+    {
+        .name = "Film Frame",
+        .priv = &film_sim_frame,
+        .max = 1,
+        .help = "Draw a film rebate around developed files: a band top and "
+                "bottom in the stock's brand colour, carrying the stock name "
+                "and frame number above and the camera line below. Off by "
+                "default; applies to developed files, not to previews.",
     },
     {
         .name = "Aspect",
