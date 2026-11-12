@@ -74,6 +74,19 @@ cc -std=c99 -O2 -o frameprev frameprev.c ../frame.c
 
 `scale` is 1–4, the hex argument is the band colour. The output is a PPM.
 
+To simulate the camera's actual output — real photograph, canister art, the
+camera's type — use `framesim`:
+
+```bash
+cc -std=c99 -O2 -o framesim framesim.c ../frame.c
+./framesim out.ppm photo.ppm sprite.rgb 40 56 "EOS 6D" "CineStill 50D" 2.8 1/200 400
+```
+
+`sprite.rgb` is raw 40x56 RGB, the same thumbnail the shelf loads from
+`CANS.DAT`. In this workspace the artwork file that ships with FilmRoll carries
+fifteen canisters (Portra 400 first); CineStill 50D's own art lives in the
+merged `CANS.DAT` on the card, so the simulated frame shows the Portra canister.
+
 ## Not done yet
 
 - **Exposure data is not in the camera line.** Shutter, aperture and ISO are
