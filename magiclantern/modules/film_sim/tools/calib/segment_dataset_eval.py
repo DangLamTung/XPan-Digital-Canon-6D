@@ -161,6 +161,9 @@ def main():
         lab_deh = srgb_to_lab(arr_deh.astype(float))
         de_map = ciede2000(lab_deh, lab_ml)
 
+        luma_ml = 0.299 * arr_ml[..., 0] + 0.587 * arr_ml[..., 1] + 0.114 * arr_ml[..., 2]
+        luma_deh = 0.299 * arr_deh[..., 0] + 0.587 * arr_deh[..., 1] + 0.114 * arr_deh[..., 2]
+
         print(f"\n[{fname}] — {title} (Global Mean dE00: {np.mean(de_map):.2f})")
 
         # 1. Face Segmentation (Skin, Hair, Lips, Eyes)
@@ -198,21 +201,23 @@ def main():
             da = np.mean(sub_a_ml - sub_a_deh)
             db_lab = np.mean(sub_b_ml - sub_b_deh)
 
+            dY = np.mean(luma_ml[smask > 0] - luma_deh[smask > 0])
+
             segmented_metrics[sname].append({
                 "frame": fname, "mean_de": mean_de, "p90_de": p90_de,
-                "dL": dL, "da": da, "db": db_lab, "dRGB": (dr, dg, db), "n": n_px
+                "dL": dL, "dY": dY, "da": da, "db": db_lab, "dRGB": (dr, dg, db), "n": n_px
             })
 
             diag = []
-            if dL < -3.0: diag.append(f"Too Dark (dL={dL:.1f})")
-            elif dL > +3.0: diag.append(f"Too Bright (dL={dL:.1f})")
-            if da > +2.5: diag.append(f"Too Red/Magenta (da={da:.1f})")
-            elif da < -2.5: diag.append(f"Too Green (da={da:.1f})")
-            if db_lab > +2.5: diag.append(f"Too Yellow (db={db_lab:.1f})")
-            elif db_lab < -2.5: diag.append(f"Too Blue (db={db_lab:.1f})")
+            if dY > +2.5: diag.append(f"Highlight/Luma Too Bright (dY={dY:+.1f})")
+            elif dY < -3.0: diag.append(f"Luma Too Dark (dY={dY:+.1f})")
+            if db_lab > +1.5: diag.append(f"Too Yellow (db={db_lab:+.1f})")
+            elif db_lab < -1.5: diag.append(f"Too Blue (db={db_lab:+.1f})")
+            if da > +2.0: diag.append(f"Too Red/Magenta (da={da:+.1f})")
+            elif da < -2.0: diag.append(f"Too Green (da={da:+.1f})")
             diag_str = " | ".join(diag) if diag else "Good Balance"
 
-            print(f"  {sname:11s} ({n_px:5d} px): Mean dE00 = {mean_de:4.2f} (90th: {p90_de:4.2f}) | dL={dL:+5.1f} | dRGB=({dr:+4.1f},{dg:+4.1f},{db:+4.1f}) -> {diag_str}")
+            print(f"  {sname:11s} ({n_px:5d} px): Mean dE00 = {mean_de:4.2f} (90th: {p90_de:4.2f}) | dY={dY:+5.1f} | dL={dL:+5.1f} | db*={db_lab:+4.1f} | dRGB=({dr:+4.1f},{dg:+4.1f},{db:+4.1f}) -> {diag_str}")
 
     print("\n" + "=" * 80)
     print("   OVERALL SEGMENTED SUMMARY ACROSS 10-IMAGE DATASET")
@@ -220,10 +225,11 @@ def main():
     for sname, list_m in segmented_metrics.items():
         if not list_m: continue
         all_des = [m["mean_de"] for m in list_m]
+        all_dys = [m["dY"] for m in list_m]
         all_dls = [m["dL"] for m in list_m]
         all_das = [m["da"] for m in list_m]
         all_dbs = [m["db"] for m in list_m]
-        print(f"  {sname:11s} (across {len(list_m)} images): Average Mean dE00 = {np.mean(all_des):4.2f} | Average dL = {np.mean(all_dls):+5.1f} | da={np.mean(all_das):+4.1f} | db={np.mean(all_dbs):+4.1f}")
+        print(f"  {sname:11s} (across {len(list_m)} images): Average Mean dE00 = {np.mean(all_des):4.2f} | Average dY = {np.mean(all_dys):+5.1f} | Average dL = {np.mean(all_dls):+5.1f} | da={np.mean(all_das):+4.1f} | db={np.mean(all_dbs):+4.1f}")
 
 if __name__ == "__main__":
     main()
