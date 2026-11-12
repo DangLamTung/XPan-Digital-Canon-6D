@@ -16,7 +16,7 @@ Every stock is measured with the same system the 50D audit used:
 | Stock | Baseline | Now | Median | ≤4.0 | Blown % (ours / Dehancer) |
 |---|---|---|---|---|---|
 | Kodachrome 64 | 11.76 | 5.41 | 5.35 | 2/101 | 3.41 / 3.87 |
-| Velvia 50 | 8.31 | 5.31 | 5.24 | 19/101 | 0.18 / 0.30 |
+| Velvia 50 | 8.31 | 5.00 | 4.96 | 25/101 | 0.13 / 0.30 |
 | Ektar 100 | 10.95 | 4.65 | 4.65 | 32/101 | 0.05 / 2.81 |
 | Portra 160 | 6.94 | 4.46 | 4.42 | 33/101 | 6.73 / 6.84 |
 | CineStill 800T | new | 4.17 | 4.14 | 46/101 | 0.05 / 0.43 |
