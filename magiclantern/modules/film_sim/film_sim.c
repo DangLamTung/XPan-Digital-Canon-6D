@@ -8459,6 +8459,25 @@ static struct menu_entry fs_menu_userlook[] = {
  * the ML menu. The shelf is now the first row of the root menu and every
  * setting lives here, one level down.
  */
+static struct menu_entry fs_menu_header[] = {
+    {
+        .name = "Film Frame",
+        .priv = &film_sim_frame,
+        .max = 1,
+        .help = "Draw the header around developed files: a margin above, and a "
+                "band below with the stock's mark, the Canon wordmark and the "
+                "exposure. Off by default; developed files only.",
+    },
+    {
+        .name = "Art",
+        .priv = &film_sim_art,
+        .max = 1,
+        .help = "Use the stock canisters from ML/FILMSIM/CANS.DAT in the header "
+                "and on the shelf. Off falls back to the brand mark.",
+    },
+    MENU_EOL,
+};
+
 static struct menu_entry fs_menu_settings[] = {
     {
             .name = "Stock",
@@ -8528,50 +8547,6 @@ static struct menu_entry fs_menu_settings[] = {
                 "frame instead of something that is not what you composed.",
     },
     {
-        .name = "Film Frame",
-        .priv = &film_sim_frame,
-        .max = 1,
-        .help = "Draw a film rebate around developed files: a band top and "
-                "bottom in the stock's brand colour, carrying the stock name "
-                "and frame number above and the camera line below. Off by "
-                "default; applies to developed files, not to previews.",
-    },
-    {
-        .name = "Aspect",
-        .priv = &film_sim_aspect,
-        .max = FS_ASPECT_COUNT - 1,
-        .choices = fs_aspect_names,
-        .update = fs_aspect_update,
-        .help = "One setting for both halves of what-you-see-is-what-you-get: "
-                "the bars on LiveView and the window a developed file is cut "
-                "to are this same mode. Canon's own JPEG is always the full "
-                "3:2 sensor, which a module cannot change, so a file the camera "
-                "shoots is 3:2 with the bars; a file Develop writes is cut to "
-                "the shape the bars showed.",
-    },
-    {
-        .name = "User Look",
-        .select = menu_open_submenu,
-        .icon_type = IT_ACTION,
-        .help = "The looks the Color Creator saved, applied by name.",
-        .children = fs_menu_userlook,
-    },
-    {
-        .name = "Custom Look",
-        .select = fs_creator_trigger,
-        .icon_type = IT_ACTION,
-        .help = "The 12-wedge colour creator: saturation, luminance and hue "
-                "per colour, plus highlight/shadow. PLAY saves into User Look.",
-    },
-    {
-        .name = "Recipe",
-        .select = menu_open_submenu,
-        .icon_type = IT_ACTION,
-        .help = "A Fuji recipe -- the IMAGE QUALITY SETTING bundle, saved as a "
-                ".fs -- plus the Blue/Amber vs Green/Magenta WB grid.",
-        .children = fs_menu_fuji,
-    },
-    {
         .name = "LiveView",
         .select = menu_open_submenu,
         .icon_type = IT_ACTION,
@@ -8610,6 +8585,46 @@ static struct menu_entry film_sim_menu[] = {
         .help = "Stock, level, strength, saturation, grain, aspect, looks, "
                 "LiveView, capture and debug.",
         .children = fs_menu_settings,
+    },
+    {
+        .name = "Header",
+        .select = menu_open_submenu,
+        .icon_type = IT_ACTION,
+        .help = "The border written around developed files: on or off, and "
+                "whether the stock shows its canister or its brand mark.",
+        .children = fs_menu_header,
+    },
+    {
+        .name = "Aspect",
+        .priv = &film_sim_aspect,
+        .max = FS_ASPECT_COUNT - 1,
+        .choices = fs_aspect_names,
+        .update = fs_aspect_update,
+        .help = "One setting for both halves of what-you-see-is-what-you-get: "
+                "the bars on LiveView and the window a developed file is cut "
+                "to are this same mode.",
+    },
+    {
+        .name = "User Look",
+        .select = menu_open_submenu,
+        .icon_type = IT_ACTION,
+        .help = "The looks the Color Creator saved, applied by name.",
+        .children = fs_menu_userlook,
+    },
+    {
+        .name = "Custom Look",
+        .select = fs_creator_trigger,
+        .icon_type = IT_ACTION,
+        .help = "The 12-wedge colour creator: saturation, luminance and hue "
+                "per colour, plus highlight/shadow. PLAY saves into User Look.",
+    },
+    {
+        .name = "Recipe",
+        .select = menu_open_submenu,
+        .icon_type = IT_ACTION,
+        .help = "A Fuji recipe -- the IMAGE QUALITY SETTING bundle, saved as a "
+                ".fs -- plus the Blue/Amber vs Green/Magenta WB grid.",
+        .children = fs_menu_fuji,
     },
     {
         .name = "Develop",

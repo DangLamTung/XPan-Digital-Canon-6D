@@ -61,6 +61,7 @@ int main(int argc, char **argv)
     memset(&f, 0, sizeof f);
     f.on = 1;
     f.scale = 1;
+    f.brand_i = -1;
     f.bg[0] = f.bg[1] = f.bg[2] = 255;
     se_frame_contrast(f.bg, f.fg);
     f.dim[0] = f.dim[1] = f.dim[2] = 120;

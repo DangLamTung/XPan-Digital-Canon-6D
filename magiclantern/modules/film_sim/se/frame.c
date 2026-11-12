@@ -2005,29 +2005,27 @@ static void brand_row(uint8_t *row, int width, int y, int ytop, int x0,
     }
 }
 
-static void sprite_row(uint8_t *row, int width, int y, int ytop, int x0,
-                       int scale, const uint8_t *sp, int sw, int sh) {
-    int gy, gx, sx, sy;
-    if (!sp || y < ytop) return;
-    gy = (y - ytop) / scale;
+static void sprite_row(uint8_t *row, int width, int y, int ay, int ax,
+                       int aw, int ah, const uint8_t *sp, int sw, int sh) {
+    int gy, gx;
+    if (!sp || y < ay || y >= ay + ah) return;
+    gy = ((y - ay) * sh) / ah;
     if (gy < 0 || gy >= sh) return;
-    for (gx = 0; gx < sw; gx++) {
-        const uint8_t *p = sp + ((size_t)gy * sw + gx) * 3;
-        if (!(p[0] | p[1] | p[2])) continue;          /* transparent ink */
-        for (sy = 0; sy < scale; sy++)
-            for (sx = 0; sx < scale; sx++) {
-                int px = x0 + gx * scale + sx;
-                if (px < 0 || px >= width) continue;
-                row[px * 3 + 0] = p[0];
-                row[px * 3 + 1] = p[1];
-                row[px * 3 + 2] = p[2];
-            }
+    for (gx = 0; gx < aw; gx++) {
+        int sx = (gx * sw) / aw;
+        const uint8_t *p = sp + ((size_t)gy * sw + sx) * 3;
+        int px = ax + gx;
+        if (!(p[0] | p[1] | p[2])) continue;
+        if (px < 0 || px >= width) continue;
+        row[px * 3 + 0] = p[0];
+        row[px * 3 + 1] = p[1];
+        row[px * 3 + 2] = p[2];
     }
 }
 
 void se_frame_layout(se_frame *f) {
     int pad = 10;
-    int art_h = f->sprite ? f->sprite_h * f->sprite_scale : 0;
+    int art_h = f->sprite ? 150 : 0;        /* the art fills the band */
     int brand_h = f->brand_i >= 0 ? BRAND_SZ : 0;
     int tall = BRAND_SZ + 4 + FONT_H;      /* brand + camera line */
     if (art_h > tall) tall = art_h;
@@ -2062,11 +2060,9 @@ void se_frame_bottom_row(uint8_t *row, int width, const se_frame *f, int y) {
         brand_row(row, width, y, by, pad, f->brand_i, f->brand_fg);
         left_w = BRAND_SZ;
     } else if (f->sprite && f->sprite_w > 0 && f->sprite_h > 0) {
-        int aw = f->sprite_w * f->sprite_scale;
-        int ah = f->sprite_h * f->sprite_scale;
-        int ay = pad + (inner - ah) / 2;
-        if (ay < 0) ay = 0;
-        sprite_row(row, width, y, ay, pad, f->sprite_scale,
+        int ah = inner;
+        int aw = (f->sprite_w * ah) / f->sprite_h;
+        sprite_row(row, width, y, pad, pad, aw, ah,
                    f->sprite, f->sprite_w, f->sprite_h);
         left_w = aw;
     } else {
