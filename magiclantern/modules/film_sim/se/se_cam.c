@@ -404,20 +404,18 @@ void se_cam_set_frame(const se_frame *f) {
  * the encoder refuses.
  */
 static int write_band(se_jpeg *enc, se_arena *ar, int width,
-                      const se_frame *f, const char *text,
-                      int rows, int edge_first) {
+                      const se_frame *f, int rows, int top) {
     unsigned char *row = SE_NEW(ar, unsigned char, (size_t)width * 3);
-    int y, ytop;
+    int y;
     if (!row || rows <= 0) return -1;
-    ytop = se_frame_text_top(rows, f->scale);
     for (y = 0; y < rows; y++) {
-        int edge = edge_first ? (y == 0) : (y == rows - 1);
+        int edge = top ? (y == rows - 1) : (y == 0);
         if (edge) {
             se_frame_edge_row(row, width, f);
+        } else if (top) {
+            se_frame_top_row(row, width, f, y);
         } else {
-            se_frame_fill_row(row, width, f);
-            se_frame_text_row(row, width, f, y, ytop,
-                              edge_first ? f->line2 : f->line1);
+            se_frame_bottom_row(row, width, f, y);
         }
         if (se_jpeg_write_rows(enc, row, 1) != SE_OK) return -1;
     }
@@ -1308,7 +1306,7 @@ se_err se_cam_develop(const char *cr2_path, const char *stock_path,
             goto done;
         }
         if (frm_top > 0 &&
-            write_band(&enc, &arena, out_w, &g_frame, g_frame.line1, frm_top, 0) != 0) {
+            write_band(&enc, &arena, out_w, &g_frame, frm_top, 1) != 0) {
             e = SE_E_IO;
             goto done;
         }
@@ -1373,7 +1371,7 @@ se_err se_cam_develop(const char *cr2_path, const char *stock_path,
         }
     }
     if (frm_bot > 0 && !failed) {
-        if (write_band(&enc, &arena, out_w, &g_frame, g_frame.line2, frm_bot, 1) != 0)
+        if (write_band(&enc, &arena, out_w, &g_frame, frm_bot, 0) != 0)
             failed = 1;
     }
     se_jpeg_end(&enc);

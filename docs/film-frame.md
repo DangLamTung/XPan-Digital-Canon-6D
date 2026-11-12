@@ -14,27 +14,31 @@ the file that is kept.
 
 ## What it draws
 
+A print border: a plain margin, and a wider band along the bottom carrying the
+camera on the left and the exposure on the right.
+
 ```
 ┌──────────────────────────────────────────────┐
-│ CINESTILL 50D   012                          │   band, stock brand colour
-├──────────────────────────────────────────────┤   one-pixel keyline
-│                                              │
 │                the photograph                │
-│                                              │
-├──────────────────────────────────────────────┤
-│ EOS 6D                                       │   band + keyline
+├──────────────────────────────────────────────┤   keyline
+│ CANON                       f    SS    ISO   │
+│ EOS 6D                     2.8  1/200   400  │
 └──────────────────────────────────────────────┘
 ```
 
-- **Top band**: stock name (from the recipe's file name, uppercased) and a
-  three-digit frame counter that wraps at 999.
-- **Bottom band**: the camera model, from ML's `camera_model`.
-- **Colour**: the band takes the brand colour of the stock family —
-  CineStill red `#B0181E`, Kodak yellow `#E0A000`, Fuji green `#0A6B3A`,
-  Ilford black `#141414`, neutral `#1A1A1A` for anything unrecognised.
-  The text colour is chosen from the band's Rec. 601 luma, so it stays readable.
-- **Type**: a 5×7 pixel font, column-major, scaled ×3 on a full-size develop
-  (21 px cap height in a 48 px band).
+- **Left**: brand line in the main text colour, camera model under it in a
+  dimmed grey — `CANON` / `EOS 6D`, the model from ML's `camera_model`.
+- **Right**: three columns, each a small label (`f`, `SS`, `ISO`) centred over
+  its value.
+- **Values** are decoded from the same tables ML uses for its own display:
+  `values_aperture`/`codes_aperture`, `values_shutter`/`codes_shutter`,
+  `values_iso`/`codes_iso` against `lens_info.raw_aperture` / `raw_shutter` /
+  `raw_iso`. A raw value not in a table — bulb, an adapted lens — shows `-`.
+- **Paper**: white (`#FFFFFF`) with a dark keyline where the border meets the
+  picture. The text colours derive from the paper's luma, so the same layout
+  works if the paper colour is changed.
+- **Type**: 5x7 pixel font, column-major, scaled x3 on a full-size develop:
+  brand and values at 21 px, model and labels smaller.
 
 ## Where it lives
 

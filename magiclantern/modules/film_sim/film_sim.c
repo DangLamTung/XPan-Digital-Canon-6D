@@ -4858,26 +4858,39 @@ static void fs_develop_note(void *ctx, const char *msg) {
 }
 
 /*
- * Brand colour for the frame band. The stock name is what the camera has; a
- * brand table would need the film_t entry plumbed into the develop, and the
- * file name already carries the brand.
+ * Exposure line for the frame: shutter, aperture and ISO, decoded from the
+ * same tables ML uses to display them. Raw values that do not appear in a
+ * table (bulb, an adapted lens) fall back to "-".
  */
-static unsigned fs_frame_colour(const char *name) {
-  if (strstr(name, "CINESTILL")) return 0xB0181E;                 /* red */
-  if (strstr(name, "PORTRA") || strstr(name, "GOLD") ||
-      strstr(name, "COLORPLUS") || strstr(name, "EKTAR") ||
-      strstr(name, "ULTRAMAX") || strstr(name, "KODACHROME") ||
-      strstr(name, "EKTACHROME") || strstr(name, "TRI-X") ||
-      strstr(name, "T-MAX"))
-    return 0xE0A000;                                              /* Kodak */
-  if (strstr(name, "PROVIA") || strstr(name, "VELVIA") ||
-      strstr(name, "ACROS") || strstr(name, "SUPERIA") ||
-      strstr(name, "C200") || strstr(name, "ASTIA"))
-    return 0x0A6B3A;                                              /* Fuji */
-  if (strstr(name, "HP5") || strstr(name, "DELTA") ||
-      strstr(name, "PANF") || strstr(name, "XP2"))
-    return 0x141414;                                              /* Ilford */
-  return 0x1A1A1A;
+static int fs_code_index(const uint8_t *codes, int n, int raw) {
+  int i;
+  for (i = 0; i < n; i++) if (codes[i] == (uint8_t)raw) return i;
+  return -1;
+}
+
+static void fs_frame_exposure(se_frame *f) {
+  int i;
+
+  snprintf(f->label[0], sizeof f->label[0], "f");
+  snprintf(f->label[1], sizeof f->label[1], "SS");
+  snprintf(f->label[2], sizeof f->label[2], "ISO");
+  snprintf(f->value[0], sizeof f->value[0], "-");
+  snprintf(f->value[1], sizeof f->value[1], "-");
+  snprintf(f->value[2], sizeof f->value[2], "-");
+
+  i = fs_code_index(codes_aperture, APERTURE_ARRAY_LEN, lens_info.raw_aperture);
+  if (i >= 0) {
+    int a = values_aperture[i];              /* aperture * 10 */
+    if (a % 10) snprintf(f->value[0], sizeof f->value[0], "%d.%d", a / 10, a % 10);
+    else        snprintf(f->value[0], sizeof f->value[0], "%d", a / 10);
+  }
+  i = fs_code_index(codes_shutter, SHUTTER_ARRAY_LEN, lens_info.raw_shutter);
+  if (i >= 0) {
+    int s = values_shutter[i];               /* denominator, 1/s */
+    if (s > 0) snprintf(f->value[1], sizeof f->value[1], "1/%d", s);
+  }
+  i = fs_code_index(codes_iso, ISO_ARRAY_LEN, lens_info.raw_iso);
+  if (i >= 0) snprintf(f->value[2], sizeof f->value[2], "%d", values_iso[i]);
 }
 
 /* Apply the film frame, or clear it, before a develop. Opt-in: the config
@@ -4885,35 +4898,21 @@ static unsigned fs_frame_colour(const char *name) {
 static void fs_frame_apply(const char *stock_path) {
   se_frame f;
   const char *base;
-  unsigned rgb;
-  static int frame_no;
-  char label[SE_FRAME_LINE];
-  int i, n = 0;
 
+  (void)stock_path;
   if (!film_sim_frame) { se_cam_set_frame(NULL); return; }
 
-  base = strrchr(stock_path, '/');
-  base = base ? base + 1 : stock_path;
-
+  base = camera_model[0] ? camera_model : "EOS 6D";
   memset(&f, 0, sizeof f);
   f.on = 1;
   f.scale = 3;
-  f.top = 7 * f.scale + 9 * f.scale;
-  f.bottom = f.top;
-  rgb = fs_frame_colour(base);
-  f.bg[0] = (uint8_t)((rgb >> 16) & 0xFF);
-  f.bg[1] = (uint8_t)((rgb >> 8) & 0xFF);
-  f.bg[2] = (uint8_t)(rgb & 0xFF);
+  se_frame_layout(&f);
+  f.bg[0] = f.bg[1] = f.bg[2] = 255;      /* paper white */
   se_frame_contrast(f.bg, f.fg);
-
-  for (i = 0; base[i] && base[i] != '.' && n < SE_FRAME_LINE - 6; i++) {
-    char c = base[i];
-    label[n++] = (c >= 'a' && c <= 'z') ? (char)(c - 'a' + 'A') : c;
-  }
-  label[n] = 0;
-  frame_no = (frame_no % 999) + 1;
-  snprintf(f.line1, sizeof f.line1, "%s  %03d", label, frame_no);
-  snprintf(f.line2, sizeof f.line2, "%s", camera_model[0] ? camera_model : "EOS 6D");
+  f.dim[0] = f.dim[1] = f.dim[2] = 120;   /* model line and labels */
+  snprintf(f.brand, sizeof f.brand, "CANON");
+  snprintf(f.model, sizeof f.model, "%s", base);
+  fs_frame_exposure(&f);
   se_cam_set_frame(&f);
 }
 

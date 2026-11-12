@@ -66,21 +66,40 @@ static const glyph *find(char c) {
     return 0;
 }
 
+
+static int ch_width(int scale) { return 6 * scale; }
+
 int se_frame_text_width(const char *text, int scale) {
     int n = 0;
     if (!text || scale < 1) return 0;
     while (text[n]) n++;
-    return n * 6 * scale;   /* 5 columns + one of spacing */
+    return n * ch_width(scale);
 }
 
-int se_frame_text_top(int band, int scale) {
-    int h = 7 * scale;
-    int t = (band - h) / 2;
-    return t > 0 ? t : 0;
+/* Draw one row of `text` with its glyph box starting at `ytop`. */
+static void glyph_row(uint8_t *row, int width, int y, int ytop, int scale,
+                      const char *text, int x0, const uint8_t fg[3]) {
+    int gy = (y - ytop) / scale, x, i, gx, sx;
+    if (!text || y < ytop || gy < 0 || gy > 6) return;
+    x = x0;
+    for (i = 0; text[i]; i++) {
+        const glyph *gl = find(text[i]);
+        if (!gl) { x += ch_width(scale); continue; }
+        for (gx = 0; gx < 5; gx++) {
+            if (!((gl->col[gx] >> gy) & 1)) continue;
+            for (sx = 0; sx < scale; sx++) {
+                int px = x + gx * scale + sx;
+                if (px < 0 || px >= width) continue;
+                row[px * 3 + 0] = fg[0];
+                row[px * 3 + 1] = fg[1];
+                row[px * 3 + 2] = fg[2];
+            }
+        }
+        x += ch_width(scale);
+    }
 }
 
 void se_frame_contrast(const uint8_t bg[3], uint8_t fg[3]) {
-    /* Rec. 601 luma, in integers: the same weighting the pixel path uses. */
     int y = (299 * bg[0] + 587 * bg[1] + 114 * bg[2]) / 1000;
     uint8_t v = y > 140 ? 0 : 255;
     fg[0] = fg[1] = fg[2] = v;
@@ -98,49 +117,69 @@ void se_frame_fill_row(uint8_t *row, int width, const se_frame *f) {
 void se_frame_edge_row(uint8_t *row, int width, const se_frame *f) {
     int x;
     for (x = 0; x < width; x++) {
-        row[x * 3 + 0] = (uint8_t)((f->bg[0] + f->fg[0]) / 2);
-        row[x * 3 + 1] = (uint8_t)((f->bg[1] + f->fg[1]) / 2);
-        row[x * 3 + 2] = (uint8_t)((f->bg[2] + f->fg[2]) / 2);
+        row[x * 3 + 0] = (uint8_t)((f->bg[0] * 4 + f->fg[0]) / 5);
+        row[x * 3 + 1] = (uint8_t)((f->bg[1] * 4 + f->fg[1]) / 5);
+        row[x * 3 + 2] = (uint8_t)((f->bg[2] * 4 + f->fg[2]) / 5);
     }
 }
 
-int se_frame_extra_rows(const se_frame *f) {
-    if (!f || !f->on) return 0;
-    return f->top + f->bottom;
+void se_frame_layout(se_frame *f) {
+    int s = f->scale < 1 ? 1 : (f->scale > 4 ? 4 : f->scale);
+    int pad = 5 * s;
+    int label_s = s > 1 ? s / 2 : 1;
+    int value_s = s > 1 ? s - 1 : 1;
+    int model_s = s > 1 ? s - 1 : 1;
+    int brand_top = pad;
+    int model_top = brand_top + 7 * s + 3 * s;
+    int values_top = pad + 7 * label_s + 2 * s;
+    int a = model_top + 7 * model_s;
+    int b = values_top + 7 * value_s;
+
+    f->scale = s;
+    f->top = pad;
+    f->bottom = (a > b ? a : b) + pad;
 }
 
-void se_frame_text_row(uint8_t *row, int width, const se_frame *f,
-                       int y, int ytop, const char *text) {
-    se_frame_text_row_at(row, width, f, y, ytop, text, 3 * (f->scale < 1 ? 1 : f->scale));
+void se_frame_top_row(uint8_t *row, int width, const se_frame *f, int y) {
+    (void)y;
+    se_frame_fill_row(row, width, f);
 }
 
-void se_frame_text_row_at(uint8_t *row, int width, const se_frame *f,
-                          int y, int ytop, const char *text, int x0) {
-    int scale = f->scale < 1 ? 1 : (f->scale > 4 ? 4 : f->scale);
-    int gy = (y - ytop) / scale, sy, sx, x, i;
+void se_frame_bottom_row(uint8_t *row, int width, const se_frame *f, int y) {
+    int s = f->scale < 1 ? 1 : f->scale;
+    int pad = 5 * s;
+    int label_s = s > 1 ? s / 2 : 1;
+    int value_s = s > 1 ? s - 1 : 1;
+    int model_s = s > 1 ? s - 1 : 1;
+    int brand_top = pad;
+    int model_top = brand_top + 7 * s + 3 * s;
+    int labels_top = pad;
+    int values_top = labels_top + 7 * label_s + 2 * s;
+    int cw[3], total = 0, gap = 5 * s, x, i;
 
-    if (!text || !*text) return;
-    if (y < ytop || gy < 0 || gy > 6) return;
+    se_frame_fill_row(row, width, f);
 
-    x = x0;
-    for (i = 0; text[i]; i++) {
-        const glyph *gl = find(text[i]);
-        int gx;
-        if (!gl) { x += 6 * scale; continue; }
-        for (gx = 0; gx < 5; gx++) {
-            if (!((gl->col[gx] >> gy) & 1)) continue;
-            for (sy = 0; sy < scale; sy++) {
-                for (sx = 0; sx < scale; sx++) {
-                    int px = x + gx * scale + sx;
-                    int py = y;   /* the caller owns the row for this y */
-                    (void)py;
-                    if (px < 0 || px >= width) continue;
-                    row[px * 3 + 0] = f->fg[0];
-                    row[px * 3 + 1] = f->fg[1];
-                    row[px * 3 + 2] = f->fg[2];
-                }
-            }
-        }
-        x += 6 * scale;
+    glyph_row(row, width, y, brand_top, s, f->brand, pad, f->fg);
+    glyph_row(row, width, y, model_top, model_s, f->model, pad, f->dim);
+
+    /* three columns, right aligned, labels centred over their values */
+    for (i = 0; i < 3; i++) {
+        int wl = se_frame_text_width(f->label[i], label_s);
+        int wv = se_frame_text_width(f->value[i], value_s);
+        cw[i] = wl > wv ? wl : wv;
+        total += cw[i];
+    }
+    total += 2 * gap;
+    x = width - pad - total;
+    if (x < pad) x = pad;
+
+    for (i = 0; i < 3; i++) {
+        int wl = se_frame_text_width(f->label[i], label_s);
+        int wv = se_frame_text_width(f->value[i], value_s);
+        glyph_row(row, width, y, labels_top, label_s, f->label[i],
+                  x + (cw[i] - wl) / 2, f->dim);
+        glyph_row(row, width, y, values_top, value_s, f->value[i],
+                  x + (cw[i] - wv) / 2, f->fg);
+        x += cw[i] + gap;
     }
 }
