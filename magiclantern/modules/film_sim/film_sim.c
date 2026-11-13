@@ -1203,7 +1203,14 @@ static void fs_lv_grade(const void *src, void *dst, int pitch, int row0, int row
    * preview a different film from the one being shot.
    */
   if (fs_yuvlook_ready()) {
+    static int logged = -1;
     unsigned char *d = (unsigned char *)dst + (size_t)row0 * pitch;
+    if (logged != 2) {
+      logged = 2;
+      fs_log("lv: grading with the .fs table '%s' (the same one the shot uses)",
+             fs_yuvlook_name());
+      fs_log_flush();
+    }
     if (dst != src)
       memcpy(d, (const unsigned char *)src + (size_t)row0 * pitch,
              (size_t)(row1 - row0) * pitch);
@@ -1211,6 +1218,14 @@ static void fs_lv_grade(const void *src, void *dst, int pitch, int row0, int row
     return;
   }
 
+  {
+    static int logged = -1;
+    if (logged != 1) {
+      logged = 1;
+      fs_log("lv: NO .fs bake -- falling back to the name-matched preset tables");
+      fs_log_flush();
+    }
+  }
   fs_core_process_rows(&fs_lut, src, dst, pitch, row0, row1, &fs_rnd);
 }
 
