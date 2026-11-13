@@ -163,6 +163,8 @@ static CONFIG_INT("film.sim.pad", film_sim_pad, 1);
 static CONFIG_INT("film.sim.frame", film_sim_frame, 0);
 /* 0 = baked tables (fast), 1 = the engine per pixel (exact, slower). */
 static CONFIG_INT("film.sim.exact", film_sim_exact, 0);
+/* LiveView: the same engine, colour only. Off by default. */
+static CONFIG_INT("film.sim.lvexact", film_sim_lvexact, 0);
 #define FS_ASPECT_MAX 6
 
 /* Off by default: this patches two firmware entry points to look at the frame
@@ -1166,6 +1168,17 @@ static int fs_lv3d_logged = -1;
 static void fs_lv_grade(const void *src, void *dst, int pitch, int row0, int row1)
 {
   const se_yuv3 *t3 = film_sim_lv3d ? fs_yuvlook_uv3() : NULL;
+
+  /* Exact LiveView: the develop's own engine, colour only. Works on one
+   * buffer, so a separate destination is filled first. */
+  if (film_sim_lvexact && fs_yuvlook_engine_lv_ready()) {
+    unsigned char *d = (unsigned char *)dst + (size_t)row0 * pitch;
+    if (dst != src)
+      memcpy(d, (const unsigned char *)src + (size_t)row0 * pitch,
+             (size_t)(row1 - row0) * pitch);
+    if (fs_yuvlook_apply_engine_lv(d, pitch / 2, row1 - row0, pitch) == 0)
+      return;
+  }
 
   if (fs_lv3d_logged != (t3 ? 1 : 0)) {
     fs_lv3d_logged = t3 ? 1 : 0;
@@ -8603,6 +8616,14 @@ static struct menu_entry fs_menu_settings[] = {
         .children = fs_menu_live,
     },
     {
+        .name = "LiveView Exact",
+        .priv = &film_sim_lvexact,
+        .max = 1,
+        .help = "Grade LiveView with the engine itself, colour only: no "
+                "halation, no grain. The panel then shows the look the develop "
+                "will write, at a few frames a second instead of 30.",
+    },
+    {
         .name = "Exact Grade",
         .priv = &film_sim_exact,
         .max = 1,
@@ -9240,6 +9261,7 @@ MODULE_CONFIG(film_sim_aspect)
 MODULE_CONFIG(film_sim_pad)
 MODULE_CONFIG(film_sim_frame)
 MODULE_CONFIG(film_sim_exact)
+MODULE_CONFIG(film_sim_lvexact)
 MODULE_CONFIG(film_sim_yuvprobe)
 MODULE_CONFIG(film_sim_yuvrows)
 MODULE_CONFIG(film_sim_queue)

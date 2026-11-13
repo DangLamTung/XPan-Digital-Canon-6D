@@ -37,6 +37,9 @@ const se_yuv3 *fs_yuvlook_uv3(void);
 /* Exact path: the real engine per pixel on the shot buffer. Slower than the
  * baked tables, and free of their 256-entry quantisation. */
 int  fs_yuvlook_engine_ready(void);
+/* LiveView form: same engine, colour only (no halation, no grain). */
+int  fs_yuvlook_engine_lv_ready(void);
+uint32_t fs_yuvlook_apply_engine_lv(unsigned char *buf, int width, int height, int stride);
 uint32_t fs_yuvlook_apply_engine(unsigned char *buf, int width, int height, int stride);
 
 uint32_t fs_yuvlook_apply(unsigned char *buf, int width, int height, int stride);

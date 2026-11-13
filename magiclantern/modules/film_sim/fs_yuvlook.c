@@ -327,6 +327,59 @@ static int eng_stride, eng_row;
 
 int fs_yuvlook_engine_ready(void) { return eng_run != NULL; }
 
+/* ---- LiveView form: the same engine, colour only ----------------------
+ *
+ * Halation and grain are the expensive stages and neither is what a panel is
+ * for; with them off the run is small enough to prepare per width and the
+ * per-frame cost drops out of the seconds. Same code path as the develop, so
+ * what the panel shows is the look, not a table standing in for it.
+ */
+static int eng_emit(void *ctx, const uint8_t *row, int width);
+static se_look      lv_look;
+static int          lv_have;
+static se_look_run *lv_run;
+static se_arena     lv_arena;
+static unsigned char lv_mem[96 * 1024];
+static unsigned char lv_rgb[2048 * 3];
+static int          lv_w;
+
+int fs_yuvlook_engine_lv_ready(void) { return lv_have; }
+
+uint32_t fs_yuvlook_apply_engine_lv(unsigned char *buf, int width, int height, int stride)
+{
+    int y;
+    if (!lv_have || !buf || width < 2 || width > 2048) return 0;
+    if (!lv_run || lv_w != width) {
+        if (lv_run) { se_look_end(lv_run, eng_drop, NULL); lv_run = NULL; }
+        se_arena_init(&lv_arena, lv_mem, sizeof lv_mem);
+        se_look_fit(&lv_look, width, sizeof lv_mem);
+        if (se_look_begin(&lv_run, &lv_look, width, &lv_arena) != SE_OK) {
+            lv_run = NULL;
+            return 0;
+        }
+        lv_w = width;
+    }
+    eng_dst = buf; eng_stride = stride; eng_row = 0;
+    for (y = 0; y < height; y++) {
+        unsigned char *src = buf + (size_t)y * (size_t)stride;
+        int x;
+        for (x = 0; x < width; x++) {
+            int Y = src[x * 2 + 1];
+            int U = (int)(signed char)src[x * 2 + 0];
+            int V = (int)(signed char)src[x * 2 + 2];
+            int r = Y + ((183 * V) >> 8);
+            int g = Y - ((44 * U + 91 * V) >> 8);
+            int b = Y + ((227 * U) >> 8);
+            lv_rgb[x * 3 + 0] = (unsigned char)(r < 0 ? 0 : r > 255 ? 255 : r);
+            lv_rgb[x * 3 + 1] = (unsigned char)(g < 0 ? 0 : g > 255 ? 255 : g);
+            lv_rgb[x * 3 + 2] = (unsigned char)(b < 0 ? 0 : b > 255 ? 255 : b);
+        }
+        se_look_rows(lv_run, lv_rgb, 1, eng_emit, NULL);
+    }
+    se_look_end(lv_run, eng_emit, NULL);
+    return 0;
+}
+
 static int eng_emit(void *ctx, const uint8_t *row, int width)
 {
     unsigned char *p = eng_dst + (size_t)eng_row * (size_t)eng_stride;
@@ -356,6 +409,12 @@ static void eng_prepare(const se_look *lk)
     if (eng_run) { se_look_end(eng_run, eng_drop, NULL); eng_run = NULL; }
     /* Shrink the halation radius until the run fits this arena, the same way
      * a develop fits its own budget. */
+    lv_look = *lk;
+    lv_look.hal_amount = 0;          /* the expensive stages, dropped */
+    lv_look.grain = 0;
+    lv_have = 1;
+    if (lv_run) { se_look_end(lv_run, eng_drop, NULL); lv_run = NULL; }
+
     se_look_fit(&fitted, 5760, sizeof eng_arena_mem);
     se_arena_init(&eng_arena, eng_arena_mem, sizeof eng_arena_mem);
     if (se_look_begin(&eng_run, &fitted, 5760, &eng_arena) != SE_OK)
