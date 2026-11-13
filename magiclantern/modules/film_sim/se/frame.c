@@ -3411,16 +3411,15 @@ void se_frame_bottom_row(uint8_t *row, int width, const se_frame *f, int y) {
 
     se_frame_fill_row(row, width, f);
 
-    /* one line on the left: what the file is, and which stock made it */
+    /* two lines on the left, like the exposure columns:
+     * "Film Simulation" over the stock name */
     {
-        int lw = se_frame_text_width("Film Simulation", s);
-        int sw2 = se_frame_text_width(f->stock, s);
-        int ly = pad + (inner - FONT_H * s) / 2;
-        if (ly < pad) ly = pad;
+        int ly = label_top;
+        int vy = value_top;
         text_row(row, width, y, ly, s, "Film Simulation", pad, f->dim);
-        if (sw2)
-            text_row(row, width, y, ly, s, f->stock, pad + lw + 12 * s, f->fg);
-        left_w = pad + lw + 12 * s + sw2;
+        if (f->stock[0])
+            text_row(row, width, y, vy, s, f->stock, pad, f->fg);
+        left_w = pad + se_frame_text_width(f->stock, s);
     }
 
     /* the camera mark, centred */
