@@ -91,6 +91,98 @@ static int fs_bars_burned = 0;
 void fs_yuvhook_bars(int mode) { fs_bars_mode = mode; }
 int fs_yuvhook_bars_burned(void) { return fs_bars_burned; }
 
+/* Header burned into the shot: the band goes in the bottom bar, so it covers
+ * black pixels and never the picture. rgb_scratch is the caller's: nothing is
+ * allocated inside the capture path. */
+static se_frame fs_hdr;
+static unsigned char *fs_hdr_scratch;
+static int fs_hdr_burned;
+
+void fs_yuvhook_header(const se_frame *f, unsigned char *scratch) {
+    if (f && scratch) {
+        fs_hdr = *f;
+        fs_hdr_scratch = scratch;
+    } else {
+        memset(&fs_hdr, 0, sizeof fs_hdr);
+        fs_hdr_scratch = NULL;
+    }
+}
+int fs_yuvhook_header_burned(void) { return fs_hdr_burned; }
+
+/* RGB row -> UYVY row (Y, Cb, Cr, BT.601 studio swing). */
+static void fs_hdr_row_uyvy(unsigned char *dst, const unsigned char *rgb, int w) {
+    int x;
+    for (x = 0; x + 1 < w; x += 2) {
+        const unsigned char *p0 = rgb + (size_t)x * 3;
+        const unsigned char *p1 = rgb + (size_t)(x + 1) * 3;
+        int y0 = (77 * p0[0] + 150 * p0[1] + 29 * p0[2] + 128) >> 8;
+        int y1 = (77 * p1[0] + 150 * p1[1] + 29 * p1[2] + 128) >> 8;
+        int r = (p0[0] + p1[0]) / 2;
+        int g = (p0[1] + p1[1]) / 2;
+        int b = (p0[2] + p1[2]) / 2;
+        int u = ((-43 * r - 85 * g + 128 * b + 128) >> 8) + 128;
+        int v = ((128 * r - 107 * g - 21 * b + 128) >> 8) + 128;
+        dst[x * 2 + 0] = (unsigned char)(u < 0 ? 0 : (u > 255 ? 255 : u));
+        dst[x * 2 + 1] = (unsigned char)(y0 < 0 ? 0 : (y0 > 255 ? 255 : y0));
+        dst[x * 2 + 2] = (unsigned char)(v < 0 ? 0 : (v > 255 ? 255 : v));
+        dst[x * 2 + 3] = (unsigned char)(y1 < 0 ? 0 : (y1 > 255 ? 255 : y1));
+    }
+}
+
+/* Draw the band into the bottom bar of a frame that already has bars. */
+static void fs_hdr_burn(unsigned char *gp, int width, int rows, int stride,
+                        int num, int den) {
+    int box_h = (width * num) / den;
+    int top, bar_h, band_h, y;
+
+    if (box_h <= 0 || box_h >= rows) return;
+    top = (rows - box_h) / 2;
+    bar_h = rows - (top + box_h);
+    if (bar_h <= 0) return;
+
+    /* band height for this width, then the placement the develop uses */
+    if (fs_hdr.inner_h <= 0) {
+        fs_hdr.inner_h = width / 14;
+        if (fs_hdr.inner_h < 120) fs_hdr.inner_h = 120;
+        if (fs_hdr.inner_h > 400) fs_hdr.inner_h = 400;
+    }
+    se_frame_layout(&fs_hdr);
+    band_h = fs_hdr.bottom;
+    if (band_h <= 0 || band_h > bar_h) return;
+
+    /* The bars become paper, not black: the shot then looks like the framed
+     * print the develop writes, and the band sits on the same paper. */
+    for (y = 0; y < top; y++) {
+        unsigned char *row = gp + (size_t)y * stride;
+        for (int x = 0; x + 1 < width; x += 2) {
+            row[x * 2 + 0] = 128;
+            row[x * 2 + 1] = 235;
+            row[x * 2 + 2] = 128;
+            row[x * 2 + 3] = 235;
+        }
+    }
+    for (y = top + box_h; y < rows - band_h; y++) {
+        unsigned char *row = gp + (size_t)y * stride;
+        for (int x = 0; x + 1 < width; x += 2) {
+            row[x * 2 + 0] = 128;
+            row[x * 2 + 1] = 235;
+            row[x * 2 + 2] = 128;
+            row[x * 2 + 3] = 235;
+        }
+    }
+
+    for (y = 0; y < band_h; y++) {
+        unsigned char *row = gp + (size_t)(rows - band_h + y) * stride;
+        se_frame_fill_row(fs_hdr_scratch, width, &fs_hdr);
+        if (y == 0)
+            se_frame_edge_row(fs_hdr_scratch, width, &fs_hdr);
+        else
+            se_frame_bottom_row(fs_hdr_scratch, width, &fs_hdr, y);
+        fs_hdr_row_uyvy(row, fs_hdr_scratch, width);
+    }
+    fs_hdr_burned++;
+}
+
 static void fs_dcache_clean(void *p, uint32_t len)
 {
     uint32_t a = (uint32_t)p & ~31u;
@@ -135,6 +227,8 @@ static uint32_t fs_yuv_grade_cached(void *buf, int width, int rows, int stride,
         if (rows == frame_h && fs_core_aspect_ratio(fs_bars_mode, &num, &den)) {
             fs_core_aspect_bars(gp, stride, width, 0, rows, num, den);
             fs_bars_burned++;
+            if (fs_hdr.on && fs_hdr_scratch)
+                fs_hdr_burn(gp, width, rows, stride, num, den);
         }
     }
 

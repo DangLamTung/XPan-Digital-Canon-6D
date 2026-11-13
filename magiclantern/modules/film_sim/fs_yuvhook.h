@@ -1,6 +1,8 @@
 #ifndef _fs_yuvhook_h_
 #define _fs_yuvhook_h_
 
+#include "se/frame.h"
+
 /*
  * Read-only probe of the frame Canon is about to encode.
  *
@@ -45,6 +47,17 @@ void fs_yuvhook_need_neutral(int on);
 int  fs_yuvhook_style_refused(void);    /* frames not graded for this reason */
 /* Aspect mode (see fs_core_aspect_ratio) to burn into the shot, 0 = none. */
 void fs_yuvhook_bars(int mode);
+
+/*
+ * Burn the film header into the shot itself, inside the bottom bar.
+ *
+ * The band is drawn over the black bar the aspect already leaves, so the
+ * picture is not covered. `rgb_scratch` must hold width*3 bytes and stays
+ * owned by the caller: the hook runs inside the capture path, where allocating
+ * is not allowed. NULL or header->on == 0 turns it off.
+ */
+void fs_yuvhook_header(const se_frame *f, unsigned char *rgb_scratch);
+int  fs_yuvhook_header_burned(void);
 int fs_yuvhook_bars_burned(void);
 uint32_t fs_yuvhook_grade_ms(void);
 

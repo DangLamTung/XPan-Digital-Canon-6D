@@ -921,6 +921,7 @@ static int fs_slot1_ready(void);
 static int fs_develop_stock_index(int count);
 static int fs_lv_preset(void);
 static int fs_can_index(const char *name);
+static void fs_capture_header(void);
 static int fs_photo_number(const char *name);
 static int fs_starts_with_ci(const char *s, const char *prefix);
 
@@ -1096,6 +1097,7 @@ static void fs_sync() {
    *    3:2 frame -- no bars burned in -- and with replace on the bars are
    *    redundant because our own cropped develop replaces the file. */
   fs_yuvhook_bars(film_sim_replace ? film_sim_aspect : 0);
+  fs_capture_header();
 
   /*
    * Which 3D LUT the develop uses.
@@ -2254,6 +2256,8 @@ static void fs_slot_backup_task(void *unused) {
            * applied on top of it -- measured on IMG_9973_F.JPG, sat 63.2
            * against the camera JPEG's 29.6. */
           fs_yuvhook_bars(film_sim_aspect);
+        fs_capture_header();
+          fs_capture_header();
           fs_yuvhook_need_neutral(fs_grade_in_shutter());
           fs_yuvhook_grade(fs_grade_in_shutter() ? film_sim_yuvrows : 0);
         }
@@ -4980,6 +4984,36 @@ static void fs_frame_apply(const char *stock_path) {
   se_frame_layout(&f);
   fs_frame_exposure(&f);
   se_cam_set_frame(&f);
+}
+
+/* Scratch for the band row burned into the shot: one RGB row at the widest
+ * frame the body can hand the hook. Static, because the hook runs where
+ * allocating is not allowed. */
+static unsigned char fs_cap_scratch[5760 * 3];
+
+/* Build the capture header from the live camera state and hand it to the hook. */
+static void fs_capture_header(void) {
+  se_frame f;
+  int count = (film_active_count > 0) ? film_active_count : FILM_COUNT;
+  const film_xml_t *film = &film_active_table[fs_develop_stock_index(count)];
+
+  if (!film_sim_frame) { fs_yuvhook_header(NULL, NULL); return; }
+
+  memset(&f, 0, sizeof f);
+  f.on = 1;
+  f.bg[0] = f.bg[1] = f.bg[2] = 255;
+  se_frame_contrast(f.bg, f.fg);
+  f.dim[0] = f.dim[1] = f.dim[2] = 120;
+  f.brand_colour[0] = 0xCC;
+  f.brand_colour[1] = 0x00;
+  f.brand_colour[2] = 0x00;
+  f.brand_i = -1;
+  snprintf(f.model, sizeof f.model, "%s", camera_model[0] ? camera_model : "EOS 6D");
+  if (lens_info.name[0])
+    snprintf(f.lens, sizeof f.lens, "%s", lens_info.name);
+  snprintf(f.stock, sizeof f.stock, "%s", film->name);
+  fs_frame_exposure(&f);
+  fs_yuvhook_header(&f, fs_cap_scratch);
 }
 
 static void fs_develop_run(void) {
@@ -8993,6 +9027,7 @@ static unsigned int film_sim_init() {
          * frame Canon encodes.
          */
         fs_yuvhook_bars(film_sim_aspect);
+        fs_capture_header();
         fs_yuvhook_need_neutral(fs_grade_in_shutter());
         fs_yuvhook_grade(fs_grade_in_shutter() ? film_sim_yuvrows : 0);
         /* Report the style that is actually selected, not the one we asked

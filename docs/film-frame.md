@@ -90,7 +90,26 @@ cc -std=c99 -O2 -o framesim framesim.c ../frame.c
 fifteen canisters (Portra 400 first); CineStill 50D's own art lives in the
 merged `CANS.DAT` on the card, so the simulated frame shows the Portra canister.
 
-## Not done yet
+## Burned into the shot (in-shutter path)
+
+When **Film Frame** is on and the aspect leaves bars — 16:9, 65:24 XPan, 2.39:1 —
+the band is burned into Canon's YUV buffer inside the shot hook, in the bottom
+bar, so the JPEG on the card already carries it and no develop is needed.
+
+- `fs_yuvhook_header()` hands the hook the same `se_frame` the develop uses,
+  plus an RGB scratch row owned by the module (the hook runs where allocation
+  is not allowed).
+- Rows are rendered with `se_frame_bottom_row()` and converted to UYVY
+  (BT.601), so the wordmark keeps its colour through Canon's own encoder.
+- The bars are painted **paper** in this path, not black, so the shot is a
+  matted print: margin, picture, band.
+- The header keeps the frame's full 5472x3648 resolution — Canon's encoder
+  writes it, not ours.
+
+**It cannot work on a 3:2 shot**: there is no bar to draw into, and the YUV
+buffer has no spare rows. In that case the header exists only on developed files.
+
+
 
 - **Exposure data is not in the camera line.** Shutter, aperture and ISO are
   Canon properties whose encodings this module does not decode yet; the line
