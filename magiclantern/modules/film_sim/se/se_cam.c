@@ -1286,8 +1286,10 @@ se_err se_cam_develop(const char *cr2_path, const char *stock_path,
         out_w = d.tgt_w ? d.tgt_w : (d.crop_x1 - d.crop_x0);
         out_h = d.tgt_w ? d.tgt_h : (d.crop_y1 - d.crop_y0);
 
-        /* Pad to 3:2 when the framing is wider than that (16:9, 65:24). */
-        if (se_pad_32) {
+        /* Pad to 3:2 when the framing is wider than that (16:9, 65:24).
+         * With a header on the file is cut to the aspect instead: a mat
+         * around a framed print is what the header already is. */
+        if (se_pad_32 && !(g_frame.on && !d.tgt_w)) {
             int want_h = (out_w * 2) / 3;
             if (want_h > out_h)
                 pad_h = want_h - out_h;   /* extra rows, not the total */

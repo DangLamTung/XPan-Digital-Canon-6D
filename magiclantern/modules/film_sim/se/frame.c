@@ -3391,9 +3391,10 @@ void se_frame_bottom_row(uint8_t *row, int width, const se_frame *f, int y) {
     int pad = 10;
     int inner = f->bottom - 2 * pad;
     int mid_h = LOGO_H + 6 + FONT_H;   /* Canon, then one camera line */
+    int stats_h = FONT_H + 4 + FONT_H;
     int logo_top = pad + (inner - mid_h) / 2;
     int model_top = logo_top + LOGO_H + 6;
-    int label_top = pad;
+    int label_top = pad + (inner - stats_h) / 2;
     int value_top = label_top + FONT_H + 4;
     int cw[3], total = 0, gap = 14, x, i, sw, left_w;
 
