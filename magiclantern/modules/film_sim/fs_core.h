@@ -176,11 +176,13 @@ static void fs_core_build_luts(fs_lut_t *lut, const fs_params_t *p,
 
         v = v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v);
 
-        int y = (int)(v * 255.0f + 0.5f);
-
-        /* blend toward the identity curve with the strength setting */
-        lut->curve[i] = (y * s + i * (100 - s)) / 100;
-        lut->curve16[i] = (unsigned short)(lut->curve[i] * 256);
+        /* 16-bit first: rounding to 8 bits here and multiplying back up puts
+         * every entry exactly on a code, and then the dither below has
+         * nothing to round -- which is why bands survived the first fix. */
+        int y16 = (int)(v * 65535.0f + 0.5f);
+        int y = (y16 * s + i * 256 * (100 - s)) / 100;
+        lut->curve16[i] = (unsigned short)y;
+        lut->curve[i] = (unsigned char)(y >> 8);
     }
 
     float sat = (1.0f + (p->saturation / 100.0f - 1.0f) * s / 100.0f)
