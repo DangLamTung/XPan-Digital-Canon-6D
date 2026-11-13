@@ -1691,7 +1691,8 @@ static unsigned int fs_display_filter(unsigned int ctx) {
  */
 /* Short forms for the header band: the menu wants words, the band wants a ratio. */
 static const char *fs_aspect_short[] = {
-    "3:2", "1:1", "4:5", "9:16", "16:9", "65:24", "2.39:1",
+    "3:2 full", "1:1 square", "4:5 portrait", "9:16 story",
+    "16:9 video", "65:24 XPan", "2.39:1 Cinemascope",
 };
 
 static const char *fs_aspect_names[] = {
