@@ -4960,6 +4960,8 @@ static void fs_frame_apply(const char *stock_path) {
   f.brand_colour[2] = 0x00;
   snprintf(f.model, sizeof f.model, "%s", base);
   snprintf(f.stock, sizeof f.stock, "%s", film->name);
+  if (lens_info.name[0])
+    snprintf(f.lens, sizeof f.lens, "%s", lens_info.name);
   /*
    * Per stock first: the canister in CANS.DAT is that stock's own artwork.
    * The brand mark is the fallback, for a card with no art file or a stock

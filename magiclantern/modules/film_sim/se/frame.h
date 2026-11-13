@@ -34,7 +34,9 @@ typedef struct {
     uint8_t      dim[3];       /* model line and column labels */
     uint8_t      brand_colour[3];  /* wordmark; a brand colour, or fg */
     char         model[SE_FRAME_LINE];   /* "EOS 6D" */
-    char         stock[SE_FRAME_LINE];   /* fallback text when there is no art */
+    char         stock[SE_FRAME_LINE];   /* the stock's name, under its mark */
+    char         lens[SE_FRAME_LINE];    /* the lens, under the camera model */
+    int          inner_h;                /* band height; 0 = 150 */
     const uint8_t *sprite;    /* stock canister, RGB, sprite_w x sprite_h */
     int          sprite_w, sprite_h, sprite_scale;
     const uint8_t *brand;     /* brand mark, BRAND_SZ x BRAND_SZ, 8-bit coverage */

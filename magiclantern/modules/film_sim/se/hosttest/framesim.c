@@ -76,13 +76,14 @@ int main(int argc, char **argv)
         f.sprite_h = sh;
         f.sprite_scale = 2;
     }
-    se_frame_layout(&f);
     snprintf(f.label[0], sizeof f.label[0], "f");
     snprintf(f.label[1], sizeof f.label[1], "SS");
     snprintf(f.label[2], sizeof f.label[2], "ISO");
     snprintf(f.value[0], sizeof f.value[0], "%s", argv[8]);
     snprintf(f.value[1], sizeof f.value[1], "%s", argv[9]);
     snprintf(f.value[2], sizeof f.value[2], "%s", argv[10]);
+    if (argc > 15) f.inner_h = atoi(argv[15]);
+    if (argc > 16) snprintf(f.lens, sizeof f.lens, "%s", argv[16]);
     if (argc > 11) {
         f.brand_i = atoi(argv[11]);
         f.brand_fg[0] = argc > 14 ? atoi(argv[12]) : 0xED;
@@ -90,6 +91,7 @@ int main(int argc, char **argv)
         f.brand_fg[2] = argc > 14 ? atoi(argv[14]) : 0x00;
         if (f.brand_i >= 0) f.sprite = NULL;
     }
+    se_frame_layout(&f);
 
     canvas = malloc((size_t)W * (size_t)(H + f.top + f.bottom) * 3);
     row = malloc((size_t)W * 3);

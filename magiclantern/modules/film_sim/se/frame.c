@@ -2025,9 +2025,11 @@ static void sprite_row(uint8_t *row, int width, int y, int ay, int ax,
 
 void se_frame_layout(se_frame *f) {
     int pad = 10;
-    int art_h = f->sprite ? 150 : 0;        /* the art fills the band */
+    int inner_h = f->inner_h > 0 ? f->inner_h : 150;
+    int art_h = f->sprite ? inner_h : 0;    /* the art fills the band */
     int brand_h = f->brand_i >= 0 ? BRAND_SZ : 0;
-    int tall = BRAND_SZ + 4 + FONT_H;      /* brand + camera line */
+    int tall = inner_h;
+    (void)0;
     if (art_h > tall) tall = art_h;
     if (LOGO_H > tall) tall = LOGO_H;
     (void)brand_h;
@@ -2044,9 +2046,10 @@ void se_frame_top_row(uint8_t *row, int width, const se_frame *f, int y) {
 void se_frame_bottom_row(uint8_t *row, int width, const se_frame *f, int y) {
     int pad = 10;
     int inner = f->bottom - 2 * pad;
-    int mid_h = LOGO_H + 4 + FONT_H;          /* Canon + model line, as a block */
+    int mid_h = LOGO_H + 4 + FONT_H + 2 + FONT_H;  /* Canon, model, lens */
     int logo_top = pad + (inner - mid_h) / 2;
     int model_top = logo_top + LOGO_H + 4;
+    int lens_top = model_top + FONT_H + 2;
     int label_top = pad;
     int value_top = label_top + FONT_H + 4;
     int cw[3], total = 0, gap = 14, x, i, sw, left_w;
@@ -2057,13 +2060,25 @@ void se_frame_bottom_row(uint8_t *row, int width, const se_frame *f, int y) {
     if (f->brand_i >= 0) {
         int by = pad + (inner - BRAND_SZ) / 2;
         if (by < 0) by = 0;
+        int sy = by + BRAND_SZ + 2;
         brand_row(row, width, y, by, pad, f->brand_i, f->brand_fg);
+        {
+            int sw2 = se_frame_text_width(f->stock, 1);
+            if (sw2 && sy + FONT_H <= f->bottom)
+                text_row(row, width, y, sy, 1, f->stock, pad, f->fg);
+        }
         left_w = BRAND_SZ;
     } else if (f->sprite && f->sprite_w > 0 && f->sprite_h > 0) {
-        int ah = inner;
+        int sw0 = se_frame_text_width(f->stock, 1);
+        int ah = inner - (sw0 ? FONT_H + 4 : 0);
         int aw = (f->sprite_w * ah) / f->sprite_h;
         sprite_row(row, width, y, pad, pad, aw, ah,
                    f->sprite, f->sprite_w, f->sprite_h);
+        {
+            int sw2 = se_frame_text_width(f->stock, 1);
+            if (sw2 && pad + ah + 2 + FONT_H <= f->bottom)
+                text_row(row, width, y, pad + ah + 2, 1, f->stock, pad, f->fg);
+        }
         left_w = aw;
     } else {
         left_w = 0;
@@ -2073,7 +2088,10 @@ void se_frame_bottom_row(uint8_t *row, int width, const se_frame *f, int y) {
     logo_row(row, width, y, logo_top, (width - LOGO_W) / 2, f->brand_colour);
     {
         int mw = se_frame_text_width(f->model, 1);
+        int lw = se_frame_text_width(f->lens, 1);
         text_row(row, width, y, model_top, 1, f->model, (width - mw) / 2, f->dim);
+        if (lw)
+            text_row(row, width, y, lens_top, 1, f->lens, (width - lw) / 2, f->dim);
     }
 
     /* the stock, centred between the camera block and the exposure block */
