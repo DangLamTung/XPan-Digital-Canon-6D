@@ -778,6 +778,21 @@ static void fs_yuv_hook_body(uint32_t *regs, uint32_t *stack, uint32_t pc)
     if (pc == FS_YUV_ADDR_STILL) fs_yuv_n_still++;
     else if (pc == FS_YUV_ADDR_SSRAW) fs_yuv_n_ssraw++;
 
+    /*
+     * Grade at the last stop, not the first.
+     *
+     * The ssraw site runs before Canon's own YUV work; anything it does to the
+     * frame afterwards (noise reduction, shading, the style pass) re-quantises
+     * what we wrote, and on a real body that showed up as block-shaped mottling
+     * in the JPEG that LiveView -- a different buffer and path -- never had.
+     * When the JPEG entry point is patched, skip this one and let that call
+     * grade, because nothing reads the frame after it.
+     */
+    if (pc == FS_YUV_ADDR_SSRAW && fs_yuv_patched[0]) {
+        fs_yuv_diag_set(pc, 7);
+        return;
+    }
+
     buf = fs_yuv_extract_buf(regs, pc, &size);
 
     /*
