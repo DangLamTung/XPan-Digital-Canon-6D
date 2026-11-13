@@ -1187,11 +1187,31 @@ static void fs_lv_grade(const void *src, void *dst, int pitch, int row0, int row
     fs_log_flush();
   }
 
-  if (t3)
+  if (t3) {
     fs_core_process_rows3(t3->y, t3->v, src, dst, pitch, row0, row1,
                           fs_lut.grain_amp, &fs_rnd);
-  else
-    fs_core_process_rows(&fs_lut, src, dst, pitch, row0, row1, &fs_rnd);
+    return;
+  }
+
+  /*
+   * The panel grades with the SAME table the shot writes with.
+   *
+   * That table is baked from the .fs by se_look_bake_yuv(), not from the
+   * ten-parameter presets, which are matched by stock name -- Ektar used to
+   * preview as Velvia and CineStill 50D as Neutral. The cost is the same
+   * (measured 0.5 ms at 720x480 for either), so there was never a reason to
+   * preview a different film from the one being shot.
+   */
+  if (fs_yuvlook_ready()) {
+    unsigned char *d = (unsigned char *)dst + (size_t)row0 * pitch;
+    if (dst != src)
+      memcpy(d, (const unsigned char *)src + (size_t)row0 * pitch,
+             (size_t)(row1 - row0) * pitch);
+    fs_yuvlook_apply(d, pitch / 2, row1 - row0, pitch);
+    return;
+  }
+
+  fs_core_process_rows(&fs_lut, src, dst, pitch, row0, row1, &fs_rnd);
 }
 
 static void FAST fs_process_frame(void *src, void *dst) {
