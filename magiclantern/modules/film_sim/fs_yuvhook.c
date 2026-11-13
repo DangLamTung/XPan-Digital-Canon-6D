@@ -211,6 +211,10 @@ static void fs_dcache_clean(void *p, uint32_t len)
 
 int fs_yuvhook_dcache_used(void) { return fs_dcache_used; }
 
+/* Exact path toggle: the engine per pixel instead of the baked tables. */
+static int fs_yuv_exact;
+void fs_yuvhook_exact(int on) { fs_yuv_exact = on ? 1 : 0; }
+
 /*
  * Grade a frame through the cached alias, and hand it back to Canon.
  *
@@ -233,7 +237,10 @@ static uint32_t fs_yuv_grade_cached(void *buf, int width, int rows, int stride,
     if (ba >= 0x40000000u && ba < 0x80000000u)
         gp = (unsigned char *)CACHEABLE(buf);
     fs_dcache_used = (gp != (unsigned char *)buf);
-    ms = fs_yuvlook_apply(gp, width, rows, stride);
+    if (fs_yuv_exact && width <= 5760 && fs_yuvlook_engine_ready())
+        ms = fs_yuvlook_apply_engine(gp, width, rows, stride);
+    else
+        ms = fs_yuvlook_apply(gp, width, rows, stride);
 
     if (fs_bars_mode > 0) {
         int num, den;

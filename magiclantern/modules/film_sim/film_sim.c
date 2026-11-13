@@ -161,6 +161,8 @@ static CONFIG_INT("film.sim.pad", film_sim_pad, 1);
 /* Film frame: a rebate band top and bottom with the stock and camera line.
  * Off by default -- it changes the file the camera writes, so it is opt-in. */
 static CONFIG_INT("film.sim.frame", film_sim_frame, 0);
+/* 0 = baked tables (fast), 1 = the engine per pixel (exact, slower). */
+static CONFIG_INT("film.sim.exact", film_sim_exact, 0);
 #define FS_ASPECT_MAX 6
 
 /* Off by default: this patches two firmware entry points to look at the frame
@@ -1097,6 +1099,7 @@ static void fs_sync() {
    *    3:2 frame -- no bars burned in -- and with replace on the bars are
    *    redundant because our own cropped develop replaces the file. */
   fs_yuvhook_bars(film_sim_replace ? film_sim_aspect : 0);
+  fs_yuvhook_exact(film_sim_exact);
   fs_capture_header();
 
   /*
@@ -8588,6 +8591,15 @@ static struct menu_entry fs_menu_settings[] = {
         .children = fs_menu_live,
     },
     {
+        .name = "Exact Grade",
+        .priv = &film_sim_exact,
+        .max = 1,
+        .help = "Grade the in-shot frame with the engine itself instead of the "
+                "baked tables: no 256-entry quantisation, so no banding in "
+                "smooth areas. Costs shutter time -- the tables take ~0.8 s, "
+                "the engine will take seconds.",
+    },
+    {
         .name = "Capture",
         .select = menu_open_submenu,
         .icon_type = IT_ACTION,
@@ -9215,6 +9227,7 @@ MODULE_CONFIG(film_sim_replace)
 MODULE_CONFIG(film_sim_aspect)
 MODULE_CONFIG(film_sim_pad)
 MODULE_CONFIG(film_sim_frame)
+MODULE_CONFIG(film_sim_exact)
 MODULE_CONFIG(film_sim_yuvprobe)
 MODULE_CONFIG(film_sim_yuvrows)
 MODULE_CONFIG(film_sim_queue)

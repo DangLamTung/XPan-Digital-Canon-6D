@@ -34,6 +34,11 @@ const se_yuvtbl *fs_yuvlook_table(void);
 const se_yuv3 *fs_yuvlook_uv3(void);
 
 /* Millisecs spent, 0 when nothing was done. */
+/* Exact path: the real engine per pixel on the shot buffer. Slower than the
+ * baked tables, and free of their 256-entry quantisation. */
+int  fs_yuvlook_engine_ready(void);
+uint32_t fs_yuvlook_apply_engine(unsigned char *buf, int width, int height, int stride);
+
 uint32_t fs_yuvlook_apply(unsigned char *buf, int width, int height, int stride);
 
 #endif

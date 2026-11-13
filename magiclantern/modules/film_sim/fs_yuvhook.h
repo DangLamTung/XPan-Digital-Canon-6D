@@ -60,6 +60,8 @@ void fs_yuvhook_header(const se_frame *f, unsigned char *rgb_scratch);
 int  fs_yuvhook_header_burned(void);
 int fs_yuvhook_bars_burned(void);
 uint32_t fs_yuvhook_grade_ms(void);
+/* 1 = grade the shot with the engine itself instead of the baked tables. */
+void fs_yuvhook_exact(int on);
 
 uint32_t fs_yuvhook_hook_ms(void);  /* get_ms_clock() when the hook last ran */
 int fs_yuvhook_hook_shots(void);    /* pictures seen by the hook */

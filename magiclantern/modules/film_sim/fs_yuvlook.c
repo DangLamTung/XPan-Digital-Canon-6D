@@ -59,6 +59,9 @@ static se_yuv3   tbl3;
 static int       baked;
 static char      baked_name[SE_STOCK_NAME];
 
+/* Exact (engine) path, defined below; prepared when a stock is baked. */
+static void eng_prepare(const se_look *lk);
+
 
 /*
  * Load a FLUT cube for the bake. The develop path has its own loader in
@@ -222,6 +225,7 @@ int fs_yuvlook_bake_lut(const char *stock_path, int strength, const char *lut_pa
             se_log("bake: %s unreadable, LiveView has the .fs only", lut_path);
         se_look_set_bake_cube(got > 0 ? &cube : NULL);
         se_look_bake_yuv(&lk, &tbl);
+        eng_prepare(&lk);
         se_look_bake_yuv3(&lk, &tbl3);
         se_look_set_bake_cube(NULL);
         free(hold);
@@ -293,6 +297,101 @@ static int fs_yuv_flat_dither(int in, int d) {
     if (in < 0 || in > 254) return 0;
     if (tbl.y[in] != tbl.y[in + 1]) return 0;
     return (d >= 192) - (d < 64);
+}
+
+
+/* ------------------------------------------------------------------------
+ * Exact path: run the real engine on the shot, not its sampled tables.
+ *
+ * The baked path samples the look into 256 luma codes and a chroma grid; that
+ * sampling is the banding, because a contrasty stock collapses a quarter of
+ * the codes onto each other. Here each row of the YUV frame is converted to
+ * RGB, pushed through the same se_look_rows() the develop uses, and converted
+ * back with the engine's own 16->8 dither. Same look as a developed frame, at
+ * the cost of per-pixel work inside the shot.
+ *
+ * Nothing here allocates: the arena and the row buffers are static and the run
+ * is created when the stock is baked, outside the capture path.
+ */
+static int eng_drop(void *ctx, const uint8_t *row, int width) { (void)ctx; (void)row; (void)width; return 0; }
+static void eng_prepare(const se_look *lk);
+static se_look_run *eng_run;
+static se_arena     eng_arena;
+/* The engine run needs far more than the develop's 192 KB at full width: the
+ * halation ring is (2r+1) rows wide. 800 KB holds it at 5760 px with r=21,
+ * close to what a develop uses; the tables never needed it at all. */
+static unsigned char eng_arena_mem[800 * 1024];
+static unsigned char eng_rgb[5760 * 3];
+static unsigned char *eng_dst;
+static int eng_stride, eng_row;
+
+int fs_yuvlook_engine_ready(void) { return eng_run != NULL; }
+
+static int eng_emit(void *ctx, const uint8_t *row, int width)
+{
+    unsigned char *p = eng_dst + (size_t)eng_row * (size_t)eng_stride;
+    int x;
+    (void)ctx;
+    for (x = 0; x + 1 < width; x += 2) {
+        const unsigned char *a = row + (size_t)x * 3;
+        const unsigned char *b = row + (size_t)(x + 1) * 3;
+        int y0 = (77 * a[0] + 150 * a[1] + 29 * a[2] + 128) >> 8;
+        int y1 = (77 * b[0] + 150 * b[1] + 29 * b[2] + 128) >> 8;
+        int r = (a[0] + b[0]) / 2, g = (a[1] + b[1]) / 2, bl = (a[2] + b[2]) / 2;
+        int u = ((-43 * r - 85 * g + 128 * bl + 128) >> 8);
+        int v = ((128 * r - 107 * g - 21 * bl + 128) >> 8);
+        p[x * 2 + 0] = (unsigned char)(signed char)(u < -128 ? -128 : u > 127 ? 127 : u);
+        p[x * 2 + 1] = (unsigned char)(y0 < 0 ? 0 : y0 > 255 ? 255 : y0);
+        p[x * 2 + 2] = (unsigned char)(signed char)(v < -128 ? -128 : v > 127 ? 127 : v);
+        p[x * 2 + 3] = (unsigned char)(y1 < 0 ? 0 : y1 > 255 ? 255 : y1);
+    }
+    eng_row++;
+    return 0;
+}
+
+/* Called from the bake: build a run for the widest frame the body can hand. */
+static void eng_prepare(const se_look *lk)
+{
+    se_look fitted = *lk;
+    if (eng_run) { se_look_end(eng_run, eng_drop, NULL); eng_run = NULL; }
+    /* Shrink the halation radius until the run fits this arena, the same way
+     * a develop fits its own budget. */
+    se_look_fit(&fitted, 5760, sizeof eng_arena_mem);
+    se_arena_init(&eng_arena, eng_arena_mem, sizeof eng_arena_mem);
+    if (se_look_begin(&eng_run, &fitted, 5760, &eng_arena) != SE_OK)
+        eng_run = NULL;
+}
+
+uint32_t fs_yuvlook_apply_engine(unsigned char *buf, int width, int height, int stride)
+{
+    int y;
+#ifndef SE_HOSTED
+    uint32_t t0 = get_ms_clock();
+#endif
+    if (!eng_run || !buf || width < 2 || width > 5760) return 0;
+    eng_dst = buf; eng_stride = stride; eng_row = 0;
+    for (y = 0; y < height; y++) {
+        unsigned char *src = buf + (size_t)y * (size_t)stride;
+        int x;
+        for (x = 0; x < width; x++) {
+            int Y = src[x * 2 + 1];
+            int U = (int)(signed char)src[x * 2 + 0];
+            int V = (int)(signed char)src[x * 2 + 2];
+            int r = Y + ((183 * V) >> 8);
+            int g = Y - ((44 * U + 91 * V) >> 8);
+            int b = Y + ((227 * U) >> 8);
+            eng_rgb[x * 3 + 0] = (unsigned char)(r < 0 ? 0 : r > 255 ? 255 : r);
+            eng_rgb[x * 3 + 1] = (unsigned char)(g < 0 ? 0 : g > 255 ? 255 : g);
+            eng_rgb[x * 3 + 2] = (unsigned char)(b < 0 ? 0 : b > 255 ? 255 : b);
+        }
+        se_look_rows(eng_run, eng_rgb, 1, eng_emit, NULL);
+    }
+    se_look_end(eng_run, eng_emit, NULL);
+#ifdef SE_HOSTED
+    return 0;
+#else
+    return get_ms_clock() - t0;
+#endif
 }
 
 uint32_t fs_yuvlook_apply(unsigned char *buf, int width, int height, int stride)
