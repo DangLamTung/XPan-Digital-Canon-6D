@@ -81,7 +81,8 @@ static const char * const fs_preset_names[FS_PRESET_COUNT] =
 
 typedef struct
 {
-    unsigned char curve[256];   /* luma response */
+    unsigned char curve[256];   /* luma response, 8-bit (3D path) */
+    unsigned short curve16[256];/* same curve at 16-bit, for dithering */
     unsigned char sat[256];     /* saturation, 7.7 fixed point (128 = 1.0) */
     short cb_off[256];          /* split toning, Cb */
     short cr_off[256];          /* split toning, Cr */
@@ -132,6 +133,20 @@ static int fs_cos_deg(int deg)
  */
 static int fs_core_satboost = 100;
 
+/* 8x8 ordered dither, scaled to one 8-bit step in 16-bit units. The develop
+ * path has used this since the beginning (se_develop_dither_row); the in-shot
+ * YUV grade did not, which is what made skies band. */
+static const unsigned char fs_core_dither[8][8] = {
+    {  0, 128,  32, 160,   8, 136,  40, 168},
+    {192,  64, 224,  96, 200,  72, 232, 104},
+    { 48, 176,  16, 144,  56, 184,  24, 152},
+    {240, 112, 208,  80, 248, 120, 216,  88},
+    { 12, 140,  44, 172,   4, 132,  36, 164},
+    {204,  76, 236, 108, 196,  68, 228, 100},
+    { 60, 188,  28, 156,  52, 180,  20, 148},
+    {252, 124, 220,  92, 244, 116, 212,  84},
+};
+
 static void fs_core_build_luts(fs_lut_t *lut, const fs_params_t *p,
                                int strength, int grain)
 {
@@ -165,6 +180,7 @@ static void fs_core_build_luts(fs_lut_t *lut, const fs_params_t *p,
 
         /* blend toward the identity curve with the strength setting */
         lut->curve[i] = (y * s + i * (100 - s)) / 100;
+        lut->curve16[i] = (unsigned short)(lut->curve[i] * 256);
     }
 
     float sat = (1.0f + (p->saturation / 100.0f - 1.0f) * s / 100.0f)
@@ -307,7 +323,7 @@ static void fs_core_process_rows(const fs_lut_t *lut, const void *src, void *dst
      * locals below are loop-invariant by construction, and the output is
      * unchanged: same arithmetic, same order.
      */
-    const unsigned char *curve = lut->curve;
+    const unsigned short *curve16 = lut->curve16;
     const unsigned char *sat_t = lut->sat;
     const short *cb_t = lut->cb_off;
     const short *cr_t = lut->cr_off;
@@ -332,9 +348,13 @@ static void fs_core_process_rows(const fs_lut_t *lut, const void *src, void *dst
                 int v  = fs_chroma_signed(px >> 16);
                 int yb = (px >> 24) & 0xFF;
 
-                int oa = curve[ya];
-                int ob = curve[yb];
-                int ym = (oa + ob) >> 1;
+                int oa16 = curve16[ya];
+                int ob16 = curve16[yb];
+                int ym = (oa16 + ob16) >> 9;
+                int dx = (i * 2) & 7;
+                int dy = y & 7;
+                int oa = (oa16 + fs_core_dither[dy][dx]) >> 8;
+                int ob = (ob16 + fs_core_dither[dy][dx + 1]) >> 8;
 
                 int nu, nv;
                 if (idmat) {
@@ -363,9 +383,13 @@ static void fs_core_process_rows(const fs_lut_t *lut, const void *src, void *dst
                 int v  = fs_chroma_signed(px >> 16);
                 int yb = (px >> 24) & 0xFF;
 
-                int oa = curve[ya];
-                int ob = curve[yb];
-                int ym = (oa + ob) >> 1;
+                int oa16 = curve16[ya];
+                int ob16 = curve16[yb];
+                int ym = (oa16 + ob16) >> 9;
+                int dx = (i * 2) & 7;
+                int dy = y & 7;
+                int oa = (oa16 + fs_core_dither[dy][dx]) >> 8;
+                int ob = (ob16 + fs_core_dither[dy][dx + 1]) >> 8;
 
                 int nu = ((m0 * u + m1 * v) >> 8);
                 int nv = ((m2 * u + m3 * v) >> 8);
