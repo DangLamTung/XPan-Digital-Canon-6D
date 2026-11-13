@@ -3450,7 +3450,6 @@ void se_frame_bottom_row(uint8_t *row, int width, const se_frame *f, int y) {
     int stats_h = (FONT_H + 4 + FONT_H) * s;
     int logo_top = pad + (inner - mid_h) / 2;
     int model_top = logo_top + (LOGO_H + 6) * s;
-    int aspect_top = model_top + FONT_H * s + 2 * s;
     int label_top = pad + (inner - stats_h) / 2;
     int value_top = label_top + (FONT_H + 4) * s;
     int cw[3], total = 0, gap, x, i, sw, left_w;
@@ -3476,20 +3475,18 @@ void se_frame_bottom_row(uint8_t *row, int width, const se_frame *f, int y) {
         for (i = 0; f->model[i] && n < (int)sizeof line - 2; i++)
             line[n++] = f->model[i];
         if (f->lens[0]) {
-            line[n++] = ' ';
-            line[n++] = '-';
-            line[n++] = ' ';
+            line[n++] = ' '; line[n++] = '-'; line[n++] = ' ';
             for (i = 0; f->lens[i] && n < (int)sizeof line - 1; i++)
                 line[n++] = f->lens[i];
+        }
+        if (f->aspect[0]) {
+            line[n++] = ' '; line[n++] = '-'; line[n++] = ' ';
+            for (i = 0; f->aspect[i] && n < (int)sizeof line - 1; i++)
+                line[n++] = f->aspect[i];
         }
         line[n] = 0;
         mw = se_frame_text_width(line, s);
         text_row(row, width, y, model_top, s, line, (width - mw) / 2, f->dim);
-        if (f->aspect[0]) {
-            int aw = se_frame_text_width(f->aspect, s);
-            text_row(row, width, y, aspect_top, s, f->aspect,
-                     (width - aw) / 2, f->dim);
-        }
     }
 
     /* the stock, centred between the camera block and the exposure block */
