@@ -1501,7 +1501,10 @@ static volatile int fs_creator_saving;
 static int fs_creator_slot;
 static int fs_creator_initialised;
 static char fs_creator_saved_name[12];
-static const char *fs_slot_names[] = { "WHEEL (1)", "WHEEL2", "WHEEL3", "WHEEL4" };
+static const char *fs_slot_names[] = {
+  "WHEEL (1)", "WHEEL2", "WHEEL3", "WHEEL4", "WHEEL5",
+  "WHEEL6", "WHEEL7", "WHEEL8", "WHEEL9", "WHEEL10"
+};
 
 /* The ring's motion: same spring the shelf uses, in units of one wedge. */
 static fs_spring_t      fs_creator_spring;
@@ -5551,7 +5554,7 @@ static void fs_name_sync(void)
 }
 
 static MENU_SELECT_FUNC(fs_slot_cycle) {
-  fs_creator_slot = (fs_slot_default() + (delta < 0 ? 3 : 1)) & 3;
+  fs_creator_slot = (fs_slot_default() + (delta < 0 ? FS_CREATOR_SLOTS - 1 : 1)) % FS_CREATOR_SLOTS;
   fs_name_reset(NULL, 0);
 }
 
@@ -5577,7 +5580,7 @@ static MENU_UPDATE_FUNC(fs_name_show_update) {
   MENU_SET_VALUE("%s.fs", fs_look_name);
 }
 
-static int fs_slot_default(void) { return fs_clamp_i(fs_creator_slot, 0, 3); }
+static int fs_slot_default(void) { return fs_clamp_i(fs_creator_slot, 0, FS_CREATOR_SLOTS - 1); }
 
 static MENU_SELECT_FUNC(fs_creator_reset_look_action) {
   (void)priv; (void)delta;
@@ -8605,6 +8608,25 @@ static struct menu_entry fs_menu_settings[] = {
     },
     MENU_EOL,
 };
+static struct menu_entry fs_menu_custom[] = {
+    {
+        .name = "Slot",
+        .select = fs_slot_cycle,
+        .update = fs_slot_update,
+        .help = "Which of the ten recipe slots the creator opens and saves. "
+                "Each is a separate .fs in ML/FILM: WHEEL.fs, WHEEL2.fs ... "
+                "WHEEL10.fs.",
+    },
+    {
+        .name = "Open Creator",
+        .select = fs_creator_trigger,
+        .icon_type = IT_ACTION,
+        .help = "Open the wheel on the slot above. UP/DOWN changes slot, SET "
+                "loads it, PLAY saves the wheel into it.",
+    },
+    MENU_EOL,
+};
+
 static struct menu_entry film_sim_menu[] = {
     {
         .name = "Film Shelf",
@@ -8649,10 +8671,11 @@ static struct menu_entry film_sim_menu[] = {
     },
     {
         .name = "Custom Look",
-        .select = fs_creator_trigger,
+        .select = menu_open_submenu,
         .icon_type = IT_ACTION,
-        .help = "The 12-wedge colour creator: saturation, luminance and hue "
-                "per colour, plus highlight/shadow. PLAY saves into User Look.",
+        .help = "The 12-wedge colour creator. Ten recipe slots, each its own "
+                ".fs on the card: pick the slot, open it, PLAY saves back.",
+        .children = fs_menu_custom,
     },
     {
         .name = "Recipe",

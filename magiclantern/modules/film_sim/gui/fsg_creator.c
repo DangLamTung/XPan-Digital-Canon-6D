@@ -555,7 +555,9 @@ void fsg_draw_slots(const fs_creator_t *c)
              "Each slot is its own wheel. SET loads the one under the bar.");
 
     for (i = 0; i < FS_CREATOR_SLOTS; i++) {
-        int y = 150 + i * 58;
+        int col = i / 5, row = i % 5;
+        int y = 140 + row * 52;
+        int x0 = 16 + col * 352;
         int here = (i == c->slot_pick);
         const char *label = c->slot_label[i];
         char file[24];
@@ -563,15 +565,15 @@ void fsg_draw_slots(const fs_creator_t *c)
         snprintf(file, sizeof file, "ML/FILM/%s.fs",
                  c->slot_file[i] ? c->slot_file[i] : "WHEEL");
         if (here)
-            fsg_fill(16, y - 6, 688, 48, FSG_PANEL);
-        fsg_text(24, y, FSG_T_SMALL, here ? FSG_AMBER : FSG_GREY, 
+            fsg_fill(x0, y - 6, 336, 44, FSG_PANEL);
+        fsg_text(x0 + 8, y, FSG_T_SMALL, here ? FSG_AMBER : FSG_GREY,
                  here ? FSG_PANEL : FSG_BG, "%s%s", here ? "> " : "  ", file);
-        fsg_text(400, y, FSG_T_SMALL,
+        fsg_text(x0 + 150, y, FSG_T_SMALL,
                  label ? FSG_WHITE : FSG_GREY_DIM,
                  here ? FSG_PANEL : FSG_BG, "%s",
                  label ? label : "EMPTY");
         if (i == c->slot_cur)
-            fsg_text(600, y, FSG_T_SMALL, FSG_GREEN,
+            fsg_text(x0 + 288, y, FSG_T_SMALL, FSG_GREEN,
                      here ? FSG_PANEL : FSG_BG, "%s", "LOADED");
     }
 
@@ -892,7 +894,8 @@ void fs_creator_defaults(fs_creator_t *c, const char *stock)
     c->look_name = "WHEEL";
     {
         static const char *files[FS_CREATOR_SLOTS] = {
-            "WHEEL", "WHEEL2", "WHEEL3", "WHEEL4"
+            "WHEEL", "WHEEL2", "WHEEL3", "WHEEL4", "WHEEL5",
+            "WHEEL6", "WHEEL7", "WHEEL8", "WHEEL9", "WHEEL10"
         };
         int k;
         for (k = 0; k < FS_CREATOR_SLOTS; k++) {

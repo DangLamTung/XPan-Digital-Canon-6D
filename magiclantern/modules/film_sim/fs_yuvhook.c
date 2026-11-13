@@ -120,11 +120,15 @@ static void fs_hdr_row_uyvy(unsigned char *dst, const unsigned char *rgb, int w)
         int r = (p0[0] + p1[0]) / 2;
         int g = (p0[1] + p1[1]) / 2;
         int b = (p0[2] + p1[2]) / 2;
-        int u = ((-43 * r - 85 * g + 128 * b + 128) >> 8) + 128;
-        int v = ((128 * r - 107 * g - 21 * b + 128) >> 8) + 128;
-        dst[x * 2 + 0] = (unsigned char)(u < 0 ? 0 : (u > 255 ? 255 : u));
+        /* DIGIC stores U and V as signed bytes with neutral 0 (fs_core.h);
+         * writing 128 here is what shifted every colour in the band. */
+        int u = ((-43 * r - 85 * g + 128 * b + 128) >> 8);
+        int v = ((128 * r - 107 * g - 21 * b + 128) >> 8);
+        if (u < -128) u = -128; else if (u > 127) u = 127;
+        if (v < -128) v = -128; else if (v > 127) v = 127;
+        dst[x * 2 + 0] = (unsigned char)(signed char)u;
         dst[x * 2 + 1] = (unsigned char)(y0 < 0 ? 0 : (y0 > 255 ? 255 : y0));
-        dst[x * 2 + 2] = (unsigned char)(v < 0 ? 0 : (v > 255 ? 255 : v));
+        dst[x * 2 + 2] = (unsigned char)(signed char)v;
         dst[x * 2 + 3] = (unsigned char)(y1 < 0 ? 0 : (y1 > 255 ? 255 : y1));
     }
 }
@@ -155,24 +159,26 @@ static void fs_hdr_burn(unsigned char *gp, int width, int rows, int stride,
     for (y = 0; y < top; y++) {
         unsigned char *row = gp + (size_t)y * stride;
         for (int x = 0; x + 1 < width; x += 2) {
-            row[x * 2 + 0] = 128;
+            row[x * 2 + 0] = 0;      /* U = neutral, signed */
             row[x * 2 + 1] = 235;
-            row[x * 2 + 2] = 128;
+            row[x * 2 + 2] = 0;      /* V = neutral */
             row[x * 2 + 3] = 235;
         }
     }
-    for (y = top + box_h; y < rows - band_h; y++) {
+    for (y = top + box_h + band_h; y < rows; y++) {
         unsigned char *row = gp + (size_t)y * stride;
         for (int x = 0; x + 1 < width; x += 2) {
-            row[x * 2 + 0] = 128;
+            row[x * 2 + 0] = 0;      /* U = neutral, signed */
             row[x * 2 + 1] = 235;
-            row[x * 2 + 2] = 128;
+            row[x * 2 + 2] = 0;      /* V = neutral */
             row[x * 2 + 3] = 235;
         }
     }
 
+    /* The band goes right under the picture, not at the bottom of the frame:
+     * the pad below it stays paper. */
     for (y = 0; y < band_h; y++) {
-        unsigned char *row = gp + (size_t)(rows - band_h + y) * stride;
+        unsigned char *row = gp + (size_t)(top + box_h + y) * stride;
         se_frame_fill_row(fs_hdr_scratch, width, &fs_hdr);
         if (y == 0)
             se_frame_edge_row(fs_hdr_scratch, width, &fs_hdr);

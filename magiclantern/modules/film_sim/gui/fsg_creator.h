@@ -13,7 +13,7 @@
 #define FSG_CREATOR_H
 
 #define FS_CREATOR_WEDGES 12
-#define FS_CREATOR_SLOTS  4
+#define FS_CREATOR_SLOTS  10
 
 typedef struct
 {
