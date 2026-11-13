@@ -86,7 +86,7 @@ int main(int argc, char **argv)
     if (f.inner_h <= 0) {
         f.inner_h = W / 14;
         if (f.inner_h < 120) f.inner_h = 120;
-        if (f.inner_h > 260) f.inner_h = 260;
+        if (f.inner_h > 400) f.inner_h = 400;
     }
     if (argc > 16) snprintf(f.lens, sizeof f.lens, "%s", argv[16]);
     if (argc > 11) {

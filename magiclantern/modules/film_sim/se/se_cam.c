@@ -1306,7 +1306,7 @@ se_err se_cam_develop(const char *cr2_path, const char *stock_path,
             if (fr.inner_h <= 0) {
                 fr.inner_h = out_w / 14;
                 if (fr.inner_h < 120) fr.inner_h = 120;
-                if (fr.inner_h > 260) fr.inner_h = 260;
+                if (fr.inner_h > 400) fr.inner_h = 400;
             }
             se_frame_layout(&fr);
             frm_top = fr.top > 0 ? fr.top : 0;

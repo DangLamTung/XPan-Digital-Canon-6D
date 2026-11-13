@@ -3322,30 +3322,38 @@ static void text_row(uint8_t *row, int width, int y, int ytop, int scale,
 }
 
 static void logo_row(uint8_t *row, int width, int y, int ytop, int x0,
-                     const uint8_t fg[3]) {
-    int gy, gx;
+                     int scale, const uint8_t fg[3]) {
+    int gy, gx, sy, sx;
     if (y < ytop) return;
-    gy = y - ytop;
+    gy = (y - ytop) / scale;
     if (gy < 0 || gy >= LOGO_H) return;
     for (gx = 0; gx < LOGO_W; gx++) {
         int a = g_logo[gy][gx];
-        int px = x0 + gx;
-        if (!a || px < 0 || px >= width) continue;
-        blend(row + px * 3, fg, a);
+        if (!a) continue;
+        for (sy = 0; sy < scale; sy++)
+            for (sx = 0; sx < scale; sx++) {
+                int px = x0 + gx * scale + sx;
+                if (px < 0 || px >= width) continue;
+                blend(row + px * 3, fg, a);
+            }
     }
 }
 
 static void brand_row(uint8_t *row, int width, int y, int ytop, int x0,
-                      int idx, const uint8_t fg[3]) {
-    int gy, gx;
+                      int idx, int scale, const uint8_t fg[3]) {
+    int gy, gx, sy, sx;
     if (idx < 0 || idx >= BRAND_N || y < ytop) return;
-    gy = y - ytop;
+    gy = (y - ytop) / scale;
     if (gy < 0 || gy >= BRAND_SZ) return;
     for (gx = 0; gx < BRAND_SZ; gx++) {
         int a = g_brand[idx][gy][gx];
-        int px = x0 + gx;
-        if (!a || px < 0 || px >= width) continue;
-        blend(row + px * 3, fg, a);
+        if (!a) continue;
+        for (sy = 0; sy < scale; sy++)
+            for (sx = 0; sx < scale; sx++) {
+                int px = x0 + gx * scale + sx;
+                if (px < 0 || px >= width) continue;
+                blend(row + px * 3, fg, a);
+            }
     }
 }
 
@@ -3377,7 +3385,9 @@ void se_frame_layout(se_frame *f) {
     if (art_h > tall) tall = art_h;
     if (LOGO_H > tall) tall = LOGO_H;
     (void)brand_h;
-    f->scale = 1;
+    f->scale = inner_h / 195;              /* 1 at 2736 wide, 2 at 5472 */
+    if (f->scale < 1) f->scale = 1;
+    if (f->scale > 2) f->scale = 2;
     f->top = pad;
     f->bottom = tall + 2 * pad;
 }
@@ -3388,48 +3398,49 @@ void se_frame_top_row(uint8_t *row, int width, const se_frame *f, int y) {
 }
 
 void se_frame_bottom_row(uint8_t *row, int width, const se_frame *f, int y) {
-    int pad = 10;
+    int s = f->scale;
+    int pad = 10 * s;
     int inner = f->bottom - 2 * pad;
-    int mid_h = LOGO_H + 6 + FONT_H;   /* Canon, then one camera line */
-    int stats_h = FONT_H + 4 + FONT_H;
+    int mid_h = (LOGO_H + 6 + FONT_H) * s;   /* Canon, then one camera line */
+    int stats_h = (FONT_H + 4 + FONT_H) * s;
     int logo_top = pad + (inner - mid_h) / 2;
-    int model_top = logo_top + LOGO_H + 6;
+    int model_top = logo_top + (LOGO_H + 6) * s;
     int label_top = pad + (inner - stats_h) / 2;
-    int value_top = label_top + FONT_H + 4;
-    int cw[3], total = 0, gap = 14, x, i, sw, left_w;
+    int value_top = label_top + (FONT_H + 4) * s;
+    int cw[3], total = 0, gap, x, i, sw, left_w;
 
     se_frame_fill_row(row, width, f);
 
     /* stock: the brand's square mark, or the canister when there is no mark */
     if (f->brand_i >= 0) {
-        int by = pad + (inner - BRAND_SZ) / 2;
+        int by = pad + (inner - BRAND_SZ * s) / 2;
         if (by < 0) by = 0;
-        int sy = by + BRAND_SZ + 2;
-        brand_row(row, width, y, by, pad, f->brand_i, f->brand_fg);
+        int sy = by + BRAND_SZ * s + 2 * s;
+        brand_row(row, width, y, by, pad, f->brand_i, s, f->brand_fg);
         {
-            int sw2 = se_frame_text_width(f->stock, 1);
-            if (sw2 && sy + FONT_H <= f->bottom)
-                text_row(row, width, y, sy, 1, f->stock, pad, f->fg);
+            int sw2 = se_frame_text_width(f->stock, s);
+            if (sw2 && sy + FONT_H * s <= f->bottom)
+                text_row(row, width, y, sy, s, f->stock, pad, f->fg);
         }
-        left_w = BRAND_SZ;
+        left_w = BRAND_SZ * s;
     } else if (f->sprite && f->sprite_w > 0 && f->sprite_h > 0) {
-        int sw0 = se_frame_text_width(f->stock, 1);
-        int ah = inner - (sw0 ? FONT_H + 4 : 0);
+        int sw0 = se_frame_text_width(f->stock, s);
+        int label_h = sw0 ? (FONT_H + 4) * s : 0;
+        int ah = inner - label_h;
         int aw = (f->sprite_w * ah) / f->sprite_h;
-        sprite_row(row, width, y, pad, pad, aw, ah,
+        int ay = pad + (inner - (ah + label_h)) / 2;
+        if (ay < 0) ay = 0;
+        sprite_row(row, width, y, ay, pad, aw, ah,
                    f->sprite, f->sprite_w, f->sprite_h);
-        {
-            int sw2 = se_frame_text_width(f->stock, 1);
-            if (sw2 && pad + ah + 2 + FONT_H <= f->bottom)
-                text_row(row, width, y, pad + ah + 2, 1, f->stock, pad, f->fg);
-        }
+        if (sw0 && ay + ah + 2 * s + FONT_H * s <= f->bottom)
+            text_row(row, width, y, ay + ah + 2 * s, s, f->stock, pad, f->fg);
         left_w = aw;
     } else {
         left_w = 0;
     }
 
     /* the camera mark, centred */
-    logo_row(row, width, y, logo_top, (width - LOGO_W) / 2, f->brand_colour);
+    logo_row(row, width, y, logo_top, (width - LOGO_W * s) / 2, s, f->brand_colour);
     {
         char line[SE_FRAME_LINE * 2];
         int mw, n = 0, i;
@@ -3443,7 +3454,7 @@ void se_frame_bottom_row(uint8_t *row, int width, const se_frame *f, int y) {
         }
         line[n] = 0;
         mw = se_frame_text_width(line, 1);
-        text_row(row, width, y, model_top, 1, line, (width - mw) / 2, f->dim);
+        text_row(row, width, y, model_top, s, line, (width - mw) / 2, f->dim);
     }
 
     /* the stock, centred between the camera block and the exposure block */
@@ -3454,9 +3465,10 @@ void se_frame_bottom_row(uint8_t *row, int width, const se_frame *f, int y) {
         text_row(row, width, y, label_top + FONT_H + 4, 1, f->stock, sx, f->fg);
     }
 
+    gap = 14 * s;
     for (i = 0; i < 3; i++) {
-        int wl = se_frame_text_width(f->label[i], 1);
-        int wv = se_frame_text_width(f->value[i], 1);
+        int wl = se_frame_text_width(f->label[i], s);
+        int wv = se_frame_text_width(f->value[i], s);
         cw[i] = wl > wv ? wl : wv;
         total += cw[i];
     }
@@ -3464,10 +3476,10 @@ void se_frame_bottom_row(uint8_t *row, int width, const se_frame *f, int y) {
     x = width - pad - total;
     if (x < pad) x = pad;
     for (i = 0; i < 3; i++) {
-        int wl = se_frame_text_width(f->label[i], 1);
-        int wv = se_frame_text_width(f->value[i], 1);
-        text_row(row, width, y, label_top, 1, f->label[i], x + (cw[i] - wl) / 2, f->dim);
-        text_row(row, width, y, value_top, 1, f->value[i], x + (cw[i] - wv) / 2, f->fg);
+        int wl = se_frame_text_width(f->label[i], s);
+        int wv = se_frame_text_width(f->value[i], s);
+        text_row(row, width, y, label_top, s, f->label[i], x + (cw[i] - wl) / 2, f->dim);
+        text_row(row, width, y, value_top, s, f->value[i], x + (cw[i] - wv) / 2, f->fg);
         x += cw[i] + gap;
     }
 }
