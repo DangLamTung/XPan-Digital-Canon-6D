@@ -8610,26 +8610,26 @@ static struct menu_entry fs_menu_header[] = {
     MENU_EOL,
 };
 
-static struct menu_entry fs_menu_settings[] = {
+/* Quality: the knobs that trade shutter wait against accuracy. */
+static struct menu_entry fs_menu_quality[] = {
     {
-            .name = "Stock",
-            .select = fs_film_next,
-            .select_Q = fs_film_prev,
-            .update = fs_film_update,
-            .help = "SET: next stock, Q: previous stock.",
-        },
+        .name = "Shot Engine",
+        .priv = &film_sim_shotmode,
+        .max = 2,
+        .choices = fs_shotmode_names,
+        .help = "How the JPEG is graded. Lattice: the joint (y,u,v) table baked "
+                "from the .fs, interpolated -- ~1.0 dE off the develop. Tables: "
+                "the flat 64x64 sample, ~2.9 dE off but faster. Engine: the "
+                "grade itself, exact, around a minute per shot.",
+    },
     {
-            .name = "Level",
-            .priv = &film_sim_level,
-            .max = FS_LEVEL_RAW,
-            .update = fs_level_update,
-            .help = "1 picture style, 2 style + grade, 3 raw develop.",
-        },
-    {
-        .name = "Strength",
-        .priv = &film_sim_strength,
-        .max = 100,
-        .help = "How much of the stock's look is applied.",
+        .name = "Style Check",
+        .priv = &film_sim_stylecheck,
+        .max = 1,
+        .help = "Refuse to grade unless the camera is on Picture Style Neutral, "
+                "so Canon's look is not stacked under ours. Off grades whatever "
+                "style is selected -- the way out if the body will not stay on "
+                "Neutral.",
     },
     {
         .name = "Grade Quality",
@@ -8639,11 +8639,13 @@ static struct menu_entry fs_menu_settings[] = {
         .update = fs_gradeq_update,
         .help = "How much of the look is graded into the shot, and therefore "
                 "how long the next frame waits. High is the full look. Normal "
-                "drops the per-hue work (greens no longer behave differently "
-                "from reds) for about a fifth less time. Fast applies the tone "
-                "curve only and leaves colour untouched -- 5x less time, no "
-                "colour shift at all. Develop always uses the full look.",
+                "drops the per-hue work. Fast applies the tone curve only.",
     },
+    MENU_EOL
+};
+
+/* Look: overrides on top of every stock. */
+static struct menu_entry fs_menu_look[] = {
     {
         .name = "Saturation",
         .priv = &film_sim_satboost,
@@ -8651,8 +8653,7 @@ static struct menu_entry fs_menu_settings[] = {
         .max = 200,
         .update = fs_satboost_update,
         .help = "Saturation on top of every stock's own SAT line: 100 leaves "
-                "the recipe as written, 160 is about one and a half times as "
-                "saturated. Applies to developed files and to LiveView.",
+                "the recipe as written, 160 is about half again as saturated.",
     },
     {
         .name = "Grain",
@@ -8665,49 +8666,54 @@ static struct menu_entry fs_menu_settings[] = {
         .priv = &film_sim_grainsize,
         .min = -1, .max = 100,
         .help = "-1 keeps each stock's own GRAIN_SIZE. 0..100 overrides it for "
-                "every stock: the engine turns it into a 1..9 pixel cell, and "
-                "that cell shrinks with the frame so a half-size develop is "
-                "not twice as grainy.",
+                "every stock, as a 1..9 pixel cell that shrinks with the frame.",
     },
     {
         .name = "Pad to 3:2",
         .priv = &film_sim_pad,
         .max = 1,
         .update = fs_pad_update,
-        .help = "Framings wider than 3:2 (16:9, 65:24 XPan, 2.39:1) are written "
-                "into a 3:2 frame with black bars, so the body shows the whole "
-                "frame instead of something that is not what you composed.",
+        .help = "Framings wider than 3:2 are written into a 3:2 frame with black "
+                "bars, so the body shows the whole frame.",
     },
+    MENU_EOL
+};
 
-
+static struct menu_entry fs_menu_settings[] = {
     {
-        .name = "Style Check",
-        .priv = &film_sim_stylecheck,
-        .max = 1,
-        .help = "Refuse to grade unless the camera is on Picture Style Neutral. "
-                "On stops an accidental double look; off grades whatever style "
-                "is selected, which is the way out if the body will not stay "
-                "on Neutral.",
+        .name = "Stock",
+        .select = fs_film_next,
+        .select_Q = fs_film_prev,
+        .update = fs_film_update,
+        .help = "SET: next stock, Q: previous stock.",
     },
     {
-        .name = "Shot Grade",
-        .priv = &film_sim_shotmode,
-        .max = 2,
-        .choices = fs_shotmode_names,
-        .help = "How the JPEG the camera writes is graded. Lattice: the joint "
-                "(y,u,v) table baked from the .fs, interpolated -- ~1.0 dE off "
-                "the develop for ~2x the tables' cost. Tables: the old flat "
-                "64x64 sample, ~2.9 dE off. Engine: the grade itself, exact, "
-                "around a minute per shot.",
+        .name = "Level",
+        .priv = &film_sim_level,
+        .max = FS_LEVEL_RAW,
+        .update = fs_level_update,
+        .help = "1 picture style only, 2 style + grade (normal), 3 raw develop.",
     },
     {
-        .name = "Exact Grade",
-        .priv = &film_sim_exact,
-        .max = 1,
-        .help = "Grade the in-shot frame with the engine itself instead of the "
-                "baked tables: no 256-entry quantisation, so no banding in "
-                "smooth areas. Costs shutter time -- the tables take ~0.8 s, "
-                "the engine will take seconds.",
+        .name = "Strength",
+        .priv = &film_sim_strength,
+        .max = 100,
+        .help = "How much of the stock's look is applied.",
+    },
+    {
+        .name = "Quality",
+        .select = menu_open_submenu,
+        .icon_type = IT_ACTION,
+        .help = "Which engine grades the JPEG, the style check, and how much "
+                "of the look is worth the shutter wait.",
+        .children = fs_menu_quality,
+    },
+    {
+        .name = "Look",
+        .select = menu_open_submenu,
+        .icon_type = IT_ACTION,
+        .help = "Saturation, grain, grain size and pad-to-3:2.",
+        .children = fs_menu_look,
     },
     {
         .name = "Capture",
@@ -8723,8 +8729,9 @@ static struct menu_entry fs_menu_settings[] = {
         .help = "Log and film-list maintenance.",
         .children = fs_menu_debug,
     },
-    MENU_EOL,
+    MENU_EOL
 };
+
 static struct menu_entry fs_menu_custom[] = {
     {
         .name = "Slot",
