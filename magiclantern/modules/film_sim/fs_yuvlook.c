@@ -356,9 +356,18 @@ int fs_yuvlook_lattice_ready(void) { return baked != 0; }
 uint32_t fs_yuvlook_apply_lattice(unsigned char *buf, int width, int height, int stride)
 {
     static unsigned rnd = 1;
+#ifndef SE_HOSTED
+    uint32_t t0 = get_ms_clock();
+#endif
     if (!baked || !buf || width < 2 || height < 1 || stride < width * 2) return 0;
     fs_core_process_rows3(tbl3.y, tbl3.v, buf, buf, stride, 0, height, 0, &rnd);
+#ifdef SE_HOSTED
     return 1;
+#else
+    /* Return the elapsed time, not a success flag: the log prints this as
+     * "grade N ms" and a constant 1 made the lattice look free. */
+    return get_ms_clock() - t0;
+#endif
 }
 
 uint32_t fs_yuvlook_apply_engine_lv(unsigned char *buf, int width, int height, int stride)

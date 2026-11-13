@@ -117,6 +117,11 @@ int fs_yuvhook_header_burned(void) { return fs_hdr_burned; }
 /* Per-stage timestamps of the last shot, so the log says where the
  * milliseconds went instead of one lump. All in get_ms_clock() units. */
 static uint32_t fs_tr_enter, fs_tr_grade, fs_tr_bars, fs_tr_band, fs_tr_clean;
+/* A second clock: get_ms_clock has been measured to under-count inside this
+ * context, so both are logged and the ratio tells which one to trust. */
+static uint64_t fs_tr_enter_us, fs_tr_clean_us;
+uint64_t fs_yuvhook_t_enter_us(void) { return fs_tr_enter_us; }
+uint64_t fs_yuvhook_t_clean_us(void) { return fs_tr_clean_us; }
 uint32_t fs_yuvhook_t_enter(void) { return fs_tr_enter; }
 uint32_t fs_yuvhook_t_grade(void) { return fs_tr_grade; }
 uint32_t fs_yuvhook_t_bars(void)  { return fs_tr_bars; }
@@ -255,6 +260,7 @@ static uint32_t fs_yuv_grade_cached(void *buf, int width, int rows, int stride,
         gp = (unsigned char *)CACHEABLE(buf);
     fs_dcache_used = (gp != (unsigned char *)buf);
     fs_tr_enter = get_ms_clock();
+    fs_tr_enter_us = get_us_clock();
     if ((fs_yuv_exact || fs_yuv_shot_mode == 2) && width <= 5760 && fs_yuvlook_engine_ready())
         ms = fs_yuvlook_apply_engine(gp, width, rows, stride);
     else if (fs_yuv_shot_mode == 1 && fs_yuvlook_lattice_ready())
@@ -291,6 +297,7 @@ static uint32_t fs_yuv_grade_cached(void *buf, int width, int rows, int stride,
     if (gp != (unsigned char *)buf)
         fs_dcache_clean(gp, (uint32_t)rows * stride);
     fs_tr_clean = get_ms_clock();
+    fs_tr_clean_us = get_us_clock();
     return ms;
 }
 

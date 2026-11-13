@@ -65,6 +65,8 @@ uint32_t fs_yuvhook_t_grade(void);
 uint32_t fs_yuvhook_t_bars(void);
 uint32_t fs_yuvhook_t_band(void);
 uint32_t fs_yuvhook_t_clean(void);
+uint64_t fs_yuvhook_t_enter_us(void);
+uint64_t fs_yuvhook_t_clean_us(void);
 int fs_yuvhook_bars_burned(void);
 uint32_t fs_yuvhook_grade_ms(void);
 /* 1 = grade the shot with the engine itself instead of the baked tables. */

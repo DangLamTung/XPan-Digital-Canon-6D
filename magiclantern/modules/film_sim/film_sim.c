@@ -8887,9 +8887,10 @@ static void fs_lv_monitor_task(void *unused) {
                      e = fs_yuvhook_t_clean();
             if (a)
               fs_log("yuvtrace: enter->grade %d, grade->bars %d, bars->band %d, "
-                     "band->clean %d, total %d ms",
+                     "band->clean %d, total %d ms / %d ms on the us clock",
                      (int)(b - a), (int)(c - b), (int)(d - c), (int)(e - d),
-                     (int)(e - a));
+                     (int)(e - a),
+                     (int)((fs_yuvhook_t_clean_us() - fs_yuvhook_t_enter_us()) / 1000));
           }
           fs_log("yuvcap: cache alias %s; camera style 0x%02x (%s); engine look %s; bars %d",
                  fs_yuvhook_dcache_used() ? "used (bit 30 cleared, D-cache cleaned)"
