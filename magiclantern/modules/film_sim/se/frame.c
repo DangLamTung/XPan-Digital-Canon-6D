@@ -3436,7 +3436,7 @@ void se_frame_bottom_row(uint8_t *row, int width, const se_frame *f, int y) {
                 line[n++] = f->lens[i];
         }
         line[n] = 0;
-        mw = se_frame_text_width(line, 1);
+        mw = se_frame_text_width(line, s);
         text_row(row, width, y, model_top, s, line, (width - mw) / 2, f->dim);
     }
 

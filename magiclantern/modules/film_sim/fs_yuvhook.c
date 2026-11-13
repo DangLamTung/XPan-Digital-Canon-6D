@@ -160,18 +160,18 @@ static void fs_hdr_burn(unsigned char *gp, int width, int rows, int stride,
         unsigned char *row = gp + (size_t)y * stride;
         for (int x = 0; x + 1 < width; x += 2) {
             row[x * 2 + 0] = 0;      /* U = neutral, signed */
-            row[x * 2 + 1] = 235;
+            row[x * 2 + 1] = 255;
             row[x * 2 + 2] = 0;      /* V = neutral */
-            row[x * 2 + 3] = 235;
+            row[x * 2 + 3] = 255;
         }
     }
     for (y = top + box_h + band_h; y < rows; y++) {
         unsigned char *row = gp + (size_t)y * stride;
         for (int x = 0; x + 1 < width; x += 2) {
             row[x * 2 + 0] = 0;      /* U = neutral, signed */
-            row[x * 2 + 1] = 235;
+            row[x * 2 + 1] = 255;
             row[x * 2 + 2] = 0;      /* V = neutral */
-            row[x * 2 + 3] = 235;
+            row[x * 2 + 3] = 255;
         }
     }
 

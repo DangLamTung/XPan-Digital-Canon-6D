@@ -4897,7 +4897,13 @@ static void fs_frame_exposure(se_frame *f) {
     if (s > 0) snprintf(f->value[1], sizeof f->value[1], "1/%d", s);
   }
   i = fs_code_index(codes_iso, ISO_ARRAY_LEN, lens_info.raw_iso);
-  if (i >= 0) snprintf(f->value[2], sizeof f->value[2], "%d", values_iso[i]);
+  if (i > 0) {
+    snprintf(f->value[2], sizeof f->value[2], "%d", values_iso[i]);
+  } else if (lens_info.iso >= 25 && lens_info.iso <= 409600) {
+    /* raw_iso is 0 when the hook runs before the ISO property settles (high
+     * ISOs especially); lens_info.iso is already decoded. Never print "0". */
+    snprintf(f->value[2], sizeof f->value[2], "%d", (int)lens_info.iso);
+  }
 }
 
 /* Apply the film frame, or clear it, before a develop. Opt-in: the config
