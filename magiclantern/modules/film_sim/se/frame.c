@@ -3411,32 +3411,16 @@ void se_frame_bottom_row(uint8_t *row, int width, const se_frame *f, int y) {
 
     se_frame_fill_row(row, width, f);
 
-    /* stock: the brand's square mark, or the canister when there is no mark */
-    if (f->brand_i >= 0) {
-        int by = pad + (inner - BRAND_SZ * s) / 2;
-        if (by < 0) by = 0;
-        int sy = by + BRAND_SZ * s + 2 * s;
-        brand_row(row, width, y, by, pad, f->brand_i, s, f->brand_fg);
-        {
-            int sw2 = se_frame_text_width(f->stock, s);
-            if (sw2 && sy + FONT_H * s <= f->bottom)
-                text_row(row, width, y, sy, s, f->stock, pad, f->fg);
-        }
-        left_w = BRAND_SZ * s;
-    } else if (f->sprite && f->sprite_w > 0 && f->sprite_h > 0) {
-        int sw0 = se_frame_text_width(f->stock, s);
-        int label_h = sw0 ? (FONT_H + 4) * s : 0;
-        int ah = inner - label_h;
-        int aw = (f->sprite_w * ah) / f->sprite_h;
-        int ay = pad + (inner - (ah + label_h)) / 2;
-        if (ay < 0) ay = 0;
-        sprite_row(row, width, y, ay, pad, aw, ah,
-                   f->sprite, f->sprite_w, f->sprite_h);
-        if (sw0 && ay + ah + 2 * s + FONT_H * s <= f->bottom)
-            text_row(row, width, y, ay + ah + 2 * s, s, f->stock, pad, f->fg);
-        left_w = aw;
-    } else {
-        left_w = 0;
+    /* one line on the left: what the file is, and which stock made it */
+    {
+        int lw = se_frame_text_width("Film Simulation", s);
+        int sw2 = se_frame_text_width(f->stock, s);
+        int ly = pad + (inner - FONT_H * s) / 2;
+        if (ly < pad) ly = pad;
+        text_row(row, width, y, ly, s, "Film Simulation", pad, f->dim);
+        if (sw2)
+            text_row(row, width, y, ly, s, f->stock, pad + lw + 12 * s, f->fg);
+        left_w = pad + lw + 12 * s + sw2;
     }
 
     /* the camera mark, centred */
