@@ -83,6 +83,11 @@ int main(int argc, char **argv)
     snprintf(f.value[1], sizeof f.value[1], "%s", argv[9]);
     snprintf(f.value[2], sizeof f.value[2], "%s", argv[10]);
     if (argc > 15) f.inner_h = atoi(argv[15]);
+    if (f.inner_h <= 0) {
+        f.inner_h = W / 14;
+        if (f.inner_h < 120) f.inner_h = 120;
+        if (f.inner_h > 260) f.inner_h = 260;
+    }
     if (argc > 16) snprintf(f.lens, sizeof f.lens, "%s", argv[16]);
     if (argc > 11) {
         f.brand_i = atoi(argv[11]);

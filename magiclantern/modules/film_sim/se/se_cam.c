@@ -1070,6 +1070,7 @@ se_err se_cam_develop(const char *cr2_path, const char *stock_path,
     int       out_w = 0, out_h = 0;
     int       pad_h = 0, pad_top = 0;
     int       frm_top = 0, frm_bot = 0;
+    se_frame  fr;
     se_jpeg_exif ex;
     static se_jpeg enc;      /* ~5 KB, keep it off this task's stack */
 
@@ -1297,8 +1298,17 @@ se_err se_cam_develop(const char *cr2_path, const char *stock_path,
          * belongs on the file that is kept, not on a 400 px preview.
          */
         if (g_frame.on && !d.tgt_w) {
-            frm_top = g_frame.top > 0 ? g_frame.top : 0;
-            frm_bot = g_frame.bottom > 0 ? g_frame.bottom : 0;
+            /* the band scales with the frame, so a 16:9 or XPan develop gets
+             * the same proportion as a 3:2 one */
+            fr = g_frame;
+            if (fr.inner_h <= 0) {
+                fr.inner_h = out_w / 14;
+                if (fr.inner_h < 120) fr.inner_h = 120;
+                if (fr.inner_h > 260) fr.inner_h = 260;
+            }
+            se_frame_layout(&fr);
+            frm_top = fr.top > 0 ? fr.top : 0;
+            frm_bot = fr.bottom > 0 ? fr.bottom : 0;
         }
         if (se_jpeg_begin(&enc, out_w, out_h + pad_h + frm_top + frm_bot, d.tgt_w ? 92 : 88, strip,
                           &ex, jpeg_out, &d) != SE_OK) {
@@ -1306,7 +1316,7 @@ se_err se_cam_develop(const char *cr2_path, const char *stock_path,
             goto done;
         }
         if (frm_top > 0 &&
-            write_band(&enc, &arena, out_w, &g_frame, frm_top, 1) != 0) {
+            write_band(&enc, &arena, out_w, &fr, frm_top, 1) != 0) {
             e = SE_E_IO;
             goto done;
         }
@@ -1371,7 +1381,7 @@ se_err se_cam_develop(const char *cr2_path, const char *stock_path,
         }
     }
     if (frm_bot > 0 && !failed) {
-        if (write_band(&enc, &arena, out_w, &g_frame, frm_bot, 0) != 0)
+        if (write_band(&enc, &arena, out_w, &fr, frm_bot, 0) != 0)
             failed = 1;
     }
     se_jpeg_end(&enc);
