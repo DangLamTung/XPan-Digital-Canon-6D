@@ -2259,7 +2259,6 @@ static void fs_slot_backup_task(void *unused) {
            * applied on top of it -- measured on IMG_9973_F.JPG, sat 63.2
            * against the camera JPEG's 29.6. */
           fs_yuvhook_bars(film_sim_aspect);
-        fs_capture_header();
           fs_capture_header();
           fs_yuvhook_need_neutral(fs_grade_in_shutter());
           fs_yuvhook_grade(fs_grade_in_shutter() ? film_sim_yuvrows : 0);

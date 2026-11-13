@@ -100,8 +100,13 @@ static int fs_hdr_burned;
 
 void fs_yuvhook_header(const se_frame *f, unsigned char *scratch) {
     if (f && scratch) {
+        /* Off while the copy lands: the hook may run mid-update, and a torn
+         * struct would draw a band with half of the previous shot's text. */
+        int on = fs_hdr.on;
+        fs_hdr.on = 0;
         fs_hdr = *f;
         fs_hdr_scratch = scratch;
+        fs_hdr.on = on || f->on;
     } else {
         memset(&fs_hdr, 0, sizeof fs_hdr);
         fs_hdr_scratch = NULL;

@@ -1070,7 +1070,11 @@ se_err se_cam_develop(const char *cr2_path, const char *stock_path,
     int       out_w = 0, out_h = 0;
     int       pad_h = 0, pad_top = 0;
     int       frm_top = 0, frm_bot = 0;
-    se_frame  fr;
+    se_frame  fr;          /* zeroed: the pad row fill tests fr.on even when
+                            * no frame is configured, and reading it
+                            * uninitialised painted the bars paper or black
+                            * depending on the stack. */
+    memset(&fr, 0, sizeof fr);
     se_jpeg_exif ex;
     static se_jpeg enc;      /* ~5 KB, keep it off this task's stack */
 
