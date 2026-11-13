@@ -44,6 +44,7 @@ int  fs_yuvhook_grade_rows(void);   /* 0 = not grading */
  * So the hook checks the style itself, per frame, and counts what it refused.
  */
 void fs_yuvhook_need_neutral(int on);
+void fs_yuvhook_stylecheck(int on);
 int  fs_yuvhook_style_refused(void);    /* frames not graded for this reason */
 /* Aspect mode (see fs_core_aspect_ratio) to burn into the shot, 0 = none. */
 void fs_yuvhook_bars(int mode);

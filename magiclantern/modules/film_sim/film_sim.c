@@ -169,6 +169,9 @@ static CONFIG_INT("film.sim.pad", film_sim_pad, 1);
 static CONFIG_INT("film.sim.frame", film_sim_frame, 0);
 /* 0 = baked tables (fast), 1 = the engine per pixel (exact, slower). */
 static CONFIG_INT("film.sim.exact", film_sim_exact, 0);
+/* Grade even when the picture style is not Neutral (the body may refuse to
+ * stay on it). Off by default: stacking a look on Canon's is worse. */
+static CONFIG_INT("film.sim.stylecheck", film_sim_stylecheck, 1);
 /* Shot grade path: 0 flat table, 1 lattice (default), higher = engine. */
 static const char *fs_shotmode_names[] = {
   "Tables (fast)", "Lattice (accurate)", "Engine (slow)",
@@ -1115,6 +1118,7 @@ static void fs_sync() {
    *    redundant because our own cropped develop replaces the file. */
   fs_yuvhook_bars(film_sim_replace ? film_sim_aspect : 0);
   fs_yuvhook_exact(film_sim_exact);
+  fs_yuvhook_stylecheck(film_sim_stylecheck);
   fs_yuvhook_shot(film_sim_shotmode);
   fs_capture_header();
 
@@ -8677,6 +8681,15 @@ static struct menu_entry fs_menu_settings[] = {
 
 
     {
+        .name = "Style Check",
+        .priv = &film_sim_stylecheck,
+        .max = 1,
+        .help = "Refuse to grade unless the camera is on Picture Style Neutral. "
+                "On stops an accidental double look; off grades whatever style "
+                "is selected, which is the way out if the body will not stay "
+                "on Neutral.",
+    },
+    {
         .name = "Shot Grade",
         .priv = &film_sim_shotmode,
         .max = 2,
@@ -9345,6 +9358,7 @@ MODULE_CONFIG(film_sim_aspect)
 MODULE_CONFIG(film_sim_pad)
 MODULE_CONFIG(film_sim_frame)
 MODULE_CONFIG(film_sim_exact)
+MODULE_CONFIG(film_sim_stylecheck)
 MODULE_CONFIG(film_sim_shotmode)
 
 MODULE_CONFIG(film_sim_yuvprobe)

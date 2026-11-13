@@ -235,6 +235,7 @@ void fs_yuvhook_exact(int on) { fs_yuv_exact = on ? 1 : 0; }
 
 /* 0 flat table, 1 lattice, 2 engine. Exact Grade still forces 2. */
 static int fs_yuv_shot_mode = 1;
+static int fs_yuv_stylecheck = 1;
 void fs_yuvhook_shot(int mode) { fs_yuv_shot_mode = mode < 0 ? 0 : (mode > 2 ? 2 : mode); }
 
 /*
@@ -874,7 +875,7 @@ static void fs_yuv_hook_body(uint32_t *regs, uint32_t *stack, uint32_t pc)
      * them again stacks two looks. Refuse, and say so with a code the log
      * carries, rather than produce a milky JPEG that looks like a soft lens.
      */
-    if (fs_yuv_grade_rows > 0 && fs_yuv_need_neutral &&
+    if (fs_yuv_grade_rows > 0 && fs_yuv_need_neutral && fs_yuv_stylecheck &&
         lens_info.raw_picstyle != 0x84) {
         fs_yuv_style_refused++;
         fs_yuv_diag_set(pc, 7);
@@ -1318,6 +1319,11 @@ void fs_yuvhook_grade(int rows) { fs_yuv_grade_rows = rows; }
  * never ran". A shot that did not grade has to be able to say that. */
 int  fs_yuvhook_grade_rows(void) { return fs_yuv_grade_rows; }
 void fs_yuvhook_need_neutral(int on) { fs_yuv_need_neutral = on ? 1 : 0; }
+
+/* The style check exists so the module cannot stack a look on top of Canon's.
+ * Off, it grades whatever style is selected -- the escape hatch when the body
+ * will not stay on Neutral. */
+void fs_yuvhook_stylecheck(int on) { fs_yuv_stylecheck = on ? 1 : 0; }
 int  fs_yuvhook_style_refused(void) { return fs_yuv_style_refused; }
 
 /*
