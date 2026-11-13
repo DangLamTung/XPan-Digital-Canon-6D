@@ -209,6 +209,7 @@ void se_look_set_grain_size(se_look *lk, int size);
  * per-channel curves combine.
  */
 #define SE_YUV_GRID  64                    /* cells per chroma axis        */
+#define SE_YUV_SHIFT 2                     /* log2(256/SE_YUV_GRID)        */
 #define SE_YUV_CELLS (SE_YUV_GRID*SE_YUV_GRID) /* 64 x 64 over U,V         */
 typedef struct {
     uint8_t y[256];                        /* graded luma at each luma      */
