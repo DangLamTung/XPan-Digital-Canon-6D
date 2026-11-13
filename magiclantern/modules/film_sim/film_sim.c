@@ -1179,7 +1179,7 @@ static int fs_lv3d_logged = -1;
  * that has not been measured, so it is behind a switch and off by default.
  * Whichever runs, ML/LOGS/FILMSIM.LOG carries the per-frame grade_ms.
  */
-static void fs_lv_grade(const void *src, void *dst, int pitch, int row0, int row1)
+static void fs_lv_grade_body(const void *src, void *dst, int pitch, int row0, int row1)
 {
   const se_yuv3 *t3 = (film_sim_lvmode == 1) ? fs_yuvlook_uv3() : NULL;
 
@@ -1241,6 +1241,23 @@ static void fs_lv_grade(const void *src, void *dst, int pitch, int row0, int row
     }
   }
   fs_core_process_rows(&fs_lut, src, dst, pitch, row0, row1, &fs_rnd);
+}
+
+/* How long the panel's grade takes, every 60 frames, so "is LiveView fast
+ * enough" is answered by a number instead of an estimate. */
+static void fs_lv_grade(const void *src, void *dst, int pitch, int row0, int row1)
+{
+  static uint32_t acc;
+  static int n;
+  uint32_t t0 = get_ms_clock();
+  fs_lv_grade_body(src, dst, pitch, row0, row1);
+  acc += get_ms_clock() - t0;
+  if (++n >= 60) {
+    fs_log("lv: %d frames, %d ms total, %.1f ms/frame",
+           n, (int)acc, (double)acc / n);
+    fs_log_flush();
+    acc = 0; n = 0;
+  }
 }
 
 static void FAST fs_process_frame(void *src, void *dst) {
