@@ -133,18 +133,21 @@ static void fs_hdr_row_uyvy(unsigned char *dst, const unsigned char *rgb, int w)
     }
 }
 
-/* Draw the band into the bottom bar of a frame that already has bars. */
+/*
+ * Draw the band. With bars it goes in the bottom bar, so it covers black.
+ * Without bars -- 3:2, 1:1, anything the sensor fills -- it is drawn over the
+ * bottom of the picture instead, because a header that silently disappears on
+ * half the framings is worse than one that covers a strip of the frame.
+ */
 static void fs_hdr_burn(unsigned char *gp, int width, int rows, int stride,
                         int num, int den) {
-    int box_h = (width * num) / den;
-    int top, bar_h, band_h, y;
+    int box_h = (num > 0 && den > 0) ? (width * num) / den : rows;
+    int top, bar_h, band_h, y, y0;
 
-    if (box_h <= 0 || box_h >= rows) return;
+    if (box_h <= 0 || box_h > rows) box_h = rows;
     top = (rows - box_h) / 2;
     bar_h = rows - (top + box_h);
-    if (bar_h <= 0) return;
 
-    /* band height for this width, then the placement the develop uses */
     if (fs_hdr.inner_h <= 0) {
         fs_hdr.inner_h = width / 14;
         if (fs_hdr.inner_h < 120) fs_hdr.inner_h = 120;
@@ -152,33 +155,35 @@ static void fs_hdr_burn(unsigned char *gp, int width, int rows, int stride,
     }
     se_frame_layout(&fs_hdr);
     band_h = fs_hdr.bottom;
-    if (band_h <= 0 || band_h > bar_h) return;
+    if (band_h <= 0 || band_h > rows) return;
 
-    /* The bars become paper, not black: the shot then looks like the framed
-     * print the develop writes, and the band sits on the same paper. */
-    for (y = 0; y < top; y++) {
-        unsigned char *row = gp + (size_t)y * stride;
-        for (int x = 0; x + 1 < width; x += 2) {
-            row[x * 2 + 0] = 0;      /* U = neutral, signed */
-            row[x * 2 + 1] = 255;
-            row[x * 2 + 2] = 0;      /* V = neutral */
-            row[x * 2 + 3] = 255;
+    if (band_h <= bar_h) {
+        /* in the bar, on paper */
+        for (y = 0; y < top; y++) {
+            unsigned char *row = gp + (size_t)y * stride;
+            for (int x = 0; x + 1 < width; x += 2) {
+                row[x * 2 + 0] = 0;
+                row[x * 2 + 1] = 255;
+                row[x * 2 + 2] = 0;
+                row[x * 2 + 3] = 255;
+            }
         }
-    }
-    for (y = top + box_h + band_h; y < rows; y++) {
-        unsigned char *row = gp + (size_t)y * stride;
-        for (int x = 0; x + 1 < width; x += 2) {
-            row[x * 2 + 0] = 0;      /* U = neutral, signed */
-            row[x * 2 + 1] = 255;
-            row[x * 2 + 2] = 0;      /* V = neutral */
-            row[x * 2 + 3] = 255;
+        for (y = top + box_h + band_h; y < rows; y++) {
+            unsigned char *row = gp + (size_t)y * stride;
+            for (int x = 0; x + 1 < width; x += 2) {
+                row[x * 2 + 0] = 0;
+                row[x * 2 + 1] = 255;
+                row[x * 2 + 2] = 0;
+                row[x * 2 + 3] = 255;
+            }
         }
+        y0 = top + box_h;
+    } else {
+        y0 = rows - band_h;      /* no room: draw over the picture */
     }
 
-    /* The band goes right under the picture, not at the bottom of the frame:
-     * the pad below it stays paper. */
     for (y = 0; y < band_h; y++) {
-        unsigned char *row = gp + (size_t)(top + box_h + y) * stride;
+        unsigned char *row = gp + (size_t)(y0 + y) * stride;
         se_frame_fill_row(fs_hdr_scratch, width, &fs_hdr);
         if (y == 0)
             se_frame_edge_row(fs_hdr_scratch, width, &fs_hdr);
@@ -233,9 +238,15 @@ static uint32_t fs_yuv_grade_cached(void *buf, int width, int rows, int stride,
         if (rows == frame_h && fs_core_aspect_ratio(fs_bars_mode, &num, &den)) {
             fs_core_aspect_bars(gp, stride, width, 0, rows, num, den);
             fs_bars_burned++;
-            if (fs_hdr.on && fs_hdr_scratch)
-                fs_hdr_burn(gp, width, rows, stride, num, den);
         }
+    }
+    /* The header is independent of the bars: with none it overlays the
+     * bottom of the picture rather than vanishing. */
+    if (fs_hdr.on && fs_hdr_scratch && rows == frame_h) {
+        int num = 0, den = 1;
+        if (fs_bars_mode > 0)
+            fs_core_aspect_ratio(fs_bars_mode, &num, &den);
+        fs_hdr_burn(gp, width, rows, stride, num, den);
     }
 
     if (gp != (unsigned char *)buf)

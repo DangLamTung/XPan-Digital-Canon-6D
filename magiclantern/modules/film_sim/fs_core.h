@@ -339,6 +339,7 @@ static void fs_core_process_rows(const fs_lut_t *lut, const void *src, void *dst
 
     for (int y = row0; y < row1; y++)
     {
+        int pu = 0, pv = 0, has_prev = 0;
         if (!grain)
         {
             for (int i = 0; i < words; i++)
@@ -380,6 +381,23 @@ static void fs_core_process_rows(const fs_lut_t *lut, const void *src, void *dst
                     nu += (d0 >= 192) - (d0 < 64);
                     nv += (d1 >= 192) - (d1 < 64);
                 }
+                /* High-ISO chroma noise lives in the shadows and saturates
+                 * the JPEG's 4:2:0 blocks into blotches. Smooth chroma there
+                 * (never in the mid-tones, never across an edge: only the
+                 * previous chroma sample is available in a row-wise pass) and
+                 * keep deep-shadow colour inside a sane radius. */
+                if (ym < 110) {
+                    int w = 110 - ym;                 /* 0..110 shadow weight */
+                    if (has_prev) {
+                        nu = (nu * (256 - w) + ((nu + pu) / 2) * w) / 256;
+                        nv = (nv * (256 - w) + ((nv + pv) / 2) * w) / 256;
+                    }
+                    pu = nu; pv = nv; has_prev = 1;
+                    if (ym < 70) {
+                        if (nu > 26) nu = 26; else if (nu < -26) nu = -26;
+                        if (nv > 26) nv = 26; else if (nv < -26) nv = -26;
+                    }
+                }
 
                 dp[i] = fs_pack_px(nu, oa, nv, ob);
             }
@@ -414,6 +432,18 @@ static void fs_core_process_rows(const fs_lut_t *lut, const void *src, void *dst
                     int d1 = fs_core_dither[dy][dx + 1];
                     nu += (d0 >= 192) - (d0 < 64);
                     nv += (d1 >= 192) - (d1 < 64);
+                }
+                if (ym < 110) {
+                    int w = 110 - ym;
+                    if (has_prev) {
+                        nu = (nu * (256 - w) + ((nu + pu) / 2) * w) / 256;
+                        nv = (nv * (256 - w) + ((nv + pv) / 2) * w) / 256;
+                    }
+                    pu = nu; pv = nv; has_prev = 1;
+                    if (ym < 70) {
+                        if (nu > 26) nu = 26; else if (nu < -26) nu = -26;
+                        if (nv > 26) nv = 26; else if (nv < -26) nv = -26;
+                    }
                 }
 
                 /* xorshift32, independent samples for both pixels in the 4:2:2 pair */
