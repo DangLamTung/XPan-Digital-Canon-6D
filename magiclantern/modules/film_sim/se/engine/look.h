@@ -217,6 +217,15 @@ typedef struct {
     int16_t matrix[4];                     /* 2x2 chroma matrix, Q8, 256 = 1.0 */
     uint8_t cg[SE_YUV_CELLS];              /* extra gain per hue cell, Q6   */
     int8_t  dy[SE_YUV_CELLS];              /* extra luma per hue cell       */
+    /*
+     * Per-cell 2x2 chroma transform, Q8 (256 = 1.0).
+     *
+     * cg alone can only scale chroma, so a recipe's per-sector HUE_ROT had to
+     * be flattened into one global matrix and the direction of each rotation
+     * was lost. This is the local Jacobian of the grade's chroma mapping at
+     * the cell centre: it carries rotation and gain together, per cell.
+     */
+    int16_t jm[SE_YUV_CELLS][4];
     int     strength;                      /* 0..100 applied when grading   */
 } se_yuvtbl;
 

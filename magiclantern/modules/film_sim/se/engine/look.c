@@ -629,6 +629,37 @@ void se_look_bake_yuv(const se_look *lk, se_yuvtbl *t)
             if (dy > 127) dy = 127;
             if (dy < -128) dy = -128;
             t->dy[cell] = (int8_t)dy;
+
+            /*
+             * Local 2x2: central difference with a wide step. A step of one
+             * cell (2 chroma units) made the derivative noise-dominated --
+             * the engine's answer is 8-bit, so two neighbours a couple of
+             * units apart differ by 0 or 1 and the ratio is garbage. 24 units
+             * two-sided averages that away while staying local.
+             */
+            {
+                const int D = 24;
+                int ax[4] = { u + D, u - D, u, u };
+                int ay[4] = { v, v, v + D, v - D };
+                int ox[4], oy2[4], k;
+                for (k = 0; k < 4; k++) {
+                    int au = ax[k], av = ay[k];
+                    int rr, gg, bb, o2[3];
+                    if (au < -127) au = -127; if (au > 127) au = 127;
+                    if (av < -127) av = -127; if (av > 127) av = 127;
+                    if (ycc_px(128, au, av, &rr, &gg, &bb) != 0) { ox[k] = ou; oy2[k] = ov; continue; }
+                    bake_px(lk, rr, gg, bb, o2);
+                    {
+                        int oy3 = luma8(o2[0], o2[1], o2[2]);
+                        ox[k]  = (((o2[2] - oy3) * 144) / 256) - t->uoff[128];
+                        oy2[k] = (((o2[0] - oy3) * 183) / 256) - t->voff[128];
+                    }
+                }
+                t->jm[cell][0] = (int16_t)((ox[0] - ox[1]) * 128 / D);
+                t->jm[cell][1] = (int16_t)((ox[2] - ox[3]) * 128 / D);
+                t->jm[cell][2] = (int16_t)((oy2[0] - oy2[1]) * 128 / D);
+                t->jm[cell][3] = (int16_t)((oy2[2] - oy2[3]) * 128 / D);
+            }
         }
     }
 }

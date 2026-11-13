@@ -493,6 +493,7 @@ uint32_t fs_yuvlook_apply(unsigned char *buf, int width, int height, int stride)
              */
             int g    = tbl.gain[yav];
             int cg   = 64, dy = 0;      /* 64 = unity in Q6 */
+            const int16_t *jm = NULL;
 
             if (gradeq < 2) {
                 if (gradeq == 0) {
@@ -501,13 +502,25 @@ uint32_t fs_yuvlook_apply(unsigned char *buf, int width, int height, int stride)
                     int cell = (vv >> 2) * SE_YUV_GRID + (uu >> 2);
                     cg = tbl.cg[cell];
                     dy = tbl.dy[cell];
+                    jm = tbl.jm[cell];
                 }
                 /* NORMAL keeps the luma gain and the matrix, drops the cells. */
                 int cgg  = cg * g;
-                int ru   = (tbl.matrix[0] * u + tbl.matrix[1] * v) >> 8;
-                int rv   = (tbl.matrix[2] * u + tbl.matrix[3] * v) >> 8;
-                int nu   = tbl.uoff[yav] + ((ru * cgg) >> 12);
-                int nv   = tbl.voff[yav] + ((rv * cgg) >> 12);
+                int ru, rv;
+                if (jm && (jm[0] | jm[1] | jm[2] | jm[3])) {
+                    /* per-cell rotation + gain: the recipe's HUE_ROT survives */
+                    ru = (jm[0] * u + jm[1] * v) >> 8;
+                    rv = (jm[2] * u + jm[3] * v) >> 8;
+                    ru = (ru * g) >> 6;
+                    rv = (rv * g) >> 6;
+                } else {
+                    ru = (tbl.matrix[0] * u + tbl.matrix[1] * v) >> 8;
+                    rv = (tbl.matrix[2] * u + tbl.matrix[3] * v) >> 8;
+                    ru = (ru * cgg) >> 12;
+                    rv = (rv * cgg) >> 12;
+                }
+                int nu   = tbl.uoff[yav] + ru;
+                int nv   = tbl.voff[yav] + rv;
                 int dith = fs_yuv_dither[y & 7][(x >> 1) & 7];
                 int ny0  = tbl.y[y0] + dy + fs_yuv_flat_dither(y0, dith);
                 int ny1  = tbl.y[y1] + dy;
