@@ -1176,7 +1176,7 @@ static void fs_lv_grade(const void *src, void *dst, int pitch, int row0, int row
     if (dst != src)
       memcpy(d, (const unsigned char *)src + (size_t)row0 * pitch,
              (size_t)(row1 - row0) * pitch);
-    if (fs_yuvlook_apply_engine_lv(d, pitch / 2, row1 - row0, pitch) == 0)
+    if (fs_yuvlook_apply_engine_lv(d, pitch / 2, row1 - row0, pitch))
       return;
   }
 
