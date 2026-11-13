@@ -371,6 +371,16 @@ static void fs_core_process_rows(const fs_lut_t *lut, const void *src, void *dst
                 nu = ((nu * sat) >> 7) + cb_t[ym];
                 nv = ((nv * sat) >> 7) + cr_t[ym];
 
+                /* Chroma is 8-bit too, and Canon subsamples it 4:2:0, which
+                 * turns a 1-step chroma plateau into a coloured blotch over
+                 * two pixels. Dither it the same way as luma. */
+                {
+                    int d0 = fs_core_dither[dy][dx];
+                    int d1 = fs_core_dither[dy][dx + 1];
+                    nu += (d0 >= 192) - (d0 < 64);
+                    nv += (d1 >= 192) - (d1 < 64);
+                }
+
                 dp[i] = fs_pack_px(nu, oa, nv, ob);
             }
         }
@@ -399,6 +409,12 @@ static void fs_core_process_rows(const fs_lut_t *lut, const void *src, void *dst
                 int sat = sat_t[ym];
                 nu = ((nu * sat) >> 7) + cb_t[ym];
                 nv = ((nv * sat) >> 7) + cr_t[ym];
+                {
+                    int d0 = fs_core_dither[dy][dx];
+                    int d1 = fs_core_dither[dy][dx + 1];
+                    nu += (d0 >= 192) - (d0 < 64);
+                    nv += (d1 >= 192) - (d1 < 64);
+                }
 
                 /* xorshift32, independent samples for both pixels in the 4:2:2 pair */
                 rnd ^= rnd << 13;
