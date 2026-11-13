@@ -1,0 +1,27 @@
+# Kodak Ektar 100: vivid reds and blues, tight, fine grain, cool.
+#
+# Ektar is the negative that behaves like a slide: blacks on the floor, a
+# steep middle, and saturation high enough that reds and blues are the reason
+# people shoot it.  The 128,131 in the red curve is the other half of its
+# reputation -- Ektar leans magenta in the highlights, and a red curve that
+# lifts slightly after mid-grey is how that reads without a cast.
+#
+VERSION   3
+NAME EKTAR 25
+DESC Slow, sharp, saturated: the finest-grain Ektar.
+WB        DAYLIGHT
+CURVE     0,3 32,13 64,32 96,60 128,97 160,136 192,170 224,204 255,239
+CURVE_R     0,3 32,31 64,64 96,98 128,133 160,168 192,201 224,238 255,255
+CURVE_G   0,7 32,32 64,64 96,97 128,131 160,165 192,199 224,234 255,255
+CURVE_B     0,9 32,35 64,71 96,103 128,134 160,164 192,197 224,234 255,255
+SAT      102
+HUE_SAT   108,109,107,103,99,93,89,85,82,84,85,88,92,98,102,108,112,117,119,120,120,119,119,118,118,118,120,124,127,132,137,140,141,140,136,130,110,103,99,96,94,92,92,93,95,96,98,100
+HUE_ROT   -0.6,-0.9,-1.2,-1.7,-2.2,-2.6,-2.5,-1.9,-1.2,-6.4,-5.7,-4.9,-4.1,-3.3,-2.6,-1.8,-1.0,-0.4,-0.1,-0.1,-0.2,-0.3,-0.5,-0.6,-0.8,-0.9,-1.0,-1.1,-1.2,-1.4,-1.5,-1.9,-2.6,-3.4,-4.1,-4.7,-5.3,-5.7,-5.9,-5.8,-5.6,-5.3,-5.3,-5.4,-5.6,-5.9,-6.1,-6.3
+HUE_LUM   102,102,102,102,104,104,104,104,101,101,101,101,95,95,95,95,89,89,89,89,91,91,91,91,96,96,96,96,93,93,93,93,90,90,90,90,98,98,98,98,105,105,105,105,105,105,105,105
+SPLIT_SH  2,-1,-2
+SPLIT_HI  4,-2,2
+HALATION  22 240 10
+HAL_TINT  255,90,60
+GRAIN     6
+GRAIN_SIZE 8
+
