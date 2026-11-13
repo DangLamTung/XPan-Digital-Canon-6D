@@ -36,6 +36,14 @@ se/hosttest/tabledump
 se/hosttest/tableerr
 se/hosttest/springtest
 se/hosttest/fs2cube
+se/hosttest/frameprev
+se/hosttest/framesim
+se/hosttest/bench_eng
+se/hosttest/bench_lv
+se/hosttest/curvechk
+se/hosttest/curvecmp
+se/hosttest/curveband
+se/hosttest/creatorwrite_ml
 
 # macOS debug bundles: build artefacts, and the DWARF inside them is 100s of KB
 se/hosttest/*.dSYM/
