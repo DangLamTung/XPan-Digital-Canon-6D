@@ -8756,6 +8756,7 @@ static void fs_lv_monitor_task(void *unused) {
        * missing line was read as "no photo was taken" when it means neither.
        */
       if (g != last_graded || nc != last_calls) {
+        fs_log("header: burned on %d shot(s)", fs_yuvhook_header_burned());
         last_graded = g;
         last_calls = nc;
         if (g > 0) {
