@@ -645,8 +645,10 @@ void se_look_bake_yuv(const se_look *lk, se_yuvtbl *t)
                 for (k = 0; k < 4; k++) {
                     int au = ax[k], av = ay[k];
                     int rr, gg, bb, o2[3];
-                    if (au < -127) au = -127; if (au > 127) au = 127;
-                    if (av < -127) av = -127; if (av > 127) av = 127;
+                    if (au < -127) au = -127;
+                    else if (au > 127) au = 127;
+                    if (av < -127) av = -127;
+                    else if (av > 127) av = 127;
                     if (ycc_px(128, au, av, &rr, &gg, &bb) != 0) { ox[k] = ou; oy2[k] = ov; continue; }
                     bake_px(lk, rr, gg, bb, o2);
                     {

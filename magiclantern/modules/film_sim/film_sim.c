@@ -108,7 +108,13 @@ static const char *fs_own_lut_path(void)
 /* Grade LiveView through the joint (y,u,v) lattice instead of the
  * preset tables. Off by default: it is ~3.5x the lookups and the
  * camera's frame budget for that is unmeasured. */
-static CONFIG_INT("film.sim.lv3d", film_sim_lv3d, 0);
+/* LiveView preview engine: 0 tables, 1 lattice, 2 engine. Was two separate
+ * switches (film.sim.lv3d, film.sim.lvexact) sitting in two different menus,
+ * which is how a panel could end up on a path nobody intended. */
+static const char *fs_lvmode_names[] = {
+  "Tables (fast)", "Lattice (accurate)", "Engine (slow)",
+};
+static CONFIG_INT("film.sim.lvmode", film_sim_lvmode, 0);
 /* Defined up here because fs_sync() decides from it whether the bars are
  * honest: only a develop-and-replace shot is actually cropped. */
 static CONFIG_INT("film.sim.replace", film_sim_replace, 1);
@@ -163,8 +169,7 @@ static CONFIG_INT("film.sim.pad", film_sim_pad, 1);
 static CONFIG_INT("film.sim.frame", film_sim_frame, 0);
 /* 0 = baked tables (fast), 1 = the engine per pixel (exact, slower). */
 static CONFIG_INT("film.sim.exact", film_sim_exact, 0);
-/* LiveView: the same engine, colour only. Off by default. */
-static CONFIG_INT("film.sim.lvexact", film_sim_lvexact, 0);
+
 #define FS_ASPECT_MAX 6
 
 /* Off by default: this patches two firmware entry points to look at the frame
@@ -1086,7 +1091,7 @@ static void fs_sync() {
   if (film_sim_user1 && preset != fs_user1_last_preset) {
     fs_user1_dirty = 1;
   }
-  if (film_sim_yuvrows > 0 || film_sim_lv3d) {
+  if (film_sim_yuvrows > 0 || film_sim_lvmode >= 1) {
     fs_yuvlook_dirty = 1;
   }
   /* Framing is an aspect mode: the hook needs it even when nothing else moved.
@@ -1167,11 +1172,11 @@ static int fs_lv3d_logged = -1;
  */
 static void fs_lv_grade(const void *src, void *dst, int pitch, int row0, int row1)
 {
-  const se_yuv3 *t3 = film_sim_lv3d ? fs_yuvlook_uv3() : NULL;
+  const se_yuv3 *t3 = (film_sim_lvmode == 1) ? fs_yuvlook_uv3() : NULL;
 
   /* Exact LiveView: the develop's own engine, colour only. Works on one
    * buffer, so a separate destination is filled first. */
-  if (film_sim_lvexact && fs_yuvlook_engine_lv_ready()) {
+  if (film_sim_lvmode == 2 && fs_yuvlook_engine_lv_ready()) {
     unsigned char *d = (unsigned char *)dst + (size_t)row0 * pitch;
     if (dst != src)
       memcpy(d, (const unsigned char *)src + (size_t)row0 * pitch,
@@ -2302,7 +2307,7 @@ static void fs_slot_backup_task(void *unused) {
      * LiveView lattice. Gating it on yuvrows alone left LiveView on the
      * preset tables when the shutter grade was off, i.e. the switch did
      * nothing exactly when a user would try it. */
-    if (fs_yuvlook_dirty && (film_sim_yuvrows > 0 || film_sim_lv3d)) {
+    if (fs_yuvlook_dirty && (film_sim_yuvrows > 0 || film_sim_lvmode >= 1)) {
       fs_yuvlook_dirty = 0;
       char stk[FS_PATH_LEN];
       if (fs_active_stock_path(stk, sizeof stk, NULL)) {
@@ -8416,14 +8421,14 @@ static struct menu_entry fs_menu_fuji[] = {
 
 static struct menu_entry fs_menu_live[] = {
     {
-        .name = "LiveView 3D",
-        .priv = &film_sim_lv3d,
-        .max = 1,
-        .help = "Grade the preview through a joint (y,u,v) lattice baked from "
-                "the stock instead of the preset tables: 3.3 levels off the "
-                "develop against 8.8, with 5x less chroma error (host test "
-                "se/hosttest/lv3d.c). Costs about 3.3x the table lookups, so "
-                "watch FILMSIM.LOG's grade_ms before leaving it on.",
+        .name = "Preview Engine",
+        .priv = &film_sim_lvmode,
+        .max = 2,
+        .choices = fs_lvmode_names,
+        .help = "How LiveView is graded. Tables: the flat 64x64 sample of the "
+                ".fs -- fastest, ~2.9 dE off the develop on colour. Lattice: "
+                "12x17x17 interpolated, ~1.0 dE off and ~2x the cost. Engine: "
+                "the real grade, colour only, exact but ~8x slower.",
     },
     {
         .name = "LiveView Frame",
@@ -8643,21 +8648,8 @@ static struct menu_entry fs_menu_settings[] = {
                 "into a 3:2 frame with black bars, so the body shows the whole "
                 "frame instead of something that is not what you composed.",
     },
-    {
-        .name = "LiveView",
-        .select = menu_open_submenu,
-        .icon_type = IT_ACTION,
-        .help = "Preview grading, frame and overlay options.",
-        .children = fs_menu_live,
-    },
-    {
-        .name = "LiveView Exact",
-        .priv = &film_sim_lvexact,
-        .max = 1,
-        .help = "Grade LiveView with the engine itself, colour only: no "
-                "halation, no grain. The panel then shows the look the develop "
-                "will write, at a few frames a second instead of 30.",
-    },
+
+
     {
         .name = "Exact Grade",
         .priv = &film_sim_exact,
@@ -8736,6 +8728,14 @@ static struct menu_entry film_sim_menu[] = {
         .help = "One setting for both halves of what-you-see-is-what-you-get: "
                 "the bars on LiveView and the window a developed file is cut "
                 "to are this same mode.",
+    },
+    {
+        .name = "LiveView",
+        .select = menu_open_submenu,
+        .icon_type = IT_ACTION,
+        .help = "Everything about the preview: which engine grades it, the "
+                "framing guide, canister art and Canon's own overlays.",
+        .children = fs_menu_live,
     },
     {
         .name = "User Look",
@@ -9101,7 +9101,7 @@ static unsigned int film_sim_init() {
     fs_log("%s (install %d)", fs_yuvhook_note(), e);
     fs_log_flush();
     task_create("fs_yuvpoll", 0x1e, 0x2000, fs_yuv_poll_task, 0);
-  } else if (film_sim_yuvrows > 0 || film_sim_lv3d) {
+  } else if (film_sim_yuvrows > 0 || film_sim_lvmode >= 1) {
     /* The shot hook needs the row path; the LiveView lattice does not. Gating
      * this on yuvrows alone left lv3d unbaked at boot whenever the shutter
      * grade was off -- the switch did nothing exactly when it was turned on. */
@@ -9278,7 +9278,7 @@ MODULE_CONFIG(film_sim_dbglog)
 MODULE_CONFIG(film_sim_art)
 MODULE_CONFIG(film_sim_shotgrade)
 MODULE_CONFIG(film_sim_lut)
-MODULE_CONFIG(film_sim_lv3d)
+MODULE_CONFIG(film_sim_lvmode)
 MODULE_CONFIG(film_sim_wbs_ba)
 MODULE_CONFIG(film_sim_wbs_gm)
 MODULE_CONFIG(film_sim_neutralcap)
@@ -9296,7 +9296,7 @@ MODULE_CONFIG(film_sim_aspect)
 MODULE_CONFIG(film_sim_pad)
 MODULE_CONFIG(film_sim_frame)
 MODULE_CONFIG(film_sim_exact)
-MODULE_CONFIG(film_sim_lvexact)
+
 MODULE_CONFIG(film_sim_yuvprobe)
 MODULE_CONFIG(film_sim_yuvrows)
 MODULE_CONFIG(film_sim_queue)
