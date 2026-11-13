@@ -8881,6 +8881,16 @@ static void fs_lv_monitor_task(void *unused) {
                  fs_yuvhook_hook_total_max(), (int)fs_yuvhook_grade_ms(),
                  (int)fs_yuvhook_header_ms(), film_sim_shotmode,
                  GetFreeMemForMalloc() / 1024);
+          {
+            uint32_t a = fs_yuvhook_t_enter(), b = fs_yuvhook_t_grade(),
+                     c = fs_yuvhook_t_bars(),  d = fs_yuvhook_t_band(),
+                     e = fs_yuvhook_t_clean();
+            if (a)
+              fs_log("yuvtrace: enter->grade %d, grade->bars %d, bars->band %d, "
+                     "band->clean %d, total %d ms",
+                     (int)(b - a), (int)(c - b), (int)(d - c), (int)(e - d),
+                     (int)(e - a));
+          }
           fs_log("yuvcap: cache alias %s; camera style 0x%02x (%s); engine look %s; bars %d",
                  fs_yuvhook_dcache_used() ? "used (bit 30 cleared, D-cache cleaned)"
                                           : "NOT used",

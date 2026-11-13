@@ -114,6 +114,15 @@ void fs_yuvhook_header(const se_frame *f, unsigned char *scratch) {
 }
 int fs_yuvhook_header_burned(void) { return fs_hdr_burned; }
 
+/* Per-stage timestamps of the last shot, so the log says where the
+ * milliseconds went instead of one lump. All in get_ms_clock() units. */
+static uint32_t fs_tr_enter, fs_tr_grade, fs_tr_bars, fs_tr_band, fs_tr_clean;
+uint32_t fs_yuvhook_t_enter(void) { return fs_tr_enter; }
+uint32_t fs_yuvhook_t_grade(void) { return fs_tr_grade; }
+uint32_t fs_yuvhook_t_bars(void)  { return fs_tr_bars; }
+uint32_t fs_yuvhook_t_band(void)  { return fs_tr_band; }
+uint32_t fs_yuvhook_t_clean(void) { return fs_tr_clean; }
+
 /* Time spent drawing the band inside the shot, last shot only. */
 static uint32_t fs_hdr_ms;
 uint32_t fs_yuvhook_header_ms(void) { return fs_hdr_ms; }
@@ -245,12 +254,14 @@ static uint32_t fs_yuv_grade_cached(void *buf, int width, int rows, int stride,
     if (ba >= 0x40000000u && ba < 0x80000000u)
         gp = (unsigned char *)CACHEABLE(buf);
     fs_dcache_used = (gp != (unsigned char *)buf);
+    fs_tr_enter = get_ms_clock();
     if ((fs_yuv_exact || fs_yuv_shot_mode == 2) && width <= 5760 && fs_yuvlook_engine_ready())
         ms = fs_yuvlook_apply_engine(gp, width, rows, stride);
     else if (fs_yuv_shot_mode == 1 && fs_yuvlook_lattice_ready())
         ms = fs_yuvlook_apply_lattice(gp, width, rows, stride);
     else
         ms = fs_yuvlook_apply(gp, width, rows, stride);
+    fs_tr_grade = get_ms_clock();
 
     if (fs_bars_mode > 0) {
         int num, den;
@@ -262,6 +273,7 @@ static uint32_t fs_yuv_grade_cached(void *buf, int width, int rows, int stride,
             fs_bars_burned++;
         }
     }
+    fs_tr_bars = get_ms_clock();
     /* The header is independent of the bars: with none it overlays the
      * bottom of the picture rather than vanishing. */
     if (fs_hdr.on && fs_hdr_scratch && rows == frame_h) {
@@ -275,8 +287,10 @@ static uint32_t fs_yuv_grade_cached(void *buf, int width, int rows, int stride,
         fs_hdr_ms = 0;
     }
 
+    fs_tr_band = get_ms_clock();
     if (gp != (unsigned char *)buf)
         fs_dcache_clean(gp, (uint32_t)rows * stride);
+    fs_tr_clean = get_ms_clock();
     return ms;
 }
 

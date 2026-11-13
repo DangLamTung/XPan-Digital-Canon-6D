@@ -59,6 +59,12 @@ void fs_yuvhook_bars(int mode);
 void fs_yuvhook_header(const se_frame *f, unsigned char *rgb_scratch);
 int  fs_yuvhook_header_burned(void);
 uint32_t fs_yuvhook_header_ms(void);   /* band drawing time, last shot */
+/* Stage timestamps of the last shot (get_ms_clock units). */
+uint32_t fs_yuvhook_t_enter(void);
+uint32_t fs_yuvhook_t_grade(void);
+uint32_t fs_yuvhook_t_bars(void);
+uint32_t fs_yuvhook_t_band(void);
+uint32_t fs_yuvhook_t_clean(void);
 int fs_yuvhook_bars_burned(void);
 uint32_t fs_yuvhook_grade_ms(void);
 /* 1 = grade the shot with the engine itself instead of the baked tables. */
