@@ -487,6 +487,13 @@ static void fs_core_process_rows(const fs_lut_t *lut, const void *src, void *dst
 #define FS_UV3_SY (((FS_UV3_NY - 1) * 65536 + 254) / 255)
 #define FS_UV3_SC (((FS_UV3_NC - 1) * 65536 + 254) / 255)
 
+/*
+ * Packed nodes were tried and reverted: dy/Cb/Cr in one uint32 cut the loads
+ * from 12 to 4 per pixel pair but added 12 unpack operations, and measured
+ * 18.1 -> 21.7 ms on a 3000x2000 frame on the host (dE unchanged). On a core
+ * where an L1 load is a cycle, unpacking costs more than the loads it saves.
+ * If this is revisited, measure it on the body before believing the theory.
+ */
 static void fs_core_process_rows3(const unsigned char *curve, const short *uv,
                                   const void *src, void *dst,
                                   int pitch, int row0, int row1,
