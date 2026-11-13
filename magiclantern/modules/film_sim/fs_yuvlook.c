@@ -269,6 +269,32 @@ static int gradeq;
 void fs_yuvlook_set_quality(int q) { gradeq = q < 0 ? 0 : (q > 2 ? 2 : q); }
 int  fs_yuvlook_quality(void) { return gradeq; }
 
+/*
+ * Ordered dither for the shot path.
+ *
+ * The baked curve is 8-bit, and for a contrasty stock 64 of its 255 steps are
+ * flat -- two input levels land on one output code. Without noise those steps
+ * are visible bands, which is exactly what the JPEG showed while LiveView (a
+ * different path, with its own dither) looked clean.
+ */
+static const unsigned char fs_yuv_dither[8][8] = {
+    {  0, 128,  32, 160,   8, 136,  40, 168},
+    {192,  64, 224,  96, 200,  72, 232, 104},
+    { 48, 176,  16, 144,  56, 184,  24, 152},
+    {240, 112, 208,  80, 248, 120, 216,  88},
+    { 12, 140,  44, 172,   4, 132,  36, 164},
+    {204,  76, 236, 108, 196,  68, 228, 100},
+    { 60, 188,  28, 156,  52, 180,  20, 148},
+    {252, 124, 220,  92, 244, 116, 212,  84},
+};
+
+/* +-1 only where the curve is flat at this input, so smooth ramps stay clean. */
+static int fs_yuv_flat_dither(int in, int d) {
+    if (in < 0 || in > 254) return 0;
+    if (tbl.y[in] != tbl.y[in + 1]) return 0;
+    return (d >= 192) - (d < 64);
+}
+
 uint32_t fs_yuvlook_apply(unsigned char *buf, int width, int height, int stride)
 {
 #ifndef SE_HOSTED
@@ -324,8 +350,11 @@ uint32_t fs_yuvlook_apply(unsigned char *buf, int width, int height, int stride)
                 int rv   = (tbl.matrix[2] * u + tbl.matrix[3] * v) >> 8;
                 int nu   = tbl.uoff[yav] + ((ru * cgg) >> 12);
                 int nv   = tbl.voff[yav] + ((rv * cgg) >> 12);
-                int ny0  = tbl.y[y0] + dy;
+                int dith = fs_yuv_dither[y & 7][(x >> 1) & 7];
+                int ny0  = tbl.y[y0] + dy + fs_yuv_flat_dither(y0, dith);
                 int ny1  = tbl.y[y1] + dy;
+                dith = fs_yuv_dither[y & 7][((x >> 1) + 1) & 7];
+                ny1 += fs_yuv_flat_dither(y1, dith);
 
                 p[0] = (unsigned char)(signed char)(nu < -128 ? -128 : nu > 127 ? 127 : nu);
                 p[2] = (unsigned char)(signed char)(nv < -128 ? -128 : nv > 127 ? 127 : nv);
@@ -333,8 +362,11 @@ uint32_t fs_yuvlook_apply(unsigned char *buf, int width, int height, int stride)
                 p[3] = (unsigned char)(ny1 < 0 ? 0 : ny1 > 255 ? 255 : ny1);
             } else {
                 /* FAST: chroma bytes are left exactly as Canon wrote them. */
-                int ny0 = tbl.y[y0];
+                int dith = fs_yuv_dither[y & 7][(x >> 1) & 7];
+                int ny0 = tbl.y[y0] + fs_yuv_flat_dither(y0, dith);
                 int ny1 = tbl.y[y1];
+                dith = fs_yuv_dither[y & 7][((x >> 1) + 1) & 7];
+                ny1 += fs_yuv_flat_dither(y1, dith);
                 p[1] = (unsigned char)(ny0 < 0 ? 0 : ny0 > 255 ? 255 : ny0);
                 p[3] = (unsigned char)(ny1 < 0 ? 0 : ny1 > 255 ? 255 : ny1);
             }
