@@ -114,6 +114,10 @@ void fs_yuvhook_header(const se_frame *f, unsigned char *scratch) {
 }
 int fs_yuvhook_header_burned(void) { return fs_hdr_burned; }
 
+/* Time spent drawing the band inside the shot, last shot only. */
+static uint32_t fs_hdr_ms;
+uint32_t fs_yuvhook_header_ms(void) { return fs_hdr_ms; }
+
 /* RGB row -> UYVY row (Y, Cb, Cr, BT.601 studio swing). */
 static void fs_hdr_row_uyvy(unsigned char *dst, const unsigned char *rgb, int w) {
     int x;
@@ -262,9 +266,13 @@ static uint32_t fs_yuv_grade_cached(void *buf, int width, int rows, int stride,
      * bottom of the picture rather than vanishing. */
     if (fs_hdr.on && fs_hdr_scratch && rows == frame_h) {
         int num = 0, den = 1;
+        uint32_t h0 = get_ms_clock();
         if (fs_bars_mode > 0)
             fs_core_aspect_ratio(fs_bars_mode, &num, &den);
         fs_hdr_burn(gp, width, rows, stride, num, den);
+        fs_hdr_ms = get_ms_clock() - h0;
+    } else {
+        fs_hdr_ms = 0;
     }
 
     if (gp != (unsigned char *)buf)

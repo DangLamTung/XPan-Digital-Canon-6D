@@ -497,9 +497,12 @@ static void fs_engine_log(void *ctx, const char *msg) {
 
 static int fs_bake_stock(const char *path, int strength, const char *lut) {
   int rc;
+  uint32_t t0 = get_ms_clock();
   se_set_log(fs_engine_log, NULL);
   rc = fs_yuvlook_bake_lut(path, strength, lut);
   se_set_log(NULL, NULL);
+  fs_log("bake: %s took %d ms (table + lattice + engine run)", path,
+         (int)(get_ms_clock() - t0));
   if (rc != 0)
     fs_log("bake: '%s' would not load (%s)", path, lut ? "with LUT" : "no LUT");
   fs_log_flush();
@@ -8872,10 +8875,11 @@ static void fs_lv_monitor_task(void *unused) {
            * means the log cannot claim "capture style Neutral" for a frame that
            * was shot on a User Def style.
            */
-          fs_log("yuvcost: hook %d ms at %d ms, worst %d ms (grade %d ms); "
-                 "malloc pool free %d KB",
+          fs_log("yuvcost: hook %d ms at %d ms, worst %d ms "
+                 "(grade %d ms, band %d ms, shot mode %d); malloc free %d KB",
                  fs_yuvhook_hook_total_ms(), (int)fs_yuvhook_hook_ms(),
                  fs_yuvhook_hook_total_max(), (int)fs_yuvhook_grade_ms(),
+                 (int)fs_yuvhook_header_ms(), film_sim_shotmode,
                  GetFreeMemForMalloc() / 1024);
           fs_log("yuvcap: cache alias %s; camera style 0x%02x (%s); engine look %s; bars %d",
                  fs_yuvhook_dcache_used() ? "used (bit 30 cleared, D-cache cleaned)"
