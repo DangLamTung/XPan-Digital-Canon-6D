@@ -1290,6 +1290,12 @@ se_err se_cam_develop(const char *cr2_path, const char *stock_path,
          * it: lens_info is the live camera state and is stale or zero by the
          * time a develop runs, which is why the band used to show "-". */
         if (fr.on) {
+            static const char *short_ratio[] = {
+                "3:2", "1:1", "4:5", "9:16", "16:9", "65:24", "2.39:1",
+            };
+            if (se_aspect_mode >= 0 &&
+                se_aspect_mode < (int)(sizeof short_ratio / sizeof short_ratio[0]))
+                snprintf(fr.aspect, sizeof fr.aspect, "%s", short_ratio[se_aspect_mode]);
             if (info.iso > 0)
                 se_frame_fmt_iso(fr.value[2], (int)sizeof fr.value[2], (int)info.iso);
             if (info.aperture > 0)

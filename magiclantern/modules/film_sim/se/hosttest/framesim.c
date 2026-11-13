@@ -89,6 +89,7 @@ int main(int argc, char **argv)
         if (f.inner_h > 400) f.inner_h = 400;
     }
     if (argc > 16) snprintf(f.lens, sizeof f.lens, "%s", argv[16]);
+    if (argc > 17) snprintf(f.aspect, sizeof f.aspect, "%s", argv[17]);
     if (argc > 11) {
         f.brand_i = atoi(argv[11]);
         f.brand_fg[0] = argc > 14 ? atoi(argv[12]) : 0xED;

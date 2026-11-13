@@ -36,6 +36,7 @@ typedef struct {
     char         model[SE_FRAME_LINE];   /* "EOS 6D" */
     char         stock[SE_FRAME_LINE];   /* the stock's name, under its mark */
     char         lens[SE_FRAME_LINE];    /* the lens, under the camera model */
+    char         aspect[SE_FRAME_LINE];  /* "65:24", on its own line */
     int          inner_h;                /* band height; 0 = 150 */
     const uint8_t *sprite;    /* stock canister, RGB, sprite_w x sprite_h */
     int          sprite_w, sprite_h, sprite_scale;

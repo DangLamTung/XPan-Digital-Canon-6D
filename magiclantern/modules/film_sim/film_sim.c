@@ -1689,6 +1689,11 @@ static unsigned int fs_display_filter(unsigned int ctx) {
  * what the frame will look like. The same list is used by both entries and by
  * the update callback below, so the menu and the screen cannot disagree.
  */
+/* Short forms for the header band: the menu wants words, the band wants a ratio. */
+static const char *fs_aspect_short[] = {
+    "3:2", "1:1", "4:5", "9:16", "16:9", "65:24", "2.39:1",
+};
+
 static const char *fs_aspect_names[] = {
     "3:2 full (native)", "1:1 square", "4:5 portrait", "9:16 story",
     "16:9 video",        "65:24 XPan", "2.39:1 Cinemascope",
@@ -4965,6 +4970,9 @@ static void fs_frame_apply(const char *stock_path) {
   f.brand_colour[2] = 0x00;
   snprintf(f.model, sizeof f.model, "%s", base);
   snprintf(f.stock, sizeof f.stock, "%s", film->name);
+  if (film_sim_aspect >= 0 &&
+      film_sim_aspect < (int)(sizeof fs_aspect_short / sizeof fs_aspect_short[0]))
+    snprintf(f.aspect, sizeof f.aspect, "%s", fs_aspect_short[film_sim_aspect]);
   if (lens_info.name[0])
     snprintf(f.lens, sizeof f.lens, "%s", lens_info.name);
   /*
@@ -5013,6 +5021,9 @@ static void fs_capture_header(void) {
   if (lens_info.name[0])
     snprintf(f.lens, sizeof f.lens, "%s", lens_info.name);
   snprintf(f.stock, sizeof f.stock, "%s", film->name);
+  if (film_sim_aspect >= 0 &&
+      film_sim_aspect < (int)(sizeof fs_aspect_short / sizeof fs_aspect_short[0]))
+    snprintf(f.aspect, sizeof f.aspect, "%s", fs_aspect_short[film_sim_aspect]);
   fs_frame_exposure(&f);
   fs_yuvhook_header(&f, fs_cap_scratch);
 }
