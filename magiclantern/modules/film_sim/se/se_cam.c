@@ -1325,7 +1325,17 @@ se_err se_cam_develop(const char *cr2_path, const char *stock_path,
              * file is one image, not an image with a trick in it. */
             unsigned char *bar = SE_NEW(&arena, unsigned char, (size_t)out_w * 3);
             if (!bar) { e = SE_E_NOMEM; goto done; }
-            memset(bar, 0, (size_t)out_w * 3);
+            /* With a frame on, the pad is paper, not black: the wide picture
+             * then reads as one bordered print instead of a black letterbox. */
+            if (fr.on) {
+                for (int x = 0; x < out_w; x++) {
+                    bar[x * 3 + 0] = fr.bg[0];
+                    bar[x * 3 + 1] = fr.bg[1];
+                    bar[x * 3 + 2] = fr.bg[2];
+                }
+            } else {
+                memset(bar, 0, (size_t)out_w * 3);
+            }
             pad_top = pad_h / 2;
             for (int i = 0; i < pad_top; i++)
                 if (se_jpeg_write_rows(&enc, bar, 1) != SE_OK) {
@@ -1372,7 +1382,15 @@ se_err se_cam_develop(const char *cr2_path, const char *stock_path,
         unsigned char *bar = SE_NEW(&arena, unsigned char, (size_t)out_w * 3);
         if (bar) {
             uint32_t b0 = se_now_ms();
-            memset(bar, 0, (size_t)out_w * 3);
+            if (fr.on) {
+                for (int x = 0; x < out_w; x++) {
+                    bar[x * 3 + 0] = fr.bg[0];
+                    bar[x * 3 + 1] = fr.bg[1];
+                    bar[x * 3 + 2] = fr.bg[2];
+                }
+            } else {
+                memset(bar, 0, (size_t)out_w * 3);
+            }
             for (int i = pad_top; i < pad_h; i++)
                 if (se_jpeg_write_rows(&enc, bar, 1) != SE_OK) { failed = 1; break; }
             t_enc += se_now_ms() - b0;   /* the bars are encoded like any row */
