@@ -1336,7 +1336,14 @@ se_err se_cam_develop(const char *cr2_path, const char *stock_path,
             } else {
                 memset(bar, 0, (size_t)out_w * 3);
             }
+            /* With a header on, the picture and its band are one block and
+             * the pad is split evenly around it, so the print sits centred
+             * in the 3:2 file instead of floating in a mat. */
             pad_top = pad_h / 2;
+            if (fr.on) {
+                pad_top = (pad_h - frm_top) / 2;
+                if (pad_top < 0) pad_top = 0;
+            }
             for (int i = 0; i < pad_top; i++)
                 if (se_jpeg_write_rows(&enc, bar, 1) != SE_OK) {
                     e = SE_E_IO;
@@ -1378,6 +1385,11 @@ se_err se_cam_develop(const char *cr2_path, const char *stock_path,
         if (rst_flush_to(&d, d.tgt_h) != 0) failed = 1;
         rst_wsum = 0;
     }
+    if (frm_bot > 0 && !failed) {
+        if (write_band(&enc, &arena, out_w, &fr, frm_bot, 0) != 0)
+            failed = 1;
+    }
+
     if (pad_h > pad_top) {
         unsigned char *bar = SE_NEW(&arena, unsigned char, (size_t)out_w * 3);
         if (bar) {
@@ -1397,10 +1409,6 @@ se_err se_cam_develop(const char *cr2_path, const char *stock_path,
         } else {
             failed = 1;
         }
-    }
-    if (frm_bot > 0 && !failed) {
-        if (write_band(&enc, &arena, out_w, &fr, frm_bot, 0) != 0)
-            failed = 1;
     }
     se_jpeg_end(&enc);
     d.enc = &enc;             /* still valid: the patch only needs the FILE* */
