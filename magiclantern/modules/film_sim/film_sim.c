@@ -169,6 +169,11 @@ static CONFIG_INT("film.sim.pad", film_sim_pad, 1);
 static CONFIG_INT("film.sim.frame", film_sim_frame, 0);
 /* 0 = baked tables (fast), 1 = the engine per pixel (exact, slower). */
 static CONFIG_INT("film.sim.exact", film_sim_exact, 0);
+/* Shot grade path: 0 flat table, 1 lattice (default), higher = engine. */
+static const char *fs_shotmode_names[] = {
+  "Tables (fast)", "Lattice (accurate)", "Engine (slow)",
+};
+static CONFIG_INT("film.sim.shotmode", film_sim_shotmode, 1);
 
 #define FS_ASPECT_MAX 6
 
@@ -1107,6 +1112,7 @@ static void fs_sync() {
    *    redundant because our own cropped develop replaces the file. */
   fs_yuvhook_bars(film_sim_replace ? film_sim_aspect : 0);
   fs_yuvhook_exact(film_sim_exact);
+  fs_yuvhook_shot(film_sim_shotmode);
   fs_capture_header();
 
   /*
@@ -8651,6 +8657,17 @@ static struct menu_entry fs_menu_settings[] = {
 
 
     {
+        .name = "Shot Grade",
+        .priv = &film_sim_shotmode,
+        .max = 2,
+        .choices = fs_shotmode_names,
+        .help = "How the JPEG the camera writes is graded. Lattice: the joint "
+                "(y,u,v) table baked from the .fs, interpolated -- ~1.0 dE off "
+                "the develop for ~2x the tables' cost. Tables: the old flat "
+                "64x64 sample, ~2.9 dE off. Engine: the grade itself, exact, "
+                "around a minute per shot.",
+    },
+    {
         .name = "Exact Grade",
         .priv = &film_sim_exact,
         .max = 1,
@@ -9296,6 +9313,7 @@ MODULE_CONFIG(film_sim_aspect)
 MODULE_CONFIG(film_sim_pad)
 MODULE_CONFIG(film_sim_frame)
 MODULE_CONFIG(film_sim_exact)
+MODULE_CONFIG(film_sim_shotmode)
 
 MODULE_CONFIG(film_sim_yuvprobe)
 MODULE_CONFIG(film_sim_yuvrows)

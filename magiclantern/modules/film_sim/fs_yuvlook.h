@@ -44,4 +44,10 @@ uint32_t fs_yuvlook_apply_engine(unsigned char *buf, int width, int height, int 
 
 uint32_t fs_yuvlook_apply(unsigned char *buf, int width, int height, int stride);
 
+/* The joint (y,u,v) lattice: baked from the same .fs, interpolated per pixel.
+ * ~1.0 dE off the develop against the flat table's 2.9, at about twice the
+ * cost. */
+int  fs_yuvlook_lattice_ready(void);
+uint32_t fs_yuvlook_apply_lattice(unsigned char *buf, int width, int height, int stride);
+
 #endif

@@ -49,6 +49,7 @@
 #define SE_YUV_STOCK_MAX (16 * 1024)
 
 #include "fs_yuvlook.h"
+#include "fs_core.h"
 #include "se/engine/look.h"
 #include "se/engine/stock.h"
 
@@ -345,6 +346,21 @@ static int          lv_w;
 
 int fs_yuvlook_engine_lv_ready(void) { return lv_have; }
 
+/* ---- joint lattice, per shot -------------------------------------------
+ *
+ * tbl3 is baked by se_look_bake_yuv3() at the same moment tbl is baked, so
+ * the lattice costs nothing at shot time beyond the interpolation.
+ */
+int fs_yuvlook_lattice_ready(void) { return baked != 0; }
+
+uint32_t fs_yuvlook_apply_lattice(unsigned char *buf, int width, int height, int stride)
+{
+    static unsigned rnd = 1;
+    if (!baked || !buf || width < 2 || height < 1 || stride < width * 2) return 0;
+    fs_core_process_rows3(tbl3.y, tbl3.v, buf, buf, stride, 0, height, 0, &rnd);
+    return 1;
+}
+
 uint32_t fs_yuvlook_apply_engine_lv(unsigned char *buf, int width, int height, int stride)
 {
     int y;
@@ -499,7 +515,7 @@ uint32_t fs_yuvlook_apply(unsigned char *buf, int width, int height, int stride)
                 if (gradeq == 0) {
                     int uu = (u + 128 < 0) ? 0 : (u + 128 > 255 ? 255 : u + 128);
                     int vv = (v + 128 < 0) ? 0 : (v + 128 > 255 ? 255 : v + 128);
-                    int cell = (vv >> 2) * SE_YUV_GRID + (uu >> 2);
+                    int cell = (vv >> SE_YUV_SHIFT) * SE_YUV_GRID + (uu >> SE_YUV_SHIFT);
                     cg = tbl.cg[cell];
                     dy = tbl.dy[cell];
                     jm = tbl.jm[cell];

@@ -215,6 +215,10 @@ int fs_yuvhook_dcache_used(void) { return fs_dcache_used; }
 static int fs_yuv_exact;
 void fs_yuvhook_exact(int on) { fs_yuv_exact = on ? 1 : 0; }
 
+/* 0 flat table, 1 lattice, 2 engine. Exact Grade still forces 2. */
+static int fs_yuv_shot_mode = 1;
+void fs_yuvhook_shot(int mode) { fs_yuv_shot_mode = mode < 0 ? 0 : (mode > 2 ? 2 : mode); }
+
 /*
  * Grade a frame through the cached alias, and hand it back to Canon.
  *
@@ -237,8 +241,10 @@ static uint32_t fs_yuv_grade_cached(void *buf, int width, int rows, int stride,
     if (ba >= 0x40000000u && ba < 0x80000000u)
         gp = (unsigned char *)CACHEABLE(buf);
     fs_dcache_used = (gp != (unsigned char *)buf);
-    if (fs_yuv_exact && width <= 5760 && fs_yuvlook_engine_ready())
+    if ((fs_yuv_exact || fs_yuv_shot_mode == 2) && width <= 5760 && fs_yuvlook_engine_ready())
         ms = fs_yuvlook_apply_engine(gp, width, rows, stride);
+    else if (fs_yuv_shot_mode == 1 && fs_yuvlook_lattice_ready())
+        ms = fs_yuvlook_apply_lattice(gp, width, rows, stride);
     else
         ms = fs_yuvlook_apply(gp, width, rows, stride);
 

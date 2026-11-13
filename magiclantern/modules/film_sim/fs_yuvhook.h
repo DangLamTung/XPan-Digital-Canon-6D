@@ -62,6 +62,8 @@ int fs_yuvhook_bars_burned(void);
 uint32_t fs_yuvhook_grade_ms(void);
 /* 1 = grade the shot with the engine itself instead of the baked tables. */
 void fs_yuvhook_exact(int on);
+/* Shot grade path: 0 flat table, 1 lattice, 2 engine per pixel. */
+void fs_yuvhook_shot(int mode);
 
 uint32_t fs_yuvhook_hook_ms(void);  /* get_ms_clock() when the hook last ran */
 int fs_yuvhook_hook_shots(void);    /* pictures seen by the hook */
