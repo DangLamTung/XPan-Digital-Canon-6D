@@ -59,6 +59,11 @@ void se_frame_edge_row(uint8_t *row, int width, const se_frame *f);
 void se_frame_top_row(uint8_t *row, int width, const se_frame *f, int y);
 void se_frame_bottom_row(uint8_t *row, int width, const se_frame *f, int y);
 
+/* Format the three exposure values for the band, no libc float needed. */
+void se_frame_fmt_iso(char *out, int cap, int iso);
+void se_frame_fmt_ap(char *out, int cap, int ap_x10);   /* 28 -> "2.8" */
+void se_frame_fmt_ss(char *out, int cap, int denom);    /* 200 -> "1/200" */
+
 /* Pick a text colour that reads on `bg`. */
 void se_frame_contrast(const uint8_t bg[3], uint8_t fg[3]);
 

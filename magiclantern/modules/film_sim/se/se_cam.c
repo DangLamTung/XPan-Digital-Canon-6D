@@ -1286,6 +1286,20 @@ se_err se_cam_develop(const char *cr2_path, const char *stock_path,
         if (!d.out) { e = SE_E_IO; goto done; }
 
         d.enc = &enc;
+        /* The developed file has the source's EXIF, so take the exposure from
+         * it: lens_info is the live camera state and is stale or zero by the
+         * time a develop runs, which is why the band used to show "-". */
+        if (fr.on) {
+            if (info.iso > 0)
+                se_frame_fmt_iso(fr.value[2], (int)sizeof fr.value[2], (int)info.iso);
+            if (info.aperture > 0)
+                se_frame_fmt_ap(fr.value[0], (int)sizeof fr.value[0],
+                                (int)(info.aperture * 10.0f + 0.5f));
+            if (info.exposure_time > 0) {
+                float inv = 1.0f / info.exposure_time;
+                se_frame_fmt_ss(fr.value[1], (int)sizeof fr.value[1], (int)(inv + 0.5f));
+            }
+        }
         SE_STEP("jpeg-begin");
         out_w = d.tgt_w ? d.tgt_w : (d.crop_x1 - d.crop_x0);
         out_h = d.tgt_w ? d.tgt_h : (d.crop_y1 - d.crop_y0);

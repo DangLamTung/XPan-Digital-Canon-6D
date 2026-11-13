@@ -4885,24 +4885,14 @@ static void fs_frame_exposure(se_frame *f) {
   snprintf(f->value[2], sizeof f->value[2], "-");
 
   i = fs_code_index(codes_aperture, APERTURE_ARRAY_LEN, lens_info.raw_aperture);
-  if (i >= 0) {
-    int a = values_aperture[i];              /* aperture * 10 */
-    if (a % 10) snprintf(f->value[0], sizeof f->value[0], "%d.%d", a / 10, a % 10);
-    else        snprintf(f->value[0], sizeof f->value[0], "%d", a / 10);
-  }
+  if (i >= 0) se_frame_fmt_ap(f->value[0], sizeof f->value[0], values_aperture[i]);
   i = fs_code_index(codes_shutter, SHUTTER_ARRAY_LEN, lens_info.raw_shutter);
-  if (i >= 0) {
-    int s = values_shutter[i];               /* denominator, 1/s */
-    if (s > 0) snprintf(f->value[1], sizeof f->value[1], "1/%d", s);
-  }
+  if (i >= 0) se_frame_fmt_ss(f->value[1], sizeof f->value[1], values_shutter[i]);
   i = fs_code_index(codes_iso, ISO_ARRAY_LEN, lens_info.raw_iso);
-  if (i > 0) {
-    snprintf(f->value[2], sizeof f->value[2], "%d", values_iso[i]);
-  } else if (lens_info.iso >= 25 && lens_info.iso <= 409600) {
-    /* raw_iso is 0 when the hook runs before the ISO property settles (high
-     * ISOs especially); lens_info.iso is already decoded. Never print "0". */
-    snprintf(f->value[2], sizeof f->value[2], "%d", (int)lens_info.iso);
-  }
+  if (i > 0)
+    se_frame_fmt_iso(f->value[2], sizeof f->value[2], values_iso[i]);
+  else if (lens_info.iso >= 25 && lens_info.iso <= 409600)
+    se_frame_fmt_iso(f->value[2], sizeof f->value[2], (int)lens_info.iso);
 }
 
 /* Apply the film frame, or clear it, before a develop. Opt-in: the config

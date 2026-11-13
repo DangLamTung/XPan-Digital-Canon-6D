@@ -3265,6 +3265,51 @@ int se_frame_text_width(const char *text, int scale) {
     return w * scale;
 }
 
+/* ISO as a camera would print it: 400, then 1k, 1.3k, 12.8k ... */
+void se_frame_fmt_iso(char *out, int cap, int iso) {
+    int n = 0;
+    if (cap <= 0) return;
+    if (iso <= 0) { if (cap > 1) { out[0] = '-'; out[1] = 0; } return; }
+    if (iso < 1000) {
+        char tmp[8]; int m = 0;
+        while (iso > 0 && m < 7) { tmp[m++] = (char)('0' + iso % 10); iso /= 10; }
+        if (m == 0) tmp[m++] = '0';
+        while (m > 0 && n < cap - 1) out[n++] = tmp[--m];
+        out[n] = 0;
+        return;
+    }
+    {
+        int k10 = (iso + 50) / 100;          /* tenths of a thousand */
+        int whole = k10 / 10, frac = k10 % 10;
+        if (whole >= 10 && n < cap - 1) { out[n++] = (char)('0' + whole / 10); }
+        if (n < cap - 1) out[n++] = (char)('0' + whole % 10);
+        if (frac && n < cap - 2) { out[n++] = '.'; out[n++] = (char)('0' + frac); }
+        if (n < cap - 1) out[n++] = 'k';
+        out[n] = 0;
+    }
+}
+
+void se_frame_fmt_ap(char *out, int cap, int ap_x10) {
+    int whole = ap_x10 / 10, frac = ap_x10 % 10, n = 0;
+    if (cap <= 0) return;
+    if (ap_x10 <= 0) { if (cap > 1) { out[0] = '-'; out[1] = 0; } return; }
+    if (whole >= 10 && n < cap - 1) out[n++] = (char)('0' + whole / 10);
+    if (n < cap - 1) out[n++] = (char)('0' + whole % 10);
+    if (frac && n < cap - 2) { out[n++] = '.'; out[n++] = (char)('0' + frac); }
+    out[n] = 0;
+}
+
+void se_frame_fmt_ss(char *out, int cap, int denom) {
+    int n = 0, tmp[8], m = 0;
+    if (cap <= 0) return;
+    if (denom <= 0) { if (cap > 1) { out[0] = '-'; out[1] = 0; } return; }
+    while (denom > 0 && m < 8) { tmp[m++] = denom % 10; denom /= 10; }
+    if (n < cap - 1) out[n++] = '1';
+    if (n < cap - 1) out[n++] = '/';
+    while (m > 0 && n < cap - 1) out[n++] = (char)('0' + tmp[--m]);
+    out[n] = 0;
+}
+
 void se_frame_contrast(const uint8_t bg[3], uint8_t fg[3]) {
     int y = (299 * bg[0] + 587 * bg[1] + 114 * bg[2]) / 1000;
     uint8_t v = y > 140 ? 0 : 255;
@@ -3431,6 +3476,7 @@ void se_frame_bottom_row(uint8_t *row, int width, const se_frame *f, int y) {
             line[n++] = f->model[i];
         if (f->lens[0]) {
             line[n++] = ' ';
+            line[n++] = '-';
             line[n++] = ' ';
             for (i = 0; f->lens[i] && n < (int)sizeof line - 1; i++)
                 line[n++] = f->lens[i];
