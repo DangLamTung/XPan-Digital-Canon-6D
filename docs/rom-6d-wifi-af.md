@@ -405,3 +405,46 @@ mostly *reading state*, not evaluating focus: 82 property reads against
 So the contrast evaluation is not in this block either. The candidates left are
 `0xFF47A798` and `0xFF2ADE1C` -- both called from RAM code, both inside the
 ROM's `0xFF` image, which is exactly where the AF unit routines live.
+
+## Round 9: the AF controller is an event/state machine, and its actions are named
+
+The ROM's trace table names every action the AF controller can take:
+
+```
+[AF] AfCtrl_Act_Ready
+[AF] AfCtrl_Act_Suspend
+[AF] AfCtrl_Act_Ignore( %d )
+[AF] AfCtrl_Act_SetLensParameter
+[AF] AfCtrl_Act_SetLensParameterRemote
+[AF] AfCtrl_Act_StartLensDriveRemote
+[AF] AfCtrl_Act_EndLensDriveRemote
+[AF] AfCtrl_Act_EmdDriveResult( Comp:%d )
+[AF] AfCtrl_Act_CompleteEmdDrive
+[AF] AfCtrl_Act_CompleteAe_ForTvAf
+[AF] AfCtrl_Act_CompleteAfResult
+[AF] AfCtrl_Act_ContinuousAfStart
+[AF] AfCtrl_Act_ContinuousAfStop
+[AF] AfCtrl_Act_TvAfStart
+[AF] AfCtrl_Act_TvAfStop
+[AF] AfCtrl_ExecuteEvent : Undefined( Event:%d, State:%d )
+[AF] AfCtrl_PropertyCBR PROP_LV_AF(%#lx)
+[AF] AEWB_AEL_SET_AFAE:%X Bv:%X
+[AF] AEWB_AEL_RESET_AFAE:%X
+```
+
+That is the shape of Canon's autofocus: an **event/state machine** (`ExecuteEvent(Event, State)`) whose actions set lens parameters, start and end a lens drive ("Emd"), wait for the drive result, and complete the AF result. Continuous AF and Tv-AF are separate start/stop actions, and the whole thing is driven by `PROP_LV_AF` property callbacks -- which is why the RAM block from round 8 was mostly property reads.
+
+So the algorithm is not a single metric function: it is a drive-and-measure loop whose states are these actions. A contrast metric must sit behind `EmdDriveResult`, because that is where a drive ends and a decision has to be made.
+
+## Wi-Fi: the WLAN manager has the same shape
+
+```
+WlanMgr            WlanPowerOn        WlanPowerOff
+WlanSDIODriver     WlanSdcom           WlanSdcomDrv        Wlanmode
+[WLAN] ADHOC-CANCEL-> ADHOC-LEAVE 1
+[WLAN] ADHOC-TIMEOUT> ADHOC-LEAVE 1
+```
+
+A manager component, power on/off, an SDIO driver binding, and an ADHOC state
+machine. The pieces named here are the ones that would have to be driven for a
+module to reach the network: `WlanPowerOn` -> `WlanSDIODriver` -> `WlanSdcom`.
