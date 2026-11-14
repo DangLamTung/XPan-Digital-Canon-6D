@@ -188,3 +188,58 @@ driver strings sit next to `InitializeSDIODriver`.
 Not yet: the AF **algorithm** (the evaluation/ramp code) and the WLAN **init and
 socket entry points** ML could call. Both need the code to be walked from the
 handlers above, which is the next pass.
+
+## Round 4: the AF handlers are marshals, and one of them forwards into the AF unit
+
+Disassembled from the table in round 3:
+
+```
+ff3131dc  ldr  r0, [pc, #-3100]   @ global at 0xff3125c8
+ff3131e4  ldr  r0, [r0, #24]
+ff3131e8  mov  r2, #24            @ a 24-byte command block
+ff3131ec  ldr  r0, [r0, #72]
+ff3131f0  b    0xff1302e8         @ tail call into the AF unit
+```
+
+`0xFF1302E8` is a real function (prologue `push {r3-r9, sl, fp, lr}`, calls
+`0xA5CC` for a lock and `0x1900` for logging, with two error strings at
+`0xFF130288`/`0xFF13028C`). That is the AF command path: the property handler
+forwards a 24-byte block to it.
+
+The other two handlers are pure marshals into the property dispatcher at
+`0x5FB8` (a low-RAM routine):
+
+```
+ff3131f4  push {r3, lr}      @ PROP_AFPOINT
+ff3131f8  ldrb r2, [r1]      @ copy 2 bytes of the payload
+ff313208  mov  r2, #3        @ 3-byte block on the stack
+ff313224  and  r0, r0, #255
+ff313228  bl   0x5fb8
+
+ff3120a0  push {r3, lr}      @ AF group 0x80050010/1B/1E/27
+ff3120a4  ldrb r1, [r1]
+ff3120ac  mov  r2, #2        @ 2-byte block
+ff3120cc  bl   0x5fb8
+```
+
+So the AF control surface is: property table (`0xF83149DC`) -> handler ->
+`0x5FB8` (status notifications) or `0xFF1302E8` (AF commands). The evaluation
+loop itself is not in these handlers; it is the task that consumes them.
+
+## Wi-Fi: part of the socket code is beyond the dumped ROM
+
+The halt-sockets loop calls out of the 16 MB image:
+
+```
+f84f3f60  ldr  r0, [r5, r4, lsl #2]   @ socket[i]
+f84f3f64  bl   0xf833fecc
+f84f3f68  bl   0xf90554f8             @ 0xF905xxxx -- past ROM1's end
+f84f3f70  ...
+f84f3f40  bl   0xf905555c
+```
+
+ROM1 covers `0xF8000000`-`0xF8FFFFFF` (16 MB), so `0xF90554F8` and
+`0xF905555C` are outside it. ML's `consts.h` only knows ROM0 and ROM1, so the
+dump that would finish the Wi-Fi analysis has to cover **`0xF9000000` and
+above** -- that is the concrete next input needed, the same way the `0xFF`
+alias was for the AF handlers.
