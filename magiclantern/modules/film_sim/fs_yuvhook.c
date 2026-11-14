@@ -208,7 +208,11 @@ static void fs_hdr_burn(unsigned char *gp, int width, int rows, int stride,
         }
         y0 = top + box_h;
     } else {
-        y0 = rows - band_h;      /* no room: draw over the picture */
+        /* no room: draw over the picture, and paint the bars here, because
+         * the caller skipped them for us */
+        if (num > 0 && den > 0 && band_h > 0)
+            fs_core_aspect_bars(gp, stride, width, 0, rows, num, den);
+        y0 = rows - band_h;
     }
 
     for (y = 0; y < band_h; y++) {
@@ -302,7 +306,13 @@ static uint32_t fs_yuv_grade_cached(void *buf, int width, int rows, int stride,
     }
     fs_tr_grade = get_ms_clock();
 
-    if (fs_bars_mode > 0) {
+    /*
+     * When the header burns, its paper fill covers both bars, so painting them
+     * here is a 73 ms pass that the band overwrites a millisecond later. The
+     * header takes over the job, and paints the bars itself in the one case
+     * where it cannot: when the band does not fit in the bar.
+     */
+    if (fs_bars_mode > 0 && !(fs_hdr.on && rows == frame_h)) {
         int num, den;
         /* Geometry from the whole frame, not from the rows this pass graded:
          * a partial grade (film.sim.yuvrows) would put the bars in the wrong
