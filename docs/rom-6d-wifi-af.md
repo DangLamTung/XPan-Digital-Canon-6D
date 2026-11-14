@@ -448,3 +448,31 @@ WlanSDIODriver     WlanSdcom           WlanSdcomDrv        Wlanmode
 A manager component, power on/off, an SDIO driver binding, and an ADHOC state
 machine. The pieces named here are the ones that would have to be driven for a
 module to reach the network: `WlanPowerOn` -> `WlanSDIODriver` -> `WlanSdcom`.
+## Round 10: the AF evaluation lives in AEWB, and its decision actions are named
+
+The ROM carries **165 AEWB_\* names** — the AE/WB/AF evaluation subsystem. The ones that matter for autofocus:
+
+```
+AEWB_AEL_RESET_AFAE
+AEWB_AEL_SET_AFAE
+AEWB_AFAE_EMDLOCK_OFF
+AEWB_AFAE_EMDLOCK_ONETIME
+AEWB_CTRL_CompleteFirstAeWb
+AEWB_CTRL_ExecMainProcess
+AEWB_CTRL_Ready
+AEWB_CTRL_RequestEmdDriveWithoutBadFrame
+AEWB_CTRL_SetCntTVAFBadFrame
+AEWB_CTRL_Start
+AEWB_CTRL_Stop
+AEWB_CTRL_Suspend
+AEWB_DSTOCK_GetAFAEControlValue
+AEWB_DSTOCK_GetAFAEInfo
+AEWB_DSTOCK_GetAFBvForAFAE
+AEWB_DSTOCK_GetBadFrameStatus
+```
+
+Reading: `AEWB_CTRL_ExecMainProcess` is the per-frame evaluation loop; it
+asks the DSTOCK getters for AF/AE inputs, and the drive decision comes out as
+`AEWB_CTRL_RequestEmdDriveWithoutBadFrame` (drive again only if the frame was
+not a bad one) plus `AEWB_CTRL_SetCntTVAFBadFrame` (count bad frames in Tv-AF).
+`AEWB_AFAE_EMDLOCK_ONETIME` / `_OFF` is the lens-drive lock around a measurement.
