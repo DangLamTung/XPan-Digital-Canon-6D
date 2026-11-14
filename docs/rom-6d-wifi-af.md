@@ -326,3 +326,57 @@ either:
    or
 2. a live trace from ML: log the PC of the task that writes
    `PROP_LV_AF_RESULT` while a shot focuses.
+
+## Round 7: the AF module's code is resident in RAM, and it can be disassembled
+
+`film_eval/rom/RAM4.BIN` is not only ML's heap: between `0x03C000` and
+`0x043000` there are **83 functions** with `push {..., lr}` prologues, and the
+data next to them names AF callbacks:
+
+```
+0x03DF64  "AfWrDmacCompleteCBR"
+0x03DF78  "AfWrDmacAbortCBR"
+0x03DF90  "AfCompleteCBR"
+0x03DFBC  "AfOverRunErrorCBR"
+```
+
+The function right after those names (`0x03DFD8`) is AF point handling:
+
+```
+3dfd8  push {r0-r9, sl, fp, lr}
+3dfdc  sub  sp, sp, #180
+3dff4  bl   0x12e78              @ state object
+3dff8  ldr  r0, [r0, #72]        @ the same +0x48 offset the ROM handler uses
+3e018  mov  r3, #128
+3e01c  ldrb r2, [r2, r1]         @ a bitmask of AF points
+3e028  cmp  r4, #6               @ at most 7 points in this loop
+3e030  add  r6, r6, #20          @ 20-byte records
+```
+
+and a second one at `0x03D560` that calls into the AF unit and multiplies two
+16-bit fields of a record:
+
+```
+3d5b0  bl   0xff1319c4           @ AF unit
+3d5b8  ldrh r1, [r0, #70]
+3d5bc  ldrh r0, [r0, #72]
+3d5c0  mul  r1, r0, r1
+3d5c8  bl   0xff4f9eb0
+```
+
+There are 20 `mul`/`mla` instructions in that block and no `smlal` pairs, so the
+correlation-style math of a contrast AF is not concentrated here -- this block is
+the point/state handling, not the evaluation. The evaluation still has to be
+found, but the search space is now a 0x7000-byte RAM region with 83 functions
+rather than a 16 MB image.
+
+Property tables also live in RAM, e.g. at `0x4B2570`:
+
+```
+4b2564  0x80050002  flags 0  handler 0x0046B434
+4b2570  0x80050029  flags 0  handler ...
+4b254c  0x80030021  flags 0  handler 0x0046B574
+```
+
+The `0x0046xxxx` handlers are ML's own loaded module code, so this table is the
+one the firmware fills from ML's registrations.
