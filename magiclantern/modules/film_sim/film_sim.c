@@ -9197,13 +9197,16 @@ static void fs_lv_monitor_task(void *unused) {
         last_calls = nc;
         if (g > 0) {
           fs_log("yuvgrade: %d shot(s) graded, buf=0x%08x size=%d, %dx%d "
-                 "stride %d, %d rows in %d ms; chunks %d used %d [%d %d %d %d]; "
+                 "stride %d, %d rows in %d ms (%.1f ms/shot, last span %d..%d); "
+                 "chunks %d used %d [%d %d %d %d]; "
                  "not graded: %d (last bad size %d) sniff 0x%x "
                  "sites jpeg %d/%d ssraw %d/%d",
                  g, (unsigned)fs_yuvhook_last_buf(),
                  (int)fs_yuvhook_last_size(), fs_yuvhook_last_w(),
                  fs_yuvhook_last_h(), fs_yuvhook_last_stride(),
                  fs_yuvhook_last_rows(), (int)fs_yuvhook_grade_ms(),
+                 g ? (double)fs_yuvhook_grade_ms() / (double)g : (double)0,
+                 fs_yuvhook_last_gar0(), fs_yuvhook_last_gar1(),
                  fs_yuvhook_chunks(), fs_yuvhook_chunk_used(),
                  (int)fs_yuvhook_chunk_size(0), (int)fs_yuvhook_chunk_size(1),
                  (int)fs_yuvhook_chunk_size(2), (int)fs_yuvhook_chunk_size(3),

@@ -97,6 +97,11 @@ int fs_yuvhook_bars_burned(void) { return fs_bars_burned; }
 static se_frame fs_hdr;
 static unsigned char *fs_hdr_scratch;
 static int fs_hdr_burned;
+/* the rows the last shot actually graded, so the log can show the span */
+static int fs_g_y0, fs_g_y1;
+static long fs_g_rows;
+int fs_yuvhook_last_gar0(void) { return fs_g_y0; }
+int fs_yuvhook_last_gar1(void) { return fs_g_y1; }
 
 void fs_yuvhook_header(const se_frame *f, unsigned char *scratch) {
     if (f && scratch) {
@@ -281,6 +286,9 @@ static uint32_t fs_yuv_grade_cached(void *buf, int width, int rows, int stride,
         {
             unsigned char *g = gp + (size_t)gy0 * stride;
             int gh = gy1 - gy0;
+            fs_g_y0 = gy0;
+            fs_g_y1 = gy1;
+            fs_g_rows += gh;
             if (fs_yuv_shot_mode == 0)
                 ms = 0;                    /* Off: Canon's frame, untouched */
             else if (fs_yuv_shot_mode == 2 && width <= 5760 && fs_yuvlook_engine_ready())

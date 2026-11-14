@@ -95,6 +95,8 @@ int  fs_yuvhook_last_w(void);
 int  fs_yuvhook_last_h(void);
 int  fs_yuvhook_last_stride(void);
 int  fs_yuvhook_last_rows(void);      /* rows actually graded, not the config */
+int  fs_yuvhook_last_gar0(void);      /* first row the last shot graded */
+int  fs_yuvhook_last_gar1(void);      /* one past the last */
 uint32_t fs_yuvhook_unknown(void);    /* suite size that was not a known plane */
 int  fs_yuvhook_chunks(void);         /* chunk count in the last suite */
 uint32_t fs_yuvhook_chunk_size(int i);
