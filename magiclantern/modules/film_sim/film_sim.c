@@ -5466,6 +5466,14 @@ static int fs_creator_open_slot(int slot)
     fs_creator.halation = 0;
     fs_creator.chrome = 0;
     fs_creator.fx_blue = 0;
+    /* the name belongs to the slot too: leaving the previous slot's name
+     * here made a blank slot save as the look it came from */
+    snprintf(fs_slot_label_buf[slot], sizeof fs_slot_label_buf[slot], "%s",
+             fs_slot_names[slot]);
+    fs_creator.look_name = fs_slot_label_buf[slot];
+    fs_creator.slot_cur = slot;
+    fs_creator.slot_pick = slot;
+    fs_creator_scan_slots();
     fs_log("slots: %s does not exist, slot %d starts blank", path, slot);
     return 0;
   }
