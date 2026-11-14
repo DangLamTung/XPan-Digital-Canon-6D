@@ -5081,6 +5081,8 @@ static int fs_code_index(const uint8_t *codes, int n, int raw) {
   return -1;
 }
 
+static int fs_hdr_iso_raw, fs_hdr_iso_val;
+
 static void fs_frame_exposure(se_frame *f) {
   int i;
 
@@ -5104,11 +5106,20 @@ static void fs_frame_exposure(se_frame *f) {
   i = fs_code_index(codes_iso, ISO_ARRAY_LEN, lens_info.raw_iso);
   {
     int iso = 0;
+    int raw = (int)lens_info.raw_iso;
     if (i >= 0)                            iso = values_iso[i];
-    else if (lens_info.raw_iso)            iso = raw2iso(lens_info.raw_iso);
+    else if (raw)                          iso = raw2iso(raw);
     if (iso <= 0 && lens_info.iso >= 25 && lens_info.iso <= 409600)
       iso = (int)lens_info.iso;
+    /* Auto ISO: PROP_ISO is 0 while the body meters, and the value it picked
+     * is in raw_iso_auto / iso_auto. */
+    if (iso <= 0 && lens_info.raw_iso_auto)
+      iso = raw2iso((int)lens_info.raw_iso_auto);
+    if (iso <= 0 && lens_info.iso_auto >= 25 && lens_info.iso_auto <= 409600)
+      iso = (int)lens_info.iso_auto;
     se_frame_fmt_iso(f->value[2], sizeof f->value[2], iso);
+    fs_hdr_iso_raw = raw;
+    fs_hdr_iso_val = iso;
   }
 }
 
@@ -5236,8 +5247,9 @@ static void fs_capture_header(void) {
   fs_frame_exposure(&f);
   /* one line per shot: what the body says about ISO, so a wrong "ISO" on the
    * header can be traced to the source instead of guessed at */
-  fs_log("hdr: iso raw=%d ml=%d -> '%s'", (int)lens_info.raw_iso,
-         (int)lens_info.iso, f.value[2]);
+  fs_log("hdr: iso raw=%d auto=%d ml=%d/%d -> '%s'", fs_hdr_iso_raw,
+         (int)lens_info.raw_iso_auto, (int)lens_info.iso,
+         (int)lens_info.iso_auto, f.value[2]);
   fs_yuvhook_header(&f, fs_cap_scratch);
 }
 
