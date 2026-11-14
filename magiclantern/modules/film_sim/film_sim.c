@@ -1281,6 +1281,7 @@ static void fs_lv_grade(const void *src, void *dst, int pitch, int row0, int row
  * the frame is copied once and the grade reads that copy */
 static unsigned char *fs_snap;
 static size_t fs_snap_size;
+static int fs_lv_g_y0, fs_lv_g_y1;
 
 
 /*
@@ -1440,30 +1441,48 @@ static void FAST fs_process_frame(void *src, void *dst) {
       fs_snap = tmp_malloc(total);
       fs_snap_size = fs_snap ? total : 0;
     }
+    /*
+     * Grade the picture, not the letterbox.
+     *
+     * With an aspect narrower than the sensor, the rows outside the picture
+     * are repainted black straight afterwards, so copying and grading them is
+     * work thrown away -- 45% of the pass at 65:24. Leaving those rows of the
+     * display buffer untouched also lets fs_lv_paint_bars() see that they are
+     * already black and skip the repaint, which is the other 60 ms a frame.
+     */
     {
-      uint32_t tg = get_ms_clock();
-      if (fs_snap && fs_snap_size >= total) {
-        unsigned char *snap = (unsigned char *)CACHEABLE(fs_snap);
-        if (row0 > 0 || row1 < height)
-          memcpy(snap + (size_t)row0 * pitch,
-                 (const char *)src + (size_t)row0 * pitch,
-                 (size_t)(row1 - row0) * pitch);
-        else
-          memcpy(snap, src, total);
-        grade_ms += get_ms_clock() - tg;
-        tg = get_ms_clock();
-        fs_lv_grade(snap, dst, pitch, row0, row1);
-      } else {
-        fs_lv_grade(src, dst, pitch, row0, row1);
+      int gy0 = row0, gy1 = row1;
+      int num, den;
+      if (fs_core_aspect_ratio(film_sim_aspect, &num, &den)) {
+        int box_h = ((pitch / 2) * num) / den;
+        if (box_h > 0 && box_h < (row1 - row0)) {
+          gy0 = row0 + ((row1 - row0) - box_h) / 2;
+          gy1 = gy0 + box_h;
+        }
       }
-      grade_ms += get_ms_clock() - tg;
-      if (src != dst) {
-        if (row0 > 0)
-          memcpy(dst, src, (size_t)row0 * pitch);
-        if (row1 < height)
-          memcpy((char *)dst + (size_t)row1 * pitch,
-                 (const char *)src + (size_t)row1 * pitch,
-                 (size_t)(height - row1) * pitch);
+      if (gy1 > gy0) {
+        uint32_t tg = get_ms_clock();
+        if (fs_snap && fs_snap_size >= total) {
+          unsigned char *snap = (unsigned char *)CACHEABLE(fs_snap);
+          memcpy(snap + (size_t)gy0 * pitch, (const char *)src + (size_t)gy0 * pitch,
+                 (size_t)(gy1 - gy0) * pitch);
+          grade_ms += get_ms_clock() - tg;
+          tg = get_ms_clock();
+          fs_lv_grade(snap, dst, pitch, gy0, gy1);
+        } else {
+          fs_lv_grade(src, dst, pitch, gy0, gy1);
+        }
+        grade_ms += get_ms_clock() - tg;
+        fs_lv_g_y0 = gy0;
+        fs_lv_g_y1 = gy1;
+        if (src != dst) {
+          if (row0 > 0)
+            memcpy(dst, src, (size_t)row0 * pitch);
+          if (row1 < height)
+            memcpy((char *)dst + (size_t)row1 * pitch,
+                   (const char *)src + (size_t)row1 * pitch,
+                   (size_t)(height - row1) * pitch);
+        }
       }
     }
     fs_lv_paint_bars(dst, pitch, pitch / 2, row0, row1);
@@ -1507,10 +1526,10 @@ static void FAST fs_process_frame(void *src, void *dst) {
    * nothing. dbglog turns it into a running trace. */
   if (fnum == 120 || (film_sim_dbglog && (fnum % 120) == 0)) {
     fs_log("lv_frame #%d: src=0x%08x dst=0x%08x %dx%d rows=%d..%d copy=%dms "
-           "grade=%dms dt=%dms (max=%dms, skipped=%d)",
+           "grade=%dms dt=%dms span %d..%d (max=%dms, skipped=%d)",
            (int)fnum, (unsigned)src, (unsigned)dst, pitch / 2, height, row0,
            row1, (int)fs_stat_copy_ms, (int)fs_stat_grade_ms, dt,
-           fs_stat_max_ms, (int)fs_stat_skipped);
+           fs_lv_g_y0, fs_lv_g_y1, fs_stat_max_ms, (int)fs_stat_skipped);
   }
 }
 
