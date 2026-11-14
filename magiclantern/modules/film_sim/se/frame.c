@@ -3267,26 +3267,22 @@ int se_frame_text_width(const char *text, int scale) {
 
 /* ISO as a camera would print it: 400, then 1k, 1.3k, 12.8k ... */
 void se_frame_fmt_iso(char *out, int cap, int iso) {
-    int n = 0;
+    char tmp[12];
+    int m = 0, n = 0;
     if (cap <= 0) return;
     if (iso <= 0) { if (cap > 1) { out[0] = '-'; out[1] = 0; } return; }
-    if (iso < 1000) {
-        char tmp[8]; int m = 0;
-        while (iso > 0 && m < 7) { tmp[m++] = (char)('0' + iso % 10); iso /= 10; }
-        if (m == 0) tmp[m++] = '0';
-        while (m > 0 && n < cap - 1) out[n++] = tmp[--m];
-        out[n] = 0;
-        return;
+    /*
+     * The exact number, not a rounded "6.4k". The field is sized from the
+     * string, and rounding turned 1250 into "1.3k" -- an ISO the camera never
+     * set.
+     */
+    while (iso > 0 && m < (int)sizeof tmp - 1) {
+        tmp[m++] = (char)('0' + iso % 10);
+        iso /= 10;
     }
-    {
-        int k10 = (iso + 50) / 100;          /* tenths of a thousand */
-        int whole = k10 / 10, frac = k10 % 10;
-        if (whole >= 10 && n < cap - 1) { out[n++] = (char)('0' + whole / 10); }
-        if (n < cap - 1) out[n++] = (char)('0' + whole % 10);
-        if (frac && n < cap - 2) { out[n++] = '.'; out[n++] = (char)('0' + frac); }
-        if (n < cap - 1) out[n++] = 'k';
-        out[n] = 0;
-    }
+    if (m == 0) tmp[m++] = '0';
+    while (m > 0 && n < cap - 1) out[n++] = tmp[--m];
+    out[n] = 0;
 }
 
 void se_frame_fmt_ap(char *out, int cap, int ap_x10) {
