@@ -383,7 +383,9 @@ uint32_t fs_yuvlook_apply_engine_lv(unsigned char *buf, int width, int height, i
     if (!lv_have || !buf || width < 2 || width > 2048) return 0;
     if (!lv_run || lv_w != width) {
         if (lv_run) { se_look_end(lv_run, eng_drop, NULL); lv_run = NULL; }
-        se_arena_init(&lv_arena, lv_mem, sizeof lv_mem);
+        /* same reason as the shot arena: MEM_TEMPORARY memory arrives
+         * uncached, and this one is touched once per pixel */
+        se_arena_init(&lv_arena, (void *)CACHEABLE(lv_mem), sizeof lv_mem);
         se_look_fit(&lv_look, width, sizeof lv_mem);
         if (se_look_begin(&lv_run, &lv_look, width, &lv_arena) != SE_OK) {
             lv_run = NULL;

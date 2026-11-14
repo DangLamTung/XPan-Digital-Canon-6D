@@ -1086,6 +1086,8 @@ static void fs_sync() {
 
   int preset = preset_now;
   fs_core_satboost = film_sim_satboost;
+  fs_yuvlook_set_satboost(film_sim_satboost);
+  se_cam_set_satboost(film_sim_satboost);
   fs_core_build_luts(&fs_lut, &fs_presets[preset], film_sim_strength,
                      film_sim_grain);
 
@@ -5476,8 +5478,13 @@ static int fs_creator_open_slot(int slot)
     fs_creator.fx_blue = 0;
     /* the name belongs to the slot too: leaving the previous slot's name
      * here made a blank slot save as the look it came from */
-    snprintf(fs_slot_label_buf[slot], sizeof fs_slot_label_buf[slot], "%s",
-             fs_slot_names[slot]);
+    {
+      /* the file name, not the menu label: "WHEEL (1)" is a label with a
+       * space and parentheses in it, and it was being saved as a look name */
+      char fn[12];
+      fs_slot_file_name(slot, fn, sizeof fn);
+      snprintf(fs_slot_label_buf[slot], sizeof fs_slot_label_buf[slot], "%s", fn);
+    }
     fs_creator.look_name = fs_slot_label_buf[slot];
     fs_creator.slot_cur = slot;
     fs_creator.slot_pick = slot;
@@ -5668,6 +5675,8 @@ static void fs_name_sync(void)
     fs_look_name[i] = fs_name_chars[c][0];
   }
   fs_look_name[fs_name_len] = 0;
+  /* the creator shows and saves this name, so it has to see the edit */
+  fs_creator.look_name = fs_look_name;
 }
 
 static MENU_SELECT_FUNC(fs_slot_cycle) {
@@ -6444,12 +6453,59 @@ static int fs_wb_run(void) {
  * ML/FILM/<NAME>.fs, and the shelf picks it up like any other stock.
  */
 
+/* Read a recipe back from its own comment line, so picking a slot shows that
+ * slot's numbers instead of the previous one's. Returns 0 when the file has no
+ * such line (an older recipe) and the caller leaves the values alone. */
+static int fs_fuji_read_slot(int slot)
+{
+  char path[64], text[1024];
+  int n, got = 0;
+  FILE *f;
+
+  snprintf(path, sizeof path, "ML/FILM/%s.fs", fs_fuji_names[slot]);
+  f = FIO_OpenFile(path, O_RDONLY);
+  if (!f) return 0;
+  n = FIO_ReadFile(f, text, sizeof text - 1);
+  FIO_CloseFile(f);
+  if (n <= 0) return 0;
+  text[n] = 0;
+  {
+    char *p = strstr(text, "# FUJI ");
+    if (p) {
+      /* no sscanf on the camera: walk the seven numbers by hand */
+      int v[8], k;
+      p += 7;
+      for (k = 0; k < 8; k++) {
+        while (*p == ' ') p++;
+        if (*p < '0' || *p > '9') { if (*p != '-' || p[1] < '0' || p[1] > '9') break; }
+        v[k] = atoi(p);
+        if (*p == '-') p++;
+        while (*p >= '0' && *p <= '9') p++;
+      }
+      if (k >= 7) {
+        fs_fuji.highlight  = v[0];
+        fs_fuji.shadow     = v[1];
+        fs_fuji.color      = v[2];
+        fs_fuji.chrome     = v[3];
+        fs_fuji.fx_blue    = v[4];
+        fs_fuji.grain      = v[5];
+        fs_fuji.grain_size = v[6];
+        if (k >= 8) fs_fuji.base_sim = v[7];   /* older files stop at seven */
+        got = 1;
+      }
+    }
+  }
+  return got;
+}
+
 static void fs_fuji_ensure_init(void)
 {
   if (!fs_fuji_inited) {
     fs_fuji_inited = 1;
     fs_fuji_defaults(&fs_fuji);
     snprintf(fs_fuji.name, sizeof fs_fuji.name, "%s", fs_fuji_names[fs_fuji_slot]);
+    /* show the slot that is on the card, not a blank recipe */
+    fs_fuji_read_slot(fs_fuji_slot);
   }
 }
 
@@ -8443,50 +8499,6 @@ static MENU_UPDATE_FUNC(fs_fuji_name_update) {
   MENU_SET_VALUE("%s", fs_fuji.name);
 }
 
-/* Read a recipe back from its own comment line, so picking a slot shows that
- * slot's numbers instead of the previous one's. Returns 0 when the file has no
- * such line (an older recipe) and the caller leaves the values alone. */
-static int fs_fuji_read_slot(int slot)
-{
-  char path[64], text[1024];
-  int n, got = 0;
-  FILE *f;
-
-  snprintf(path, sizeof path, "ML/FILM/%s.fs", fs_fuji_names[slot]);
-  f = FIO_OpenFile(path, O_RDONLY);
-  if (!f) return 0;
-  n = FIO_ReadFile(f, text, sizeof text - 1);
-  FIO_CloseFile(f);
-  if (n <= 0) return 0;
-  text[n] = 0;
-  {
-    char *p = strstr(text, "# FUJI ");
-    if (p) {
-      /* no sscanf on the camera: walk the seven numbers by hand */
-      int v[7], k;
-      p += 7;
-      for (k = 0; k < 7; k++) {
-        while (*p == ' ') p++;
-        if (*p < '0' || *p > '9') { if (*p != '-' || p[1] < '0' || p[1] > '9') break; }
-        v[k] = atoi(p);
-        if (*p == '-') p++;
-        while (*p >= '0' && *p <= '9') p++;
-      }
-      if (k == 7) {
-        fs_fuji.highlight  = v[0];
-        fs_fuji.shadow     = v[1];
-        fs_fuji.color      = v[2];
-        fs_fuji.chrome     = v[3];
-        fs_fuji.fx_blue    = v[4];
-        fs_fuji.grain      = v[5];
-        fs_fuji.grain_size = v[6];
-        got = 1;
-      }
-    }
-  }
-  return got;
-}
-
 static MENU_SELECT_FUNC(fs_fuji_name_select) {
   fs_fuji_slot = (fs_fuji_slot + (delta < 0 ? 3 : 1)) % 4;
   snprintf(fs_fuji.name, sizeof fs_fuji.name, "%s", fs_fuji_names[fs_fuji_slot]);
@@ -8500,8 +8512,9 @@ static MENU_SELECT_FUNC(fs_fuji_name_select) {
 }
 
 static MENU_UPDATE_FUNC(fs_fuji_wb_update) {
+    /* the grid draws R = -gm and B = -ba, so the numbers say the same */
     MENU_SET_VALUE("R%+d  B%+d",
-                   (int)film_sim_wbs_ba, (int)film_sim_wbs_gm);
+                   -(int)film_sim_wbs_gm, -(int)film_sim_wbs_ba);
 }
 
 static const char *fs_grain_size_names[] = { "Small", "Large" };

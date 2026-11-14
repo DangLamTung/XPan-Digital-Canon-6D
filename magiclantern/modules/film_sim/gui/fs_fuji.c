@@ -18,6 +18,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "fs_fuji.h"
 
@@ -124,8 +125,8 @@ int fs_fuji_write(const fs_fuji_t *f, const char *base_text, char *buf, int cap)
     PUT("VERSION   3\n");
     /* one comment line carries the recipe back: the curve below is a sampled
      * form of these numbers, and reading them back from knots would round */
-    PUT("# FUJI %d %d %d %d %d %d %d\n", f->highlight, f->shadow, f->color,
-        f->chrome, f->fx_blue, f->grain, f->grain_size);
+    PUT("# FUJI %d %d %d %d %d %d %d %d\n", f->highlight, f->shadow, f->color,
+        f->chrome, f->fx_blue, f->grain, f->grain_size, f->base_sim);
     PUT("NAME      %s\n", f->name[0] ? f->name : "RECIPE");
     PUT("DESC      FUJI RECIPE (TONE CURVE, COLOR, CHROME, GRAIN)\n");
     PUT("WB        AS_SHOT\n");
@@ -144,7 +145,15 @@ int fs_fuji_write(const fs_fuji_t *f, const char *base_text, char *buf, int cap)
         PUT("CURVE_B   0,0 128,128 255,255\n");
     }
 
-    PUT("SAT       %d\n", 100 + f->color * 12);
+    {
+        /* The base carries the saturation the look depends on: Acros is
+         * SAT 0, Classic Chrome 74, Velvia 118. The Color slider scales that
+         * rather than replacing it, so a monochrome base stays monochrome. */
+        int base_sat = 100;
+        const char *sp = base_text ? strstr(base_text, "\nSAT ") : NULL;
+        if (sp) base_sat = atoi(sp + 5);
+        PUT("SAT       %d\n", (base_sat * (100 + f->color * 12) + 50) / 100);
+    }
     PUT("COLOR_CHROME %s\n", level_word(f->chrome));
     PUT("FX_BLUE   %s\n", level_word(f->fx_blue));
     PUT("GRAIN     %d\n", f->grain == 2 ? 16 : (f->grain == 1 ? 8 : 0));
