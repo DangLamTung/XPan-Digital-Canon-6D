@@ -100,6 +100,8 @@ static int fs_hdr_burned;
 /* the rows the last shot actually graded, so the log can show the span */
 static int fs_g_y0, fs_g_y1;
 static int fs_hbar;                 /* the aspect leaves top/bottom bars */
+/* outermost rows the shot wrote, so the clean can skip the rest */
+static int fs_clean_from, fs_clean_to = 1;
 static long fs_g_rows;
 int fs_yuvhook_last_gar0(void) { return fs_g_y0; }
 int fs_yuvhook_last_gar1(void) { return fs_g_y1; }
@@ -298,6 +300,8 @@ static uint32_t fs_yuv_grade_cached(void *buf, int width, int rows, int stride,
             fs_g_y0 = gy0;
             fs_g_y1 = gy1;
             fs_g_rows += gh;
+            fs_clean_from = gy0;
+            fs_clean_to = gy1;
             if (fs_yuv_shot_mode == 0)
                 ms = 0;                    /* Off: Canon's frame, untouched */
             else if (fs_yuv_shot_mode == 2 && width <= 5760 && fs_yuvlook_engine_ready())
@@ -318,6 +322,8 @@ static uint32_t fs_yuv_grade_cached(void *buf, int width, int rows, int stride,
      */
     if (fs_bars_mode > 0 && !(fs_hdr.on && rows == frame_h && fs_hbar)) {
         int num, den;
+        fs_clean_from = 0;
+        fs_clean_to = rows;
         /* Geometry from the whole frame, not from the rows this pass graded:
          * a partial grade (film.sim.yuvrows) would put the bars in the wrong
          * place. If the two differ the bars are skipped rather than guessed. */
@@ -335,6 +341,8 @@ static uint32_t fs_yuv_grade_cached(void *buf, int width, int rows, int stride,
         if (fs_bars_mode > 0)
             fs_core_aspect_ratio(fs_bars_mode, &num, &den);
         fs_hdr_burn(gp, width, rows, stride, num, den);
+        fs_clean_from = 0;
+        fs_clean_to = rows;
         fs_hdr_ms = get_ms_clock() - h0;
     } else {
         fs_hdr_ms = 0;
@@ -342,7 +350,15 @@ static uint32_t fs_yuv_grade_cached(void *buf, int width, int rows, int stride,
 
     fs_tr_band = get_ms_clock();
     if (gp != (unsigned char *)buf)
-        fs_dcache_clean(gp, (uint32_t)rows * stride);
+        /*
+         * Clean the span that was written, not the whole plane: with a 65:24
+         * crop the untouched rows below the picture and the band are 40% of
+         * the buffer, and cleaning them is pure time (43 ms for the full
+         * plane). fs_clean_from/fs_clean_to are the outermost rows any stage
+         * touched, set as the shot goes.
+         */
+        fs_dcache_clean(gp + (size_t)fs_clean_from * stride,
+                        (uint32_t)(fs_clean_to - fs_clean_from) * stride);
     fs_tr_clean = get_ms_clock();
     fs_tr_clean_us = get_us_clock();
     return ms;
