@@ -1118,7 +1118,9 @@ static void fs_sync() {
    *    is the JPEG on the card. With replace off that JPEG stays a clean full
    *    3:2 frame -- no bars burned in -- and with replace on the bars are
    *    redundant because our own cropped develop replaces the file. */
-  fs_yuvhook_bars(film_sim_replace ? film_sim_aspect : 0);
+  /* bars belong to the aspect, not to the header: turning the frame off must
+   * not letterbox the sensor into the picture */
+  fs_yuvhook_bars(film_sim_aspect);
   fs_yuvhook_stylecheck(film_sim_stylecheck);
   if (film_sim_shotmode < 1 || film_sim_shotmode > 2) film_sim_shotmode = 1;
   if (film_sim_lvmode   < 1 || film_sim_lvmode   > 2) film_sim_lvmode   = 1;

@@ -290,11 +290,19 @@ void se_lut3_apply_row(const se_lut3 *lut, uint16_t *rgb, int width)
         }
 
         for (c = 0; c < 3; c++) {
-            int64_t v = (int64_t)c000[c] * (65535 - wa - wb - wc)
-                      + (int64_t)ca[c]   * wa
-                      + (int64_t)cb2[c]  * wb
-                      + (int64_t)c111[c] * wc;
-            v /= 65535;
+            /*
+             * 32-bit, not 64-bit: the coefficients are at most 65535 and the
+             * four weights sum to exactly 65535, so the largest possible sum
+             * is 65535 * 65535 = 4,294,836,225 and fits in a uint32_t. The
+             * 64-bit form made every pixel pay four 64-bit multiplies and a
+             * 64-bit divide; checked against it over 2,000,000 random weight
+             * sets -- same quotient every time (tools/div_eq.c).
+             */
+            uint32_t v = (uint32_t)c000[c] * (uint32_t)(65535 - wa - wb - wc)
+                       + (uint32_t)ca[c]   * (uint32_t)wa
+                       + (uint32_t)cb2[c]  * (uint32_t)wb
+                       + (uint32_t)c111[c] * (uint32_t)wc;
+            v /= 65535u;
             rgb[x * 3 + c] = (uint16_t)SE_CLAMP(v, 0, 65535);
         }
     }

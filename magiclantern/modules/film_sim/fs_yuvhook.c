@@ -260,12 +260,35 @@ static uint32_t fs_yuv_grade_cached(void *buf, int width, int rows, int stride,
     fs_dcache_used = (gp != (unsigned char *)buf);
     fs_tr_enter = get_ms_clock();
     fs_tr_enter_us = get_us_clock();
-    if (fs_yuv_shot_mode == 2 && width <= 5760 && fs_yuvlook_engine_ready())
-        ms = fs_yuvlook_apply_engine(gp, width, rows, stride);
-    else if (fs_yuv_shot_mode == 1 && fs_yuvlook_lattice_ready())
-        ms = fs_yuvlook_apply_lattice(gp, width, rows, stride);
-    else
-        ms = fs_yuvlook_apply(gp, width, rows, stride);
+    /*
+     * Grade the picture, not the bars.
+     *
+     * With an aspect narrower than the sensor, the rows above and below the
+     * picture are about to be painted black anyway, so grading them is work
+     * thrown away -- 45% of the pass at 65:24. The bars still run below.
+     */
+    {
+        int gy0 = 0, gy1 = rows;
+        int num, den;
+        if (fs_bars_mode > 0 && rows == frame_h &&
+            fs_core_aspect_ratio(fs_bars_mode, &num, &den)) {
+            int box_h = (width * num) / den;
+            if (box_h > 0 && box_h < rows) {
+                gy0 = (rows - box_h) / 2;
+                gy1 = gy0 + box_h;
+            }
+        }
+        {
+            unsigned char *g = gp + (size_t)gy0 * stride;
+            int gh = gy1 - gy0;
+            if (fs_yuv_shot_mode == 2 && width <= 5760 && fs_yuvlook_engine_ready())
+                ms = fs_yuvlook_apply_engine(g, width, gh, stride);
+            else if (fs_yuv_shot_mode == 1 && fs_yuvlook_lattice_ready())
+                ms = fs_yuvlook_apply_lattice(g, width, gh, stride);
+            else
+                ms = fs_yuvlook_apply(g, width, gh, stride);
+        }
+    }
     fs_tr_grade = get_ms_clock();
 
     if (fs_bars_mode > 0) {
