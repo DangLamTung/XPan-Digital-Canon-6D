@@ -496,7 +496,9 @@ uint32_t fs_yuvlook_apply_engine(unsigned char *buf, int width, int height, int 
      * next row. Re-begin at the width actually being graded.
      */
     if (eng_fitted_ok && se_look_width(eng_run) != width) {
-        se_look_end(eng_run, eng_emit, NULL);
+        /* reset, do not flush: flushing would emit the old pass's rows into
+         * a destination that belongs to the previous frame */
+        se_look_reset(eng_run);
         se_arena_init(&eng_arena, eng_arena_mem, sizeof eng_arena_mem);
         if (se_look_begin(&eng_run, &eng_fitted, width, &eng_arena) != SE_OK)
             eng_run = NULL;

@@ -1496,6 +1496,16 @@ static se_err emit_delayed(se_look_run *r, int p, se_look_emit emit,
 
 int se_look_width(const se_look_run *r) { return r ? r->w : 0; }
 
+/* Drop any half-finished pass without emitting: the caller is about to start
+ * over at a different width, and the old destination no longer exists. */
+void se_look_reset(se_look_run *r)
+{
+  if (!r) return;
+  r->pushed = 0;
+  r->y_out = 0;
+  if (r->colsum) memset(r->colsum, 0, (size_t)r->w * sizeof(int));
+}
+
 se_err se_look_rows(se_look_run *r, const uint8_t *rgb, int nrows,
                     se_look_emit emit, void *ctx) {
   int i;
