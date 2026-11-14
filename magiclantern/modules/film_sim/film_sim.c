@@ -8035,11 +8035,37 @@ static void fs_recover_tmp_files(void) {
 /* ---------------------------------------------------------------- xml reload
  */
 
-static MENU_SELECT_FUNC(fs_reload_xml_action) {
-  int count = fs_load_films_xml();
+/*
+ * Rebuild the catalogue without the stock jumping to another film, and off
+ * the menu task: reading every XML on the card takes seconds, and doing it in
+ * a select handler froze the menu for that long.
+ */
+static void fs_reload_task(void *unused)
+{
+  char was[40];
+  int was_idx = (film_active_count > 0)
+              ? fs_clamp_i(film_sim_stock, 0, film_active_count - 1) : -1;
+  int count;
+  was[0] = 0;
+  if (was_idx >= 0) snprintf(was, sizeof was, "%s", film_active_table[was_idx].name);
+
+  count = fs_load_films_xml();
   fs_group_by_artwork();
+
+  if (was[0] && film_active_count > 0) {
+    int i, found = -1;
+    for (i = 0; i < film_active_count; i++)
+      if (!strcasecmp(film_active_table[i].name, was)) { found = i; break; }
+    if (found >= 0) film_sim_stock = found;
+    else            film_sim_stock = fs_clamp_i(film_sim_stock, 0, film_active_count - 1);
+  }
   fs_film_gen++;
-  NotifyBox(2000, "Loaded %d XML Films from %s", count, FILM_DIR);
+  NotifyBox(2000, "Loaded %d films from %s", count, FILM_DIR);
+}
+
+static MENU_SELECT_FUNC(fs_reload_xml_action) {
+  task_create("fs_reload", 0x1e, 0x2000, fs_reload_task, 0);
+  (void)priv; (void)delta;
 }
 
 

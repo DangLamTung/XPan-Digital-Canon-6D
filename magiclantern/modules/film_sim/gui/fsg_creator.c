@@ -534,7 +534,7 @@ void fsg_draw_fx(const fs_creator_t *c)
         fsg_text(24, 386, FSG_T_SMALL, FSG_GREY, FSG_BG, "%s", line);
     }
     footer("UP/DOWN value    SET field    PLAY save",
-           "Q: wheel/tone/fx    MENU back");
+           "Q: wheel/tone/fx/slots    MENU back");
 }
 
 
@@ -881,7 +881,7 @@ void fsg_draw_tone(const fs_creator_t *c)
     }
 
     footer("DIAL/UP/DOWN value   SET shadow/highlight   PLAY save",
-           "Q wheel   MENU back");
+           "Q fx   MENU back");
 }
 
 /* ---- keys ------------------------------------------------------------- */
