@@ -431,18 +431,27 @@ void se_stock_bake(const se_stock *s, se_lut1 out[3])
     gain = pick_exposure(s, SE_SRC_RAW) != 0.0f
          ? st_pow(2.0f, pick_exposure(s, SE_SRC_RAW)) : 1.0f;
 
-    for (c = 0; c < 3; c++) {
-        for (i = 0; i < SE_LUT1_SIZE; i++) {
-            float lin = (float)i / (float)(SE_LUT1_SIZE - 1);
-            float v;
-            lin *= gain;
-            if (lin > 1.0f) lin = 1.0f;
-            v = enc(lin);                                   /* to the curve domain */
-            if (cv[0]->n >= 2)     v = se_curve_eval(cv[0], v);
-            if (cv[c + 1]->n >= 2) v = se_curve_eval(cv[c + 1], v);
-            v = SE_CLAMP(v, 0.0f, 1.0f);
-            v = dec(v);                                      /* back to linear */
-            out[c].v[i] = (uint16_t)SE_CLAMP(v * 65535.0f + 0.5f, 0.0f, 65535.0f);
+    /*
+     * The exposure and the master curve do not depend on the channel, so they
+     * are evaluated once per entry instead of three times: this loop used to
+     * run enc() and the master curve, both of which go through st_pow(), for
+     * every channel. The per-channel curve, clamp and decode stay in the same
+     * order, so the table is identical.
+     */
+    for (i = 0; i < SE_LUT1_SIZE; i++) {
+        float lin = (float)i / (float)(SE_LUT1_SIZE - 1);
+        float v;
+        lin *= gain;
+        if (lin > 1.0f) lin = 1.0f;
+        v = enc(lin);                                   /* to the curve domain */
+        if (cv[0]->n >= 2) v = se_curve_eval(cv[0], v);
+        v = SE_CLAMP(v, 0.0f, 1.0f);
+        for (c = 0; c < 3; c++) {
+            float w = v;
+            if (cv[c + 1]->n >= 2) w = se_curve_eval(cv[c + 1], w);
+            w = SE_CLAMP(w, 0.0f, 1.0f);
+            w = dec(w);                                      /* back to linear */
+            out[c].v[i] = (uint16_t)SE_CLAMP(w * 65535.0f + 0.5f, 0.0f, 65535.0f);
         }
     }
 }

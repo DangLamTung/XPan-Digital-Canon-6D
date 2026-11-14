@@ -5850,11 +5850,10 @@ static unsigned int fs_film_dir_sig(int *count_out)
     if (len < 4) continue;
     if (strcasecmp(fi.name + len - 3, ".fs") != 0) continue;
     {
-      char full[96];
-      uint32_t size = 0;
+      /* the directory entry already carries the size: asking the filesystem
+       * again for every recipe was one more card call per file */
+      uint32_t size = fi.size;
       int k;
-      snprintf(full, sizeof full, "ML/FILM/%s", fi.name);
-      FIO_GetFileSize(full, &size);
       for (k = 0; fi.name[k]; k++)
         sig = (sig ^ (unsigned char)fi.name[k]) * 16777619u;
       sig = (sig ^ size) * 16777619u;
@@ -5887,7 +5886,11 @@ static void fs_film_watch_task(void *unused)
     msleep(3000);
 
     /* never reload the table out from under a screen that is reading it */
-    if (fs_gui_active || fs_darkroom_active || fs_creator_active || fs_wb_active)
+    /* also hold off while a develop is reading/writing the card: this scan
+     * opens the directory and stats every recipe, which is card I/O the
+     * develop is waiting behind */
+    if (fs_gui_active || fs_darkroom_active || fs_creator_active ||
+        fs_wb_active || fs_develop_active || fs_view_active)
       continue;
 
     {
