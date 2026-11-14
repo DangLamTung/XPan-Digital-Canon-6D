@@ -494,6 +494,50 @@ static void fs_core_process_rows(const fs_lut_t *lut, const void *src, void *dst
  * where an L1 load is a cycle, unpacking costs more than the loads it saves.
  * If this is revisited, measure it on the body before believing the theory.
  */
+/*
+ * Lattice lookup tables: (node offset << 9) | fraction, one entry per input
+ * byte. Three of them turn the per-pixel grid arithmetic -- three multiplies,
+ * six shifts, three edge tests and three stride multiplies -- into three
+ * reads and an add. They depend only on the lattice geometry, so they are
+ * built once.
+ */
+static uint32_t fs_lat_tab[3][256];
+static int      fs_lat_ready;
+
+static void fs_lat_build(void)
+{
+    int i;
+    for (i = 0; i < 256; i++) {
+        int t  = i * FS_UV3_SY;
+        int ix = t >> 16, fx = (t >> 8) & 0xFF;
+        if (ix > FS_UV3_NY - 2) { ix = FS_UV3_NY - 2; fx = 256; }
+        fs_lat_tab[0][i] = ((uint32_t)(ix * 3) << 9) | (uint32_t)fx;
+
+        t = i * FS_UV3_SC;
+        ix = t >> 16; fx = (t >> 8) & 0xFF;
+        if (ix > FS_UV3_NC - 2) { ix = FS_UV3_NC - 2; fx = 256; }
+        fs_lat_tab[1][i] = ((uint32_t)(ix * (FS_UV3_NY * 3)) << 9) | (uint32_t)fx;
+        fs_lat_tab[2][i] = ((uint32_t)(ix * (FS_UV3_NY * FS_UV3_NC * 3)) << 9) | (uint32_t)fx;
+    }
+    fs_lat_ready = 1;
+}
+
+/*
+ * The lattice pass, one UYVY pair at a time.
+ *
+ * Three changes here, and each is exact rather than approximate -- proven by
+ * comparing the output byte for byte against the previous loop:
+ *
+ *   - the grid coordinates come from three 256-entry tables, so the per-pixel
+ *     cost is three reads and an add instead of multiply/shift/test/stride;
+ *   - U and V are interpolated together in one register: each node stores
+ *     them as (v+128)<<16 | (u+128), the four weights sum to 256 and each
+ *     lane is at most 255, so a lane reaches 65280 and can never carry into
+ *     the other one, and the result already sits in UYVY's byte positions;
+ *   - runs of identical pairs (sky, wall, shadow) are copied from the
+ *     previous output, which only holds when grain is off because grain
+ *     consumes the random state per pixel.
+ */
 static void fs_core_process_rows3(const unsigned char *curve, const short *uv,
                                   const void *src, void *dst,
                                   int pitch, int row0, int row1,
@@ -505,22 +549,25 @@ static void fs_core_process_rows3(const unsigned char *curve, const short *uv,
     const unsigned int * sp = (const unsigned int *)src + (unsigned int)row0 * words;
     unsigned int * dp = (unsigned int *)dst + (unsigned int)row0 * words;
 
-    /* node strides, in shorts: one step in y, in Cb, in Cr */
     const int ky = 3, ku = FS_UV3_NY * 3, kv = FS_UV3_NY * FS_UV3_NC * 3;
+    const int ko = ky + ku + kv;
+
+    if (!fs_lat_ready) fs_lat_build();
 
     for (int y = row0; y < row1; y++)
     {
+        unsigned int prev_px = 0, prev_out = 0;
         for (int i = 0; i < words; i++)
         {
             unsigned int px = sp[i];
-
-            int u  = fs_chroma_signed(px);
             int ya = (px >>  8) & 0xFF;
-            int v  = fs_chroma_signed(px >> 16);
             int yb = (px >> 24) & 0xFF;
+            int oa, ob, dy;
+            uint32_t uvo;
+            unsigned int out;
 
-            int oa = curve[ya];
-            int ob = curve[yb];
+            if (!grain && i && px == prev_px) { dp[i] = prev_out; continue; }
+
             /*
              * Index the lattice by the INPUT luma, not the graded one: the
              * nodes were baked at input luma y, so passing the tone-curved
@@ -529,32 +576,24 @@ static void fs_core_process_rows3(const unsigned char *curve, const short *uv,
              * (11.1 levels) than the whole separable form it was meant to
              * beat (7.0).
              */
-            int ym = (ya + yb) >> 1;
-
-            int ty = ym * FS_UV3_SY;
-            int tu = (u + 128) * FS_UV3_SC;
-            int tv = (v + 128) * FS_UV3_SC;
-            int iy = ty >> 16, iu = tu >> 16, iv = tv >> 16;
-            int fy = (ty >> 8) & 0xFF, fu = (tu >> 8) & 0xFF, fv = (tv >> 8) & 0xFF;
-
-            /* the top node of an axis has no neighbour: interpolate to it */
-            if (iy > FS_UV3_NY - 2) { iy = FS_UV3_NY - 2; fy = 256; }
-            if (iu > FS_UV3_NC - 2) { iu = FS_UV3_NC - 2; fu = 256; }
-            if (iv > FS_UV3_NC - 2) { iv = FS_UV3_NC - 2; fv = 256; }
-
-            const short *base = uv + iy * ky + iu * ku + iv * kv;
-            int out3[3];                 /* dy, Cb, Cr */
-            /*
-             * Tetrahedral, not trilinear. The cube splits into six tetrahedra
-             * and the ordering of the three fractions picks one; the sample
-             * then needs four corners instead of eight, and three differences
-             * instead of seven interpolations. Same table, same result class,
-             * roughly half the work -- and this runs on every LiveView frame.
-             */
             {
+                uint32_t my = fs_lat_tab[0][(ya + yb) >> 1];
+                /* the byte is signed: 247 means u = -9, so the table index is
+                 * the value biased to 0..255, i.e. byte ^ 0x80 */
+                uint32_t mu = fs_lat_tab[1][(px & 0xFF) ^ 0x80];
+                uint32_t mv = fs_lat_tab[2][((px >> 16) & 0xFF) ^ 0x80];
+                /* offsets and fractions are added separately: three fractions
+                 * can sum past 512 and would carry into the offset */
+                const short *base = uv + (int)((my >> 9) + (mu >> 9) + (mv >> 9));
+                int fy = (int)(my & 0x1FF), fu = (int)(mu & 0x1FF), fv = (int)(mv & 0x1FF);
                 const short *ca, *cb2;
-                int wa, wb, wc;
+                int w0, wa, wb, wc;
 
+                /*
+                 * Tetrahedral, not trilinear: the cube splits into six
+                 * tetrahedra, the ordering of the fractions picks one, and the
+                 * sample needs four corners instead of eight.
+                 */
                 if (fy >= fv) {
                     if (fv >= fu)      { ca = base + ky; cb2 = ca + kv; wa = fy - fv; wb = fv - fu; wc = fu; }
                     else if (fy >= fu) { ca = base + ky; cb2 = ca + ku; wa = fy - fu; wb = fu - fv; wc = fv; }
@@ -564,35 +603,43 @@ static void fs_core_process_rows3(const unsigned char *curve, const short *uv,
                     else if (fu >= fy) { ca = base + kv; cb2 = ca + ku; wa = fv - fu; wb = fu - fy; wc = fy; }
                     else               { ca = base + kv; cb2 = ca + ky; wa = fv - fy; wb = fy - fu; wc = fu; }
                 }
+                w0 = 256 - wa - wb - wc;
 
-                for (int c = 0; c < 3; c++)
+                dy = (base[0] * w0 + ca[0] * wa + cb2[0] * wb
+                      + base[ko] * wc) >> 8;
+
                 {
-                    int v000 = base[c];
-                    int v111 = base[c + ky + ku + kv];
-                    /* wa + wb + wc == the largest fraction, so the corner at
-                     * the origin takes what is left of 256 */
-                    out3[c] = (v000 * (256 - wa - wb - wc)
-                               + ca[c]  * wa
-                               + cb2[c] * wb
-                               + v111   * wc) >> 8;
+                    uint32_t n0 = ((uint32_t)(base[2] + 128) << 16) | (uint32_t)(base[1] + 128);
+                    uint32_t na = ((uint32_t)(ca[2]  + 128) << 16) | (uint32_t)(ca[1]  + 128);
+                    uint32_t nb = ((uint32_t)(cb2[2] + 128) << 16) | (uint32_t)(cb2[1] + 128);
+                    uint32_t n1 = ((uint32_t)(base[ko + 2] + 128) << 16) | (uint32_t)(base[ko + 1] + 128);
+                    uint32_t acc = n0 * (uint32_t)w0 + na * (uint32_t)wa
+                                 + nb * (uint32_t)wb + n1 * (uint32_t)wc;
+                    uvo = ((acc >> 8) & 0x00FF00FFu) ^ 0x00800080u;
                 }
             }
 
             /* the tone curve carries luma, the node carries what the colour
              * does to it -- per pixel, so the pair's two lumas stay distinct */
-            oa = fs_clamp_i(oa + out3[0], 0, 255);
-            ob = fs_clamp_i(ob + out3[0], 0, 255);
+            oa = curve[ya] + dy;
+            ob = curve[yb] + dy;
+            if (oa < 0) oa = 0; else if (oa > 255) oa = 255;
+            if (ob < 0) ob = 0; else if (ob > 255) ob = 255;
 
             if (grain)
             {
                 rnd ^= rnd << 13;
                 rnd ^= rnd >> 17;
                 rnd ^= rnd << 5;
-                oa = fs_clamp_i(oa + ((((int)(rnd & 0xFF) - 128) * grain) >> 7), 0, 255);
-                ob = fs_clamp_i(ob + ((((int)((rnd >> 8) & 0xFF) - 128) * grain) >> 7), 0, 255);
+                oa += ((((int)(rnd & 0xFF) - 128) * grain) >> 7);
+                ob += ((((int)((rnd >> 8) & 0xFF) - 128) * grain) >> 7);
+                if (oa < 0) oa = 0; else if (oa > 255) oa = 255;
+                if (ob < 0) ob = 0; else if (ob > 255) ob = 255;
             }
 
-            dp[i] = fs_pack_px(out3[1], oa, out3[2], ob);
+            out = uvo | ((unsigned int)oa << 8) | ((unsigned int)ob << 24);
+            dp[i] = out;
+            prev_px = px; prev_out = out;
         }
 
         sp += words;
