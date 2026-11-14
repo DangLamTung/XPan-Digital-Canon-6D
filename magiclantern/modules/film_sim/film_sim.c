@@ -112,7 +112,7 @@ static const char *fs_own_lut_path(void)
  * switches (film.sim.lv3d, film.sim.lvexact) sitting in two different menus,
  * which is how a panel could end up on a path nobody intended. */
 static const char *fs_lvmode_names[] = {
-  "Lattice (default)", "Engine (slow)",
+  "(unused)", "Lattice (default)", "Engine (slow)",
 };
 static CONFIG_INT("film.sim.lvmode", film_sim_lvmode, 1);
 /* Per-frame LiveView timing in the log. Off by default: it is a diagnostic
@@ -176,7 +176,7 @@ static CONFIG_INT("film.sim.frame", film_sim_frame, 0);
 static CONFIG_INT("film.sim.stylecheck", film_sim_stylecheck, 1);
 /* Shot grade path: 0 flat table, 1 lattice (default), higher = engine. */
 static const char *fs_shotmode_names[] = {
-  "Lattice (default)", "Engine (slow)",
+  "(unused)", "Lattice (default)", "Engine (slow)",
 };
 static CONFIG_INT("film.sim.shotmode", film_sim_shotmode, 1);
 
