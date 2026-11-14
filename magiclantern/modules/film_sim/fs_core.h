@@ -631,10 +631,11 @@ static void fs_core_process_rows3(const unsigned char *curve, const signed char 
                       + base[ko] * wc + 128) >> 8;    /* round, do not bias down */
 
                 {
-                    uint32_t n0 = ((uint32_t)(base[2] + 128) << 16) | (uint32_t)(base[1] + 128);
-                    uint32_t na = ((uint32_t)(ca[2]  + 128) << 16) | (uint32_t)(ca[1]  + 128);
-                    uint32_t nb = ((uint32_t)(cb2[2] + 128) << 16) | (uint32_t)(cb2[1] + 128);
-                    uint32_t n1 = ((uint32_t)(base[ko + 2] + 128) << 16) | (uint32_t)(base[ko + 1] + 128);
+                    /* chroma is already biased by +128 in the table */
+                    uint32_t n0 = ((uint32_t)(uint8_t)base[2] << 16) | (uint32_t)(uint8_t)base[1];
+                    uint32_t na = ((uint32_t)(uint8_t)ca[2]  << 16) | (uint32_t)(uint8_t)ca[1];
+                    uint32_t nb = ((uint32_t)(uint8_t)cb2[2] << 16) | (uint32_t)(uint8_t)cb2[1];
+                    uint32_t n1 = ((uint32_t)(uint8_t)base[ko + 2] << 16) | (uint32_t)(uint8_t)base[ko + 1];
                     /* +128 per lane rounds to nearest; a lane peaks at
                      * 255*256 = 65280, so it still cannot carry into the
                      * other lane */

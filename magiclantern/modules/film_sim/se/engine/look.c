@@ -746,8 +746,14 @@ void se_look_bake_yuv3(const se_look *lk, se_yuv3 *t)
             if (dy > 127) dy = 127;
             t->v[k] = (int8_t)dy;
         }
-        t->v[k + 1] = (int8_t)clamp_c(div_round((o[2] - y2) * 256, 454));
-        t->v[k + 2] = (int8_t)clamp_c(div_round((o[0] - y2) * 256, 359));
+        /*
+         * Cb and Cr are stored biased by +128, i.e. as 0..255 in a signed
+         * byte. The interpolator needs them in that form for the packed
+         * multiply, so biasing them here removes eight adds and eight sign
+         * extensions from every pixel pair.
+         */
+        t->v[k + 1] = (int8_t)(clamp_c(div_round((o[2] - y2) * 256, 454)) + 128);
+        t->v[k + 2] = (int8_t)(clamp_c(div_round((o[0] - y2) * 256, 359)) + 128);
     }
 }
 

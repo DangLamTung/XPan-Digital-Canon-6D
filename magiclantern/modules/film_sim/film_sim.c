@@ -380,9 +380,6 @@ static size_t fs_dump_total = 0;
 /* Private copy of part of Canon's LiveView plane, so a pass cannot read a
  * buffer that LiveView has already started to rewrite. Graded a band at a
  * time; ordinary cached memory, not fio_malloc -- see fs_process_frame. */
-static void *fs_snap = 0;
-static size_t fs_snap_size = 0;
-static int fs_snap_failed = 0; /* say it once, not every frame */
 static volatile uint32_t fs_stat_src = 0;
 static volatile uint32_t fs_stat_dst = 0;
 static volatile int fs_stat_pitch = 0;
@@ -1380,68 +1377,28 @@ static void FAST fs_process_frame(void *src, void *dst) {
      * different sensor frames and show as seams every 16 rows. A single 11 ms
      * copy cannot do that.
      */
-    size_t total = (size_t)pitch * (size_t)height;
 
-    if (!fs_snap && !fs_snap_failed) {
-      fs_snap = tmp_malloc(total);
-      fs_snap_size = fs_snap ? total : 0;
-      if (!fs_snap) {
-        fs_snap_failed = 1;
-        fs_log("lv: no memory for the %d byte frame copy; grading Canon's "
-               "buffer directly (can read a half-written frame)",
-               (int)total);
-        fs_log_flush();
-      }
-    } else if (fs_snap && fs_snap_size < total) {
-      /* the panel geometry changed under us (movie mode, HDMI) */
-      free(fs_snap);
-      fs_snap = tmp_malloc(total);
-      fs_snap_size = fs_snap ? total : 0;
-    }
-
-    if (fs_snap && fs_snap_size >= total) {
-      uint32_t tc = get_ms_clock();
-      /*
-       * tmp_malloc hands out the uncached alias (0x4xxxxxxx). Reading and
-       * writing the copy through it costs a DRAM round trip per word; the
-       * same RAM at 0x0xxxxxxx goes through the caches, and nothing else
-       * ever sees this buffer, so no clean is needed afterwards.
-       */
-      unsigned char *snap = (unsigned char *)CACHEABLE(fs_snap);
-      static int snap_logged;
-      if (!snap_logged) {
-        snap_logged = 1;
-        fs_log("lv: frame copy at 0x%x, graded at 0x%x",
-               (unsigned)(uintptr_t)fs_snap, (unsigned)(uintptr_t)snap);
-      }
-      /* only the rows that will be graded: with film.sim.yuvrows limiting the
-       * band, copying the whole frame and then grading a slice of it was
-       * copying rows nobody reads */
-      if (row0 > 0 || row1 < height)
-        memcpy(snap + (size_t)row0 * pitch, (const char *)src + (size_t)row0 * pitch,
-               (size_t)(row1 - row0) * pitch);
-      else
-        memcpy(snap, src, total);
-      copy_ms = get_ms_clock() - tc;
-      tc = get_ms_clock();
-      fs_lv_grade(snap, dst, pitch, row0, row1);
-      grade_ms += get_ms_clock() - tc;
-      if (row0 > 0)
-        memcpy(dst, src, (size_t)row0 * pitch);
-      if (row1 < height)
-        memcpy((char *)dst + (size_t)row1 * pitch,
-               (const char *)src + (size_t)row1 * pitch,
-               (size_t)(height - row1) * pitch);
-    } else {
+    /*
+     * Grade straight from Canon's completed buffer into the display buffer.
+     *
+     * This used to copy the frame into fs_snap first (691 KB, ~11 ms) to shut
+     * the window in which the sensor can rewrite a row mid-pass. The lattice
+     * now grades a 720x480 frame in a few milliseconds, well inside the ~66 ms
+     * before display_filter_get_buffers() reuses that buffer, so the copy is
+     * pure cost. If a frame ever tears, this is the line to put back.
+     */
+    {
       uint32_t tg = get_ms_clock();
       fs_lv_grade(src, dst, pitch, row0, row1);
       grade_ms += get_ms_clock() - tg;
-      if (row0 > 0)
-        memcpy(dst, src, (size_t)row0 * pitch);
-      if (row1 < height)
-        memcpy((char *)dst + (size_t)row1 * pitch,
-               (const char *)src + (size_t)row1 * pitch,
-               (size_t)(height - row1) * pitch);
+      if (src != dst) {
+        if (row0 > 0)
+          memcpy(dst, src, (size_t)row0 * pitch);
+        if (row1 < height)
+          memcpy((char *)dst + (size_t)row1 * pitch,
+                 (const char *)src + (size_t)row1 * pitch,
+                 (size_t)(height - row1) * pitch);
+      }
     }
     fs_aspect_bars(dst, pitch, row0, row1);
   } else if (film_sim_enable) {
@@ -1542,8 +1499,7 @@ static void fs_dump_task(void *unused) {
     struct vram_info *vr = get_yuv422_vram();
     if (vr && vr->vram && vr->pitch >= 64 && vr->height > 0) {
       int pitch = vr->pitch, height = vr->height;
-      size_t total = (size_t)pitch * (size_t)height;
-
+  
       if (!film_sim_enable) {
         fs_log("lvdump: film.sim.enable is 0, so no frame is graded; turn "
                "LiveView Filter on first");
@@ -1552,17 +1508,19 @@ static void fs_dump_task(void *unused) {
         return;
       }
 
-      fs_dump_raw = fio_malloc(total);
-      fs_dump_graded = fio_malloc(total);
+      unsigned int dtot = (unsigned int)pitch * (unsigned int)height;
+      fs_dump_total = dtot;
+      fs_dump_raw = fio_malloc(dtot);
+      fs_dump_graded = fio_malloc(dtot);
       if (!fs_dump_raw || !fs_dump_graded) {
         fio_free(fs_dump_raw);
         fio_free(fs_dump_graded);
         fs_dump_raw = fs_dump_graded = 0;
-        fs_log("lvdump: no memory for %d bytes twice", (int)total);
+        fs_log("lvdump: no memory for %d bytes twice", (int)dtot);
         fs_log_flush();
         return;
       }
-      fs_dump_total = total;
+      fs_dump_total = dtot;
       fs_dump_want = 1;
 
       /* Up to 6 s: the filter runs once per processed frame, and one pass is
@@ -9340,7 +9298,7 @@ static unsigned int film_sim_init() {
 static unsigned int film_sim_deinit() {
   fs_yuvhook_uninstall();
   /*
-   * Deliberately NOT freeing fs_snap / fs_dump_raw / fs_dump_graded here.
+   * Deliberately NOT freeing fs_dump_raw / fs_dump_graded here.
    *
    * deinit is only reached from _module_unload_all() in module_shutdown() --
    * src/module.c:913 and :2255, called from src/tasks.c:366 and :404 and from
