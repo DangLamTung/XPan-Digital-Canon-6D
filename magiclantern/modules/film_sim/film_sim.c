@@ -118,6 +118,13 @@ static CONFIG_INT("film.sim.lvmode", film_sim_lvmode, 1);
 /* Per-frame LiveView timing in the log. Off by default: it is a diagnostic
  * and it writes a line every 60 frames. */
 static CONFIG_INT("film.sim.lvfps", film_sim_lvfps, 0);
+/*
+ * 1: copy the sensor frame once, then grade the copy. That copy is what keeps
+ * Canon from rewriting a row while it is being graded; turning it off grades
+ * the live buffer and saves ~11 ms a frame, at the risk of seams when the
+ * sensor refreshes mid-pass.
+ */
+static CONFIG_INT("film.sim.lvcopy", film_sim_lvcopy, 1);
 /* Defined up here because fs_sync() decides from it whether the bars are
  * honest: only a develop-and-replace shot is actually cropped. */
 static CONFIG_INT("film.sim.replace", film_sim_replace, 1);
@@ -1388,7 +1395,7 @@ static void FAST fs_process_frame(void *src, void *dst) {
       fs_snap_size = fs_snap ? total : 0;
     }
 
-    if (fs_snap && fs_snap_size >= total) {
+    if (film_sim_lvcopy && fs_snap && fs_snap_size >= total) {
       uint32_t tc = get_ms_clock();
       /*
        * tmp_malloc hands out the uncached alias (0x4xxxxxxx). Reading and
@@ -1403,8 +1410,15 @@ static void FAST fs_process_frame(void *src, void *dst) {
         fs_log("lv: frame copy at 0x%x, graded at 0x%x",
                (unsigned)(uintptr_t)fs_snap, (unsigned)(uintptr_t)snap);
       }
-      memcpy(snap, src, total);
-      copy_ms += get_ms_clock() - tc;
+      /* only the rows that will be graded: with film.sim.yuvrows limiting the
+       * band, copying the whole frame and then grading a slice of it was
+       * copying rows nobody reads */
+      if (row0 > 0 || row1 < height)
+        memcpy(snap + (size_t)row0 * pitch, (const char *)src + (size_t)row0 * pitch,
+               (size_t)(row1 - row0) * pitch);
+      else
+        memcpy(snap, src, total);
+      copy_ms = get_ms_clock() - tc;
       tc = get_ms_clock();
       fs_lv_grade(snap, dst, pitch, row0, row1);
       grade_ms += get_ms_clock() - tc;
@@ -9365,6 +9379,7 @@ MODULE_CONFIG(film_sim_shotgrade)
 MODULE_CONFIG(film_sim_lut)
 MODULE_CONFIG(film_sim_lvmode)
 MODULE_CONFIG(film_sim_lvfps)
+MODULE_CONFIG(film_sim_lvcopy)
 MODULE_CONFIG(film_sim_wbs_ba)
 MODULE_CONFIG(film_sim_wbs_gm)
 MODULE_CONFIG(film_sim_neutralcap)
