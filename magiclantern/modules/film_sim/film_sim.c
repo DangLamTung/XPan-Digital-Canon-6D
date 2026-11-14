@@ -1143,6 +1143,8 @@ static void fs_sync() {
   if (film_sim_lvmode   < 0 || film_sim_lvmode   > 2) film_sim_lvmode   = 1;
   fs_yuvhook_shot(film_sim_shotmode);
   fs_capture_header();
+  /* and again at every shot, from the settings in force at that moment */
+  fs_yuvhook_hdr_refresh(fs_capture_header);
 
   /*
    * Which 3D LUT the develop uses.
@@ -5093,11 +5095,21 @@ static void fs_frame_exposure(se_frame *f) {
   if (i >= 0) se_frame_fmt_ap(f->value[0], sizeof f->value[0], values_aperture[i]);
   i = fs_code_index(codes_shutter, SHUTTER_ARRAY_LEN, lens_info.raw_shutter);
   if (i >= 0) se_frame_fmt_ss(f->value[1], sizeof f->value[1], values_shutter[i]);
+  /*
+   * ISO has three sources, in order of reliability: the code table, ML's own
+   * raw2iso(), and the rounded value the body reports.  The table stops at
+   * 25600 and a body in an extended ISO range uses codes it does not carry, so
+   * without the middle one an ISO above 1000 could come out as "-".
+   */
   i = fs_code_index(codes_iso, ISO_ARRAY_LEN, lens_info.raw_iso);
-  if (i > 0)
-    se_frame_fmt_iso(f->value[2], sizeof f->value[2], values_iso[i]);
-  else if (lens_info.iso >= 25 && lens_info.iso <= 409600)
-    se_frame_fmt_iso(f->value[2], sizeof f->value[2], (int)lens_info.iso);
+  {
+    int iso = 0;
+    if (i >= 0)                            iso = values_iso[i];
+    else if (lens_info.raw_iso)            iso = raw2iso(lens_info.raw_iso);
+    if (iso <= 0 && lens_info.iso >= 25 && lens_info.iso <= 409600)
+      iso = (int)lens_info.iso;
+    se_frame_fmt_iso(f->value[2], sizeof f->value[2], iso);
+  }
 }
 
 /* Apply the film frame, or clear it, before a develop. Opt-in: the config

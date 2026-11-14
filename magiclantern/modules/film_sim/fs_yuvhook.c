@@ -139,6 +139,10 @@ uint32_t fs_yuvhook_t_clean(void) { return fs_tr_clean; }
 
 /* Time spent drawing the band inside the shot, last shot only. */
 static uint32_t fs_hdr_ms;
+/* refill the frame from the camera's current settings just before it burns:
+ * the header used to carry whatever exposure was set when fs_sync() last ran */
+static void (*fs_hdr_refresh)(void);
+void fs_yuvhook_hdr_refresh(void (*fn)(void)) { fs_hdr_refresh = fn; }
 uint32_t fs_yuvhook_header_ms(void) { return fs_hdr_ms; }
 
 /* RGB row -> UYVY row (Y, Cb, Cr, BT.601 studio swing). */
@@ -337,6 +341,7 @@ static uint32_t fs_yuv_grade_cached(void *buf, int width, int rows, int stride,
      * bottom of the picture rather than vanishing. */
     if (fs_hdr.on && fs_hdr_scratch && rows == frame_h) {
         int num = 0, den = 1;
+        if (fs_hdr_refresh) fs_hdr_refresh();
         uint32_t h0 = get_ms_clock();
         if (fs_bars_mode > 0)
             fs_core_aspect_ratio(fs_bars_mode, &num, &den);
