@@ -380,3 +380,28 @@ Property tables also live in RAM, e.g. at `0x4B2570`:
 
 The `0x0046xxxx` handlers are ML's own loaded module code, so this table is the
 one the firmware fills from ML's registrations.
+
+## Round 8: the RAM AF block, mapped
+
+`docs/af-function-map.txt` lists all 83 functions in the block
+(`0x03C000`-`0x043000`) with their sizes, and the call statistics:
+
+* **521 `bl`** in the block, **289 of them into the ROM** (`0xFF...`),
+* so the RAM code is the driver and the ROM holds the routines it calls.
+
+The three most-called ROM routines are:
+
+| calls | target | what it looks like |
+|---|---|---|
+| 82 | `0xFF1319C4` | a property **getter**: `and r7, r0, #0xf000000`, calls `0xFF130878`, branches to an error log with a format string on failure |
+| 48 | `0xFF47A798` | not yet read |
+| 40 | `0xFF2ADE1C` | not yet read |
+
+`0xFF1319C4` being the most-called thing in the AF block says the block is
+mostly *reading state*, not evaluating focus: 82 property reads against
+521 calls in total. That matches the round-7 observation that the heavy
+`ldrb` loop at `0x041678` is a debug dump (it logs with `0x67C8`), not a metric.
+
+So the contrast evaluation is not in this block either. The candidates left are
+`0xFF47A798` and `0xFF2ADE1C` -- both called from RAM code, both inside the
+ROM's `0xFF` image, which is exactly where the AF unit routines live.
