@@ -139,6 +139,7 @@ uint32_t fs_yuvhook_t_clean(void) { return fs_tr_clean; }
 
 /* Time spent drawing the band inside the shot, last shot only. */
 static uint32_t fs_hdr_ms;
+static void fs_yuv_note_graded(void *buf, uint32_t stride, int rows);
 /* refill the frame from the camera's current settings just before it burns:
  * the header used to carry whatever exposure was set when fs_sync() last ran */
 static void (*fs_hdr_refresh)(void);
@@ -352,6 +353,12 @@ static uint32_t fs_yuv_grade_cached(void *buf, int width, int rows, int stride,
     } else {
         fs_hdr_ms = 0;
     }
+    /*
+     * Record the fingerprint here, after every stage has written: the bars and
+     * the band change the bytes, and a fingerprint taken before them made the
+     * camera's second hook call for the same shot look like a new frame.
+     */
+    fs_yuv_note_graded(buf, (uint32_t)stride, rows);
 
     fs_tr_band = get_ms_clock();
     if (gp != (unsigned char *)buf)
@@ -832,6 +839,7 @@ static uint32_t fs_yuv_finger(const void *p, uint32_t stride, int rows)
 }
 
 static uint32_t fs_yuv_done_addr, fs_yuv_done_finger, fs_yuv_done_stride;
+static int      fs_yuv_done_rows;
 static uint32_t fs_yuv_done_ms;
 
 static int fs_yuv_should_grade(void *buf, uint32_t stride, int rows)
@@ -849,6 +857,7 @@ static void fs_yuv_note_graded(void *buf, uint32_t stride, int rows)
 {
     fs_yuv_done_addr   = (uint32_t)buf;
     fs_yuv_done_stride = stride;
+    fs_yuv_done_rows   = rows;
     fs_yuv_done_finger = fs_yuv_finger(buf, stride, rows);
     fs_yuv_done_ms     = get_ms_clock();
 }
@@ -1045,6 +1054,17 @@ bare_done:
             if (!pb) { fs_yuv_unknown = sz; continue; }
             if (sz < pb) pb = sz;
             r = fs_yuv_safe_rows((const void *)a, stride, pb, fs_yuv_grade_rows);
+            /*
+             * The camera calls this hook more than once per shot. Black bars
+             * we painted make the last row read as zeros, which fs_yuv_reaches
+             * takes for unmapped memory and halves the row count -- and the
+             * smaller span then graded the top half a second time, over the
+             * bars. Keep the span the first call established.
+             */
+            if (a == fs_yuv_done_addr && stride == fs_yuv_done_stride &&
+                get_ms_clock() - fs_yuv_done_ms < 5000u &&
+                fs_yuv_done_rows > r)
+                r = fs_yuv_done_rows;
             if (r <= 0) { fs_yuv_unknown = sz; continue; }
             if (!fs_yuv_should_grade((void *)a, stride, r)) continue;
 
