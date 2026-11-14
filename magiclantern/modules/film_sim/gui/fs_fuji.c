@@ -29,18 +29,39 @@ void fs_fuji_defaults(fs_fuji_t *f)
     f->grain_size = 0;
 }
 
-/* out level for an in level, in Fuji's sense: + highlight compresses the top,
- * + shadow deepens the bottom. Scale chosen so the extremes (+-4) move an end
- * by about 30 levels -- visible, not destructive. */
+/*
+ * The five knots of the curve the recipe writes, moved the way Fuji moves
+ * them: the ends stay at 0 and 255 (a recipe does not turn white into grey),
+ * Shadow Tone moves the 1/4 knot and Highlight Tone the 3/4 knot.
+ *
+ * The old formula subtracted t*t and (100-t)^2 from the level itself, which
+ * peaks exactly at the ends: Highlight +4 pulled 255 down to 215 and
+ * Highlight -2 pushed it to 275 (clipped back to 255), so "harden" greyed the
+ * whites and "soften" blew them out.
+ */
+static int knot_lo(const fs_fuji_t *f)
+{
+    /* Shadow + deepens: the quarter tone comes down. -4..+4 -> +-24 levels */
+    int v = 64 - f->shadow * 6;
+    return v < 0 ? 0 : (v > 128 ? 128 : v);
+}
+
+static int knot_hi(const fs_fuji_t *f)
+{
+    /* Highlight + hardens: the three-quarter tone goes up. */
+    int v = 192 + f->highlight * 9;
+    return v < 128 ? 128 : (v > 255 ? 255 : v);
+}
+
 static int tone_out(const fs_fuji_t *f, int in)
 {
-    int t = in * 100 / 255;
-    int out = in;
-    out -= (f->highlight * t * t) / 1000;                /* top end     */
-    out -= (f->shadow * (100 - t) * (100 - t)) / 1000;   /* bottom end  */
-    if (out < 0) out = 0;
-    if (out > 255) out = 255;
-    return out;
+    int k0 = 0, k1 = knot_lo(f), k2 = 128, k3 = knot_hi(f), k4 = 255;
+    if (in <= 0) return 0;
+    if (in >= 255) return 255;
+    if (in < 64)  return k0 + (k1 - k0) * in / 64;
+    if (in < 128) return k1 + (k2 - k1) * (in - 64) / 64;
+    if (in < 192) return k2 + (k3 - k2) * (in - 128) / 64;
+    return k3 + (k4 - k3) * (in - 192) / 63;
 }
 
 static int append(char *buf, int cap, int n, const char *fmt, ...)

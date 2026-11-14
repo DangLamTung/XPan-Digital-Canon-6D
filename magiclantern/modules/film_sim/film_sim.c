@@ -5523,8 +5523,8 @@ static int fs_creator_open_slot(int slot)
   /* The slot the menu has selected is the one this screen writes; the labels
    * come from the four files on the card so the slot screen can say what each
    * one holds instead of just ML/FILM/WHEEL2.fs. */
-  fs_creator.slot_cur = fs_slot_default();
-  fs_creator.slot_pick = fs_creator.slot_cur;
+  fs_creator.slot_cur = slot;
+  fs_creator.slot_pick = slot;
   fs_creator_scan_slots();
   fs_creator.slot_label[slot] = fs_slot_label_buf[slot];
   fs_log("slots: loaded slot %d from %s as '%s' (tone %d/%d, curve err %d)",
@@ -6088,8 +6088,12 @@ static void fs_creator_save_task(void *unused) {
    * always the slot, and the name rides in the XML where the shelf reads it.
    */
   fs_slot_file_name(fs_slot_default(), file, sizeof file);
-  if (fs_look_name[0]) snprintf(label, sizeof label, "%s", fs_look_name);
-  else                 snprintf(label, sizeof label, "%s", file);
+  if (fs_creator.look_name && fs_creator.look_name[0])
+    snprintf(label, sizeof label, "%s", fs_creator.look_name);
+  else if (fs_look_name[0])
+    snprintf(label, sizeof label, "%s", fs_look_name);
+  else
+    snprintf(label, sizeof label, "%s", file);
 
   fs_log("creator: save task started (slot %s, name %s)", file, label);
   fs_log_flush();
@@ -6188,6 +6192,15 @@ static int fs_creator_run(void) {
    * stock the saved .fs does not contain. */
   if (!fs_creator_initialised) {
     fs_creator_defaults(&fs_creator, "BASE: FLAT - SELF-CONTAINED");
+    /*
+     * Load the slot's own file before showing anything. This used to leave a
+     * flat wheel on screen and every slot marked EMPTY even when WHEEL.fs was
+     * on the card, so the first save overwrote a look the user had not seen.
+     */
+    fs_creator_scan_slots();
+    fs_creator_open_slot(fs_slot_default());
+    fs_creator.slot_cur = fs_slot_default();
+    fs_creator.slot_pick = fs_slot_default();
     fs_creator_initialised = 1;
   }
   fs_name_sync();
@@ -6199,7 +6212,10 @@ static int fs_creator_run(void) {
     fs_slot_file_name(fs_slot_default(), slot_file, sizeof slot_file);
     fs_creator.slot_name = slot_file;
   }
-  fs_creator.look_name = fs_look_name;
+  /* keep the name the slot loaded: assigning fs_look_name here threw away
+   * the recipe's own name and the next save wrote "LOOK" over it */
+  if (!fs_creator.look_name || !fs_creator.look_name[0])
+    fs_creator.look_name = fs_look_name;
   /* start settled: a spring beginning at 0 would spin the whole ring into
    * place every time the screen opens */
   fs_creator_spring.x = 0;
