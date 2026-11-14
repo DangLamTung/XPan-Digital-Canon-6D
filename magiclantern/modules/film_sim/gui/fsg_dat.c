@@ -144,8 +144,12 @@ int fsg_can_pick(int index)
   if (index != can_cur) {
     off = can_off + index * can_w * can_h;
     if (!fsg_file_seek(can_fp, off) ||
-        fsg_file_read(can_fp, can_px, can_w * can_h) != can_w * can_h)
+        fsg_file_read(can_fp, can_px, can_w * can_h) != can_w * can_h) {
+      /* can_px is now half written: stop showing whatever is in it */
+      fsg_can_hide();
+      can_cur = -1;
       return 0;
+    }
     can_cur = index;
   }
   fsg_img_set(can_px, can_w, can_h);

@@ -5451,7 +5451,14 @@ static int fs_creator_open_slot(int slot)
       fs_creator.rot[i] = 0;
       fs_creator.lum[i] = 100;
     }
+    /* a blank slot starts blank: the FX of the slot we came from must not
+     * follow us here */
     fs_creator.shadow = fs_creator.highlight = 0;
+    fs_creator.grain = 0;
+    fs_creator.grain_size = 0;
+    fs_creator.halation = 0;
+    fs_creator.chrome = 0;
+    fs_creator.fx_blue = 0;
     fs_log("slots: %s does not exist, slot %d starts blank", path, slot);
     return 0;
   }
@@ -6321,7 +6328,8 @@ static void fs_wb_apply_task(void *unused) {
    * was sent.
    */
   msleep(80);
-  if (lens_info.wbs_ba == want_ba && lens_info.wbs_gm == want_gm) {
+  if ((int)(int8_t)lens_info.wbs_ba == want_ba &&
+      (int)(int8_t)lens_info.wbs_gm == want_gm) {
     fs_wb_applied = 1;
     fs_log("fuji: camera reports B/A %+d G/M %+d, as asked",
            (int)lens_info.wbs_ba, (int)lens_info.wbs_gm);
@@ -7438,7 +7446,7 @@ static void fs_auto_task(void *unused) {
      * crop and the letterbox are ours, not Canon's -- so a framing other than
      * full 3:2 still needs the develop.
      */
-    if (film_sim_yuvrows > 0 && film_sim_aspect == 0 && film_sim_shotgrade) {
+    if (film_sim_yuvrows > 0 && film_sim_aspect == 0 && film_sim_shotmode > 0) {
       char newest[16];
       if (fs_newest_raw_name(newest, sizeof newest) &&
           strcasecmp(newest, fs_auto_last)) {
