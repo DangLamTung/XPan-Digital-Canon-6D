@@ -2737,6 +2737,13 @@ static int fs_apply_film_now(void) {
          film_active_table[idx].name, slot, base, st.contrast, st.sharpness,
          st.saturation, st.tone, st.kelvin, film_sim_level, neutral_style, ack);
   fs_log_flush();
+  /*
+   * The shutter hook reads its mode, bars, style-check and the baked tables
+   * from state that fs_sync() owns, and fs_sync() used to run only inside the
+   * display filter: with LiveView off, changing the stock or the shot mode
+   * never reached the capture path. Push it here as well.
+   */
+  fs_sync();
   return ack;
 }
 
@@ -6120,6 +6127,9 @@ static void fs_creator_save_task(void *unused) {
          FS_CREATOR_WEDGES, label);
   fs_log_flush();
   fs_register_look(file, label, "MADE IN COLOR CREATOR");
+  /* the file we just wrote may be the look that is loaded: force a re-bake */
+  fs_signature_valid = 0;
+  fs_yuvlook_dirty = 1;
 
   /*
    * Report success BEFORE rebuilding the catalogue.
@@ -6445,6 +6455,8 @@ static void fs_fuji_save_task(void *unused) {
   fs_log("fuji: wrote %s (%d bytes)", path, n);
   fs_log_flush();
   fs_register_look(file, fs_fuji.name, "MADE IN FUJI RECIPE");
+  fs_signature_valid = 0;
+  fs_yuvlook_dirty = 1;
   /* Confirm first, rebuild the catalogue after -- same reason as the creator:
    * the bytes are on the card, and the reload walks every XML on it. */
   NotifyBox(1500, "Saved %s", path);
@@ -8345,6 +8357,8 @@ static MENU_SELECT_FUNC(fs_fuji_name_select) {
   snprintf(fs_fuji.name, sizeof fs_fuji.name, "%s", fs_fuji_names[fs_fuji_slot]);
 }
 
+static const char *fs_grain_size_names[] = { "Small", "Large" };
+
 static struct menu_entry fs_menu_fuji[] = {
     {
         .name = "Name",
@@ -8398,7 +8412,8 @@ static struct menu_entry fs_menu_fuji[] = {
         .name = "Grain Size",
         .priv = &fs_fuji.grain_size,
         .min = 0, .max = 1,
-        .help = "0 = small, 1 = large.",
+        .choices = fs_grain_size_names,
+        .help = "Small: fine, 35 mm-like. Large: coarser, for a pushed look.",
     },
     {
         .name = "WB Shift R/B",
@@ -8496,7 +8511,7 @@ static struct menu_entry fs_menu_live[] = {
  * lists every stock as well, so "which of my four looks was that" used to
  * mean reading a shelf of thirty-four. These four rows say it outright.
  */
-static int fs_user_slot[4] = { 0, 1, 2, 3 };
+static int fs_user_slot[10] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
 
 static void fs_user_look_apply(int slot)
 {
@@ -8559,6 +8574,48 @@ static struct menu_entry fs_menu_userlook[] = {
         .select = fs_user_look_select,
         .icon_type = IT_ACTION,
         .help = "Make ML/FILM/WHEEL4.fs the active look.",
+    },
+    {
+        .name = "Apply WHEEL5",
+        .priv = &fs_user_slot[4],
+        .select = fs_user_look_select,
+        .icon_type = IT_ACTION,
+        .help = "Make ML/FILM/WHEEL5.fs the active look.",
+    },
+    {
+        .name = "Apply WHEEL6",
+        .priv = &fs_user_slot[5],
+        .select = fs_user_look_select,
+        .icon_type = IT_ACTION,
+        .help = "Make ML/FILM/WHEEL6.fs the active look.",
+    },
+    {
+        .name = "Apply WHEEL7",
+        .priv = &fs_user_slot[6],
+        .select = fs_user_look_select,
+        .icon_type = IT_ACTION,
+        .help = "Make ML/FILM/WHEEL7.fs the active look.",
+    },
+    {
+        .name = "Apply WHEEL8",
+        .priv = &fs_user_slot[7],
+        .select = fs_user_look_select,
+        .icon_type = IT_ACTION,
+        .help = "Make ML/FILM/WHEEL8.fs the active look.",
+    },
+    {
+        .name = "Apply WHEEL9",
+        .priv = &fs_user_slot[8],
+        .select = fs_user_look_select,
+        .icon_type = IT_ACTION,
+        .help = "Make ML/FILM/WHEEL9.fs the active look.",
+    },
+    {
+        .name = "Apply WHEEL10",
+        .priv = &fs_user_slot[9],
+        .select = fs_user_look_select,
+        .icon_type = IT_ACTION,
+        .help = "Make ML/FILM/WHEEL10.fs the active look.",
     },
     {
         .name = "Share Active Look",
