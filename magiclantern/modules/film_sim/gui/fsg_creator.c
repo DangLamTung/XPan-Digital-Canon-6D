@@ -990,8 +990,9 @@ void fs_creator_step(fs_creator_t *c, int act)
         if (c->screen == 3) {
             /* No file I/O from a key handler: raise the flag, the module's
              * loop does the read and the parse. */
-            if (c->slot_pick != c->slot_cur)
-                c->slot_request = 1;
+            /* reload even when the picked slot is the one on screen: it is
+             * how the user says "read this file again" */
+            c->slot_request = 1;
             break;
         }
         if (c->screen == 0) {
