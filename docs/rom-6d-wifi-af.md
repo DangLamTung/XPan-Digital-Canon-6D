@@ -243,3 +243,52 @@ ROM1 covers `0xF8000000`-`0xF8FFFFFF` (16 MB), so `0xF90554F8` and
 dump that would finish the Wi-Fi analysis has to cover **`0xF9000000` and
 above** -- that is the concrete next input needed, the same way the `0xFF`
 alias was for the AF handlers.
+
+## Round 5: the AF property family, and the ROM is bigger than the dump
+
+Walking the descriptor table at `0xF8B6EB64` (16-byte entries: id, flags, size,
+index) gives **30 AF-family properties**, and every one of them is a **9-byte**
+payload except the last:
+
+```
+0x80050000 0x80050002 0x80050005 0x8005000A 0x8005000B 0x8005000C
+0x8005000D 0x80050008 0x80050010 0x8005001B 0x8005001E 0x80050027
+0x80050029 0x80050028 0x8005002B 0x80050033 0x80050035 0x8005003A
+0x8005003B 0x8005003E 0x80050040 0x80050041 0x8005003D 0x8005003F
+0x80050042 0x80050045   (0x80050045 is 14 bytes)
+```
+
+A 9-byte payload is one length byte plus two 4-byte values -- the shape the
+marshalling handlers in round 4 copy onto the stack.
+
+### The AF command chain, verified
+
+```
+property write
+  -> handler 0xFF3131DC   (table 0xF83149DC)
+  -> 0xFF1302E8           prologue push {r3-r9, sl, fp, lr}; takes a 24-byte block
+       calls 0xFF130828   (8 times) -- thin wrapper around 0x39F54 that logs on error
+       calls 0xA5CC       lock
+       calls 0x6BB98      copy
+       calls 0x90F4, 0x91AC, 0x904C   small RAM helpers
+```
+
+So the property layer only *queues* AF work; the evaluation loop is a task that
+consumes it.
+
+### The dumped ROM is not the whole ROM
+
+Across ROM1 there are **2,681** 32-bit literals pointing into
+`0xF9000000`-`0xF9FFFFFF` and **1,989** into `0xFA000000`-`0xFAFFFFFF` -- both
+outside the 16 MB dump. The Wi-Fi socket code itself calls there:
+
+```
+f84f3f40  bl 0xf905555c
+f84f3f68  bl 0xf90554f8
+```
+
+ML's `platform/6D.116/consts.h` declares `ROM1_ADDR 0xF8000000` and
+`ROM1_SIZE 0x01000000`, and `src/debug.c` writes exactly that range to
+`ML/LOGS/ROM1.BIN`. So the next dump has to extend to at least
+`0xF8000000 + 0x02000000` before the Wi-Fi stack can be read, the same way the
+`0xFF` alias had to be found before the AF handlers would decode.
