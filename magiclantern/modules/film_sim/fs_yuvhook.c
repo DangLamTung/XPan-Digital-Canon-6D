@@ -230,8 +230,6 @@ static void fs_dcache_clean(void *p, uint32_t len)
 int fs_yuvhook_dcache_used(void) { return fs_dcache_used; }
 
 /* Exact path toggle: the engine per pixel instead of the baked tables. */
-static int fs_yuv_exact;
-void fs_yuvhook_exact(int on) { fs_yuv_exact = on ? 1 : 0; }
 
 /* 0 flat table, 1 lattice, 2 engine. Exact Grade still forces 2. */
 static int fs_yuv_shot_mode = 1;
@@ -262,7 +260,7 @@ static uint32_t fs_yuv_grade_cached(void *buf, int width, int rows, int stride,
     fs_dcache_used = (gp != (unsigned char *)buf);
     fs_tr_enter = get_ms_clock();
     fs_tr_enter_us = get_us_clock();
-    if ((fs_yuv_exact || fs_yuv_shot_mode == 2) && width <= 5760 && fs_yuvlook_engine_ready())
+    if (fs_yuv_shot_mode == 2 && width <= 5760 && fs_yuvlook_engine_ready())
         ms = fs_yuvlook_apply_engine(gp, width, rows, stride);
     else if (fs_yuv_shot_mode == 1 && fs_yuvlook_lattice_ready())
         ms = fs_yuvlook_apply_lattice(gp, width, rows, stride);

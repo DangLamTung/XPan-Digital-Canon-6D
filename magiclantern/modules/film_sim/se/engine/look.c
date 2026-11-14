@@ -630,6 +630,7 @@ void se_look_bake_yuv(const se_look *lk, se_yuvtbl *t)
             if (dy < -128) dy = -128;
             t->dy[cell] = (int8_t)dy;
 
+#ifdef SE_HOSTED
             /*
              * Local 2x2: central difference with a wide step. A step of one
              * cell (2 chroma units) made the derivative noise-dominated --
@@ -662,6 +663,8 @@ void se_look_bake_yuv(const se_look *lk, se_yuvtbl *t)
                 t->jm[cell][2] = (int16_t)((oy2[0] - oy2[1]) * 128 / D);
                 t->jm[cell][3] = (int16_t)((oy2[2] - oy2[3]) * 128 / D);
             }
+#endif
+
         }
     }
 

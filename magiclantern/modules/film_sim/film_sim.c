@@ -112,9 +112,12 @@ static const char *fs_own_lut_path(void)
  * switches (film.sim.lv3d, film.sim.lvexact) sitting in two different menus,
  * which is how a panel could end up on a path nobody intended. */
 static const char *fs_lvmode_names[] = {
-  "Tables (fast)", "Lattice (accurate)", "Engine (slow)",
+  "Lattice (default)", "Engine (slow)",
 };
-static CONFIG_INT("film.sim.lvmode", film_sim_lvmode, 0);
+static CONFIG_INT("film.sim.lvmode", film_sim_lvmode, 1);
+/* Per-frame LiveView timing in the log. Off by default: it is a diagnostic
+ * and it writes a line every 60 frames. */
+static CONFIG_INT("film.sim.lvfps", film_sim_lvfps, 0);
 /* Defined up here because fs_sync() decides from it whether the bars are
  * honest: only a develop-and-replace shot is actually cropped. */
 static CONFIG_INT("film.sim.replace", film_sim_replace, 1);
@@ -168,13 +171,12 @@ static CONFIG_INT("film.sim.pad", film_sim_pad, 1);
  * Off by default -- it changes the file the camera writes, so it is opt-in. */
 static CONFIG_INT("film.sim.frame", film_sim_frame, 0);
 /* 0 = baked tables (fast), 1 = the engine per pixel (exact, slower). */
-static CONFIG_INT("film.sim.exact", film_sim_exact, 0);
 /* Grade even when the picture style is not Neutral (the body may refuse to
  * stay on it). Off by default: stacking a look on Canon's is worse. */
 static CONFIG_INT("film.sim.stylecheck", film_sim_stylecheck, 1);
 /* Shot grade path: 0 flat table, 1 lattice (default), higher = engine. */
 static const char *fs_shotmode_names[] = {
-  "Tables (fast)", "Lattice (accurate)", "Engine (slow)",
+  "Lattice (default)", "Engine (slow)",
 };
 static CONFIG_INT("film.sim.shotmode", film_sim_shotmode, 1);
 
@@ -1117,8 +1119,9 @@ static void fs_sync() {
    *    3:2 frame -- no bars burned in -- and with replace on the bars are
    *    redundant because our own cropped develop replaces the file. */
   fs_yuvhook_bars(film_sim_replace ? film_sim_aspect : 0);
-  fs_yuvhook_exact(film_sim_exact);
   fs_yuvhook_stylecheck(film_sim_stylecheck);
+  if (film_sim_shotmode < 1 || film_sim_shotmode > 2) film_sim_shotmode = 1;
+  if (film_sim_lvmode   < 1 || film_sim_lvmode   > 2) film_sim_lvmode   = 1;
   fs_yuvhook_shot(film_sim_shotmode);
   fs_capture_header();
 
@@ -1256,7 +1259,7 @@ static void fs_lv_grade(const void *src, void *dst, int pitch, int row0, int row
   uint32_t t0 = get_ms_clock();
   fs_lv_grade_body(src, dst, pitch, row0, row1);
   acc += get_ms_clock() - t0;
-  if (++n >= 60) {
+  if (film_sim_lvfps && ++n >= 60) {
     fs_log("lv: %d frames, %d ms total, %.1f ms/frame",
            n, (int)acc, (double)acc / n);
     fs_log_flush();
@@ -8453,7 +8456,7 @@ static struct menu_entry fs_menu_live[] = {
     {
         .name = "Preview Engine",
         .priv = &film_sim_lvmode,
-        .max = 2,
+        .min = 1, .max = 2,
         .choices = fs_lvmode_names,
         .help = "How LiveView is graded. Tables: the flat 64x64 sample of the "
                 ".fs -- fastest, ~2.9 dE off the develop on colour. Lattice: "
@@ -8615,12 +8618,11 @@ static struct menu_entry fs_menu_quality[] = {
     {
         .name = "Shot Engine",
         .priv = &film_sim_shotmode,
-        .max = 2,
+        .min = 1, .max = 2,
         .choices = fs_shotmode_names,
         .help = "How the JPEG is graded. Lattice: the joint (y,u,v) table baked "
-                "from the .fs, interpolated -- ~1.0 dE off the develop. Tables: "
-                "the flat 64x64 sample, ~2.9 dE off but faster. Engine: the "
-                "grade itself, exact, around a minute per shot.",
+                "from the .fs and interpolated -- ~1 dE off the develop. "
+                "Engine: the grade itself, exact, around a minute per shot.",
     },
     {
         .name = "Style Check",
@@ -8913,11 +8915,10 @@ static void fs_lv_monitor_task(void *unused) {
            * was shot on a User Def style.
            */
           fs_log("yuvcost: hook %d ms at %d ms, worst %d ms "
-                 "(grade %d ms, band %d ms, shot mode %d); malloc free %d KB",
+                 "(grade %d ms, shot mode %d); malloc free %d KB",
                  fs_yuvhook_hook_total_ms(), (int)fs_yuvhook_hook_ms(),
                  fs_yuvhook_hook_total_max(), (int)fs_yuvhook_grade_ms(),
-                 (int)fs_yuvhook_header_ms(), film_sim_shotmode,
-                 GetFreeMemForMalloc() / 1024);
+                 film_sim_shotmode, GetFreeMemForMalloc() / 1024);
           {
             uint32_t a = fs_yuvhook_t_enter(), b = fs_yuvhook_t_grade(),
                      c = fs_yuvhook_t_bars(),  d = fs_yuvhook_t_band(),
@@ -9348,6 +9349,7 @@ MODULE_CONFIG(film_sim_art)
 MODULE_CONFIG(film_sim_shotgrade)
 MODULE_CONFIG(film_sim_lut)
 MODULE_CONFIG(film_sim_lvmode)
+MODULE_CONFIG(film_sim_lvfps)
 MODULE_CONFIG(film_sim_wbs_ba)
 MODULE_CONFIG(film_sim_wbs_gm)
 MODULE_CONFIG(film_sim_neutralcap)
@@ -9364,7 +9366,6 @@ MODULE_CONFIG(film_sim_replace)
 MODULE_CONFIG(film_sim_aspect)
 MODULE_CONFIG(film_sim_pad)
 MODULE_CONFIG(film_sim_frame)
-MODULE_CONFIG(film_sim_exact)
 MODULE_CONFIG(film_sim_stylecheck)
 MODULE_CONFIG(film_sim_shotmode)
 
