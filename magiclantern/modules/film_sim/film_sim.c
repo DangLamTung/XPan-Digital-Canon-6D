@@ -5234,6 +5234,10 @@ static void fs_capture_header(void) {
       film_sim_aspect < (int)(sizeof fs_aspect_short / sizeof fs_aspect_short[0]))
     snprintf(f.aspect, sizeof f.aspect, "%s", fs_aspect_short[film_sim_aspect]);
   fs_frame_exposure(&f);
+  /* one line per shot: what the body says about ISO, so a wrong "ISO" on the
+   * header can be traced to the source instead of guessed at */
+  fs_log("hdr: iso raw=%d ml=%d -> '%s'", (int)lens_info.raw_iso,
+         (int)lens_info.iso, f.value[2]);
   fs_yuvhook_header(&f, fs_cap_scratch);
 }
 
