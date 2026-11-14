@@ -476,3 +476,23 @@ asks the DSTOCK getters for AF/AE inputs, and the drive decision comes out as
 `AEWB_CTRL_RequestEmdDriveWithoutBadFrame` (drive again only if the frame was
 not a bad one) plus `AEWB_CTRL_SetCntTVAFBadFrame` (count bad frames in Tv-AF).
 `AEWB_AFAE_EMDLOCK_ONETIME` / `_OFF` is the lens-drive lock around a measurement.
+
+## What is needed to finish, with the evidence for each
+
+**Wi-Fi: a ROM dump wider than 16 MB.** ROM1 references `0xF9000000`-`0xFAFFFFFF`
+in 4,670 32-bit literals, and the socket-halt loop itself calls
+`0xF90554F8`/`0xF905555C`. ML's `consts.h` declares `ROM1_SIZE 0x01000000` and
+`src/debug.c` writes exactly that, so the dump stops 1 MB short of the first
+such call. `qemu/6D/raw_dump/ROM1.BIN`, `qemu/6D/SFDATA.BIN` and `qemu/cf.img`
+in this workspace are all 8-16 MB and contain the same image, not more.
+
+**AF: the metric has no address to reach it.** The AEWB/AF trace strings
+(`AEWB_CTRL_ExecMainProcess`, `AfCtrl_Act_EmdDriveResult`) are not referenced by
+absolute address, by the `0xFF` alias, or by a PC-relative `add`: all three
+searches come back empty, because the trace subsystem indexes them. Without a
+symbol table for this firmware, the only remaining route is a live trace: a
+module that logs the PC that writes `PROP_LV_AF_RESULT` while the camera focuses,
+which needs the camera.
+
+So both halves stand on data that is not in this workspace: a 32 MB ROM dump, or
+the camera itself.
