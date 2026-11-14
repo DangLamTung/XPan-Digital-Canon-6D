@@ -98,9 +98,15 @@ static const int sin30[12] = { 0, 500, 866, 1000, 866, 500,
 
 static int isqrt_i(int v)
 {
-    int r = 0;
-    while ((r + 1) * (r + 1) <= v) r++;
-    return r;
+    /* bitwise square root: 16 fixed steps instead of up to 1000 multiplies */
+    unsigned int r = 0, bit = 1u << 30, n = (unsigned int)v;
+    while (bit > n) bit >>= 2;
+    while (bit) {
+        if (n >= r + bit) { n -= r + bit; r = (r >> 1) + bit; }
+        else               r >>= 1;
+        bit >>= 2;
+    }
+    return (int)r;
 }
 
 static void line_fill(int x0, int y0, int x1, int y1, int c)

@@ -435,10 +435,16 @@ static void blit_scaled(int x, int y, const unsigned char *px,
   if (!px || sw <= 0 || sh <= 0 || dw <= 0 || dh <= 0) return;
   for (int yy = 0; yy < dh; yy++) {
     const unsigned char *row = px + (yy * sh / dh) * sw;
+    /*
+     * (sx * sw) / dw was two software divisions per pixel of a film strip,
+     * seven strips a frame. Same mapping as a fixed-point step: no divide in
+     * the loop, and the source index still advances by one per source pixel.
+     */
+    const unsigned int step = ((unsigned)sw << 16) / (unsigned)dw;
     int sx = 0;
     while (sx < dw) {
-      int v = row[(sx * sw) / dw], run = 1;
-      while (sx + run < dw && row[((sx + run) * sw) / dw] == v) run++;
+      int v = row[((unsigned)sx * step) >> 16], run = 1;
+      while (sx + run < dw && row[((unsigned)(sx + run) * step) >> 16] == v) run++;
       if (v != 255) fsg_fill(x + sx, y + yy, run, 1, FSG_PIX(v));
       sx += run;
     }
