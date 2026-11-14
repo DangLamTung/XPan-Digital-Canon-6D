@@ -49,6 +49,9 @@
 #define SE_YUV_STOCK_MAX (16 * 1024)
 
 #include "fs_yuvlook.h"
+#ifndef SE_HOSTED
+#include <mem_defs.h>
+#endif
 #include "fs_core.h"
 #include "se/engine/look.h"
 #include "se/engine/stock.h"
@@ -441,7 +444,28 @@ static void eng_prepare(const se_look *lk)
     if (lv_run) { se_look_end(lv_run, eng_drop, NULL); lv_run = NULL; }
 
     se_look_fit(&fitted, 5760, sizeof eng_arena_mem);
+    /*
+     * The engine's working set is the ring buffer plus the RGB rows it hands
+     * back, and it is touched once per pixel. The array is static, so where it
+     * lands depends on how the module was loaded; going through the cached
+     * alias costs nothing when it is already cached (CACHEABLE only clears bit
+     * 30) and avoids a DRAM round trip per word when it is not.
+     */
+#ifndef SE_HOSTED
+    {
+        void *raw = eng_arena_mem;
+        void *cached = CACHEABLE(raw);
+        static int told;
+        if (!told) {
+            told = 1;
+            se_log("eng: arena at 0x%x, used at 0x%x", (unsigned)(uintptr_t)raw,
+                   (unsigned)(uintptr_t)cached);
+        }
+        se_arena_init(&eng_arena, cached, sizeof eng_arena_mem);
+    }
+#else
     se_arena_init(&eng_arena, eng_arena_mem, sizeof eng_arena_mem);
+#endif
     if (se_look_begin(&eng_run, &fitted, 5760, &eng_arena) != SE_OK)
         eng_run = NULL;
 }
