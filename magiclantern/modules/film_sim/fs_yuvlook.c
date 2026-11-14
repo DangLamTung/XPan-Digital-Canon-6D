@@ -604,8 +604,18 @@ uint32_t fs_yuvlook_apply(unsigned char *buf, int width, int height, int stride)
                 if (jm) {
                     ru = (jm[0] * u + jm[1] * v) >> 8;
                     rv = (jm[2] * u + jm[3] * v) >> 8;
+#ifdef SE_HOSTED
+                    /* the host keeps a real 2x2 per cell, which already
+                     * carries the cell's chroma transform */
                     ru = (ru * g) >> 6;
                     rv = (rv * g) >> 6;
+#else
+                    /* on the body jm is the plain matrix, so the cell's
+                     * HUE_SAT weight has to be applied here -- it used to be
+                     * dropped, and the flat table lost its hue saturation */
+                    ru = (ru * cgg) >> 12;
+                    rv = (rv * cgg) >> 12;
+#endif
                 } else {
                     ru = (tbl.matrix[0] * u + tbl.matrix[1] * v) >> 8;
                     rv = (tbl.matrix[2] * u + tbl.matrix[3] * v) >> 8;
