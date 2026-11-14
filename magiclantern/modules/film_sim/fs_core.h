@@ -515,9 +515,15 @@ static void fs_lat_build(void)
         if (ix > FS_UV3_NY - 2) { ix = FS_UV3_NY - 2; fx = 256; }
         fs_lat_tab[0][i] = ((uint32_t)(ix * 3) << 9) | (uint32_t)fx;
 
-        t = i * FS_UV3_SC;
-        ix = t >> 16; fx = (t >> 8) & 0xFF;
-        if (ix > FS_UV3_NC - 2) { ix = FS_UV3_NC - 2; fx = 256; }
+        /* chroma nodes step by 16 (see se_look_bake_yuv3); the last node
+         * covers 240..255 */
+        if (i >= 16 * (FS_UV3_NC - 2)) {
+            ix = FS_UV3_NC - 2;
+            fx = (i - 16 * (FS_UV3_NC - 2)) * 256 / 15;
+        } else {
+            ix = i >> 4;
+            fx = (i & 15) << 4;
+        }
         fs_lat_tab[1][i] = ((uint32_t)(ix * (FS_UV3_NY * 3)) << 9) | (uint32_t)fx;
         fs_lat_tab[2][i] = ((uint32_t)(ix * (FS_UV3_NY * FS_UV3_NC * 3)) << 9) | (uint32_t)fx;
     }
@@ -622,14 +628,17 @@ static void fs_core_process_rows3(const unsigned char *curve, const signed char 
                 w0 = 256 - wa - wb - wc;
 
                 dy = (base[0] * w0 + ca[0] * wa + cb2[0] * wb
-                      + base[ko] * wc) >> 8;
+                      + base[ko] * wc + 128) >> 8;    /* round, do not bias down */
 
                 {
                     uint32_t n0 = ((uint32_t)(base[2] + 128) << 16) | (uint32_t)(base[1] + 128);
                     uint32_t na = ((uint32_t)(ca[2]  + 128) << 16) | (uint32_t)(ca[1]  + 128);
                     uint32_t nb = ((uint32_t)(cb2[2] + 128) << 16) | (uint32_t)(cb2[1] + 128);
                     uint32_t n1 = ((uint32_t)(base[ko + 2] + 128) << 16) | (uint32_t)(base[ko + 1] + 128);
-                    uint32_t acc = n0 * (uint32_t)w0 + na * (uint32_t)wa
+                    /* +128 per lane rounds to nearest; a lane peaks at
+                     * 255*256 = 65280, so it still cannot carry into the
+                     * other lane */
+                    uint32_t acc = 0x00800080u + n0 * (uint32_t)w0 + na * (uint32_t)wa
                                  + nb * (uint32_t)wb + n1 * (uint32_t)wc;
                     uvo = ((acc >> 8) & 0x00FF00FFu) ^ 0x00800080u;
                 }

@@ -715,9 +715,17 @@ void se_look_bake_yuv3(const se_look *lk, se_yuv3 *t)
     for (iv = 0; iv < NC; iv++)
     for (iu = 0; iu < NC; iu++)
     for (iy = 0; iy < NY; iy++) {
-        int yy = iy * 255 / (NY - 1);
-        int u  = -128 + iu * 255 / (NC - 1);
-        int vv = -128 + iv * 255 / (NC - 1);
+        /*
+         * Chroma nodes step by 16 instead of 255/16, so the neutral axis
+         * (u = v = 0) is a node and not a point between two: with the old
+         * step node 8 sat at u = -1, and grey was interpolated as a slightly
+         * green colour. The last node takes the remaining 15 units to +127.
+         * Luma is rounded rather than truncated, to sit on the same centre
+         * that fs_lat_build() interpolates towards.
+         */
+        int yy = (iy * 255 + (NY - 1) / 2) / (NY - 1);
+        int u  = (iu == NC - 1) ? 127 : -128 + iu * 16;
+        int vv = (iv == NC - 1) ? 127 : -128 + iv * 16;
         int r, g, b, o[3], y2;
         /* y innermost, so this MUST match fs_core_process_rows3's strides */
         size_t k = (((size_t)iv * NC + (size_t)iu) * NY + (size_t)iy) * 3;
