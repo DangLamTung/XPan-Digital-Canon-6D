@@ -53,7 +53,7 @@ static void unpack(const unsigned char *s, unsigned char *o, int npix)
 {
     for (int x = 0; x + 1 < npix; x += 2) {
         int u = (signed char)s[0], y0 = s[1], v = (signed char)s[2], y1 = s[3];
-        o[0] = clamp8(y0 + ((359 * v) >> 8));
+        o[0] = clamp8(y0 + ((359 * v + 128) >> 8));
         o[1] = clamp8(y0 - ((88 * u + 183 * v) >> 8));
         o[2] = clamp8(y0 + ((454 * u) >> 8));
         o[3] = clamp8(y1 + ((359 * v) >> 8));

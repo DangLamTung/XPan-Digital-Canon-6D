@@ -509,10 +509,31 @@ static int      fs_lat_ready;
 static void fs_lat_build(void)
 {
     int i;
+    /*
+     * Luma nodes sit where se_look_bake_yuv3() puts them, rounded to the
+     * nearest level; the old fixed multiplier drifted off a node by up to
+     * 5/256 of a cell even when the input was exactly on it.
+     */
+    static int yy_node[FS_UV3_NY];
+    static int    yy_ready;
+    if (!yy_ready) {
+        int k;
+        for (k = 0; k < FS_UV3_NY; k++)
+            yy_node[k] = (k * 255 + (FS_UV3_NY - 1) / 2) / (FS_UV3_NY - 1);
+        yy_ready = 1;
+    }
     for (i = 0; i < 256; i++) {
-        int t  = i * FS_UV3_SY;
-        int ix = t >> 16, fx = (t >> 8) & 0xFF;
-        if (ix > FS_UV3_NY - 2) { ix = FS_UV3_NY - 2; fx = 256; }
+        int ix = FS_UV3_NY - 2, fx = 256, k;
+        for (k = 0; k < FS_UV3_NY - 1; k++) {
+            int a = yy_node[k], b = yy_node[k + 1];
+            if (i <= a) { ix = k; fx = 0; break; }
+            if (i < b) {
+                ix = k;
+                fx = ((i - a) * 256 + (b - a) / 2) / (b - a);
+                break;
+            }
+        }
+        if (i >= yy_node[FS_UV3_NY - 1]) { ix = FS_UV3_NY - 2; fx = 256; }
         fs_lat_tab[0][i] = ((uint32_t)(ix * 3) << 9) | (uint32_t)fx;
 
         /* chroma nodes step by 16 (see se_look_bake_yuv3); the last node

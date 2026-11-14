@@ -116,6 +116,11 @@ static double eval_stock(const se_stock *st, double *out_des, uint8_t out_rgb[N_
   double worst_de = 0.0;
 
   se_look_from_stock(st, 1, &lk);
+  /* These 24 patches are measured as a single row, so a horizontal halation
+   * blur would bleed the white patch into its neighbours and grain would be
+   * frozen at y = 0: both would be baked into the numbers. */
+  lk.grain = 0;
+  lk.hal_amount = 0;
   se_arena_init(&ar, arena_mem, sizeof arena_mem);
   if (se_look_begin(&run, &lk, N_TARGETS, &ar) != SE_OK) return 999.0;
 

@@ -5503,10 +5503,20 @@ static int fs_creator_open_slot(int slot)
     return 0;
   }
 
-  for (i = 0; i < FS_CREATOR_WEDGES && i < SE_HUE_SECTORS; i++) {
-    fs_creator.sat[i] = (int)(st.hue_sat[i] + (st.hue_sat[i] >= 0 ? 0.5f : -0.5f));
-    fs_creator.rot[i] = (int)(st.hue_rot[i] + (st.hue_rot[i] >= 0 ? 0.5f : -0.5f)) ;
-    fs_creator.lum[i] = (int)(st.hue_lum[i] + (st.hue_lum[i] >= 0 ? 0.5f : -0.5f));
+  /*
+   * The engine works in SE_HUE_SECTORS (48) sectors, the wheel in 12 wedges,
+   * so wedge i is sector i * 4. Reading st.hue_sat[i] for i < 12 took the
+   * first quarter of the wheel -- three wedges plus their interpolated
+   * neighbours -- and pasted it over all twelve.
+   */
+  {
+    const int step = SE_HUE_SECTORS / FS_CREATOR_WEDGES;
+    for (i = 0; i < FS_CREATOR_WEDGES; i++) {
+      int k = i * step;
+      fs_creator.sat[i] = (int)(st.hue_sat[k] + (st.hue_sat[k] >= 0 ? 0.5f : -0.5f));
+      fs_creator.rot[i] = (int)(st.hue_rot[k] + (st.hue_rot[k] >= 0 ? 0.5f : -0.5f));
+      fs_creator.lum[i] = (int)(st.hue_lum[k] + (st.hue_lum[k] >= 0 ? 0.5f : -0.5f));
+    }
   }
   fs_creator.grain = (int)(st.grain + 0.5f);
   fs_creator.grain_size = (int)(st.grain_size + 0.5f);

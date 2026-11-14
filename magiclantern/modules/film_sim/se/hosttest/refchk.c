@@ -124,6 +124,11 @@ int main(int argc, char **argv)
   fclose(f);
   if (se_stock_parse(text, got, &st) != SE_OK) { fprintf(stderr, "parse .fs failed\n"); return 1; }
   se_look_from_stock(&st, 1, &lk);
+  /* These 24 patches are measured as a single row, so a horizontal halation
+   * blur would bleed the white patch into its neighbours and grain would be
+   * frozen at y = 0: both would be baked into the numbers. */
+  lk.grain = 0;
+  lk.hal_amount = 0;
   se_arena_init(&ar, arena_mem, sizeof arena_mem);
   if (se_look_begin(&run, &lk, 24, &ar) != SE_OK) { fprintf(stderr, "look begin failed\n"); return 1; }
 
