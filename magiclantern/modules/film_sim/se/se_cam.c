@@ -715,10 +715,12 @@ static int rst_feed(struct dev *d, const unsigned char *row, int sy)
     }
     d->last_oy = oy;
 
+    /* the map holds (xs, xe) for this width pair; two divisions per column
+     * per source row were being redone for nothing */
+    rst_build_map(sw, tw);
     for (int ox = 0; ox < tw && ox < RST_MAXW; ox++) {
-        int xs = (int)((long)ox * sw / tw);
-        int xe = (int)((long)(ox + 1) * sw / tw);
-        if (xe <= xs) xe = xs + 1;
+        int xs = rst_xs[ox];
+        int xe = rst_xe[ox];
         unsigned int r = 0, g = 0, b = 0;
         for (int x = xs; x < xe; x++) {
             r += row[x * 3 + 0];
@@ -1258,6 +1260,7 @@ se_err se_cam_develop(const char *cr2_path, const char *stock_path,
     }
     d.last_oy = -1;
     rst_wsum = 0;
+    if (d.tgt_w > 0 && d.src_w > 0) rst_build_map(d.src_w, d.tgt_w);
     if (d.tgt_w > 0)
         memset(rst_acc, 0, sizeof(rst_acc[0]) * (size_t)d.tgt_w * 3);
     d.row_in = 0;

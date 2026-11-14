@@ -518,7 +518,16 @@ uint32_t fs_yuvlook_apply(unsigned char *buf, int width, int height, int stride)
              */
             int g    = tbl.gain[yav];
             int cg   = 64, dy = 0;      /* 64 = unity in Q6 */
+            /*
+             * Per-cell 2x2 only exists on the host build: on the camera the
+             * bake fills every cell from the same global matrix, so reading
+             * 32 KB of duplicate tables per frame would evict L1 for nothing.
+             */
+#ifdef SE_HOSTED
             const int16_t *jm = NULL;
+#else
+            const int16_t *jm = tbl.matrix;
+#endif
 
             if (gradeq < 2) {
                 if (gradeq == 0) {
@@ -527,7 +536,9 @@ uint32_t fs_yuvlook_apply(unsigned char *buf, int width, int height, int stride)
                     int cell = (vv >> SE_YUV_SHIFT) * SE_YUV_GRID + (uu >> SE_YUV_SHIFT);
                     cg = tbl.cg[cell];
                     dy = tbl.dy[cell];
+#ifdef SE_HOSTED
                     jm = tbl.jm[cell];
+#endif
                 }
                 /* NORMAL keeps the luma gain and the matrix, drops the cells. */
                 int cgg  = cg * g;
