@@ -534,7 +534,7 @@ static void fs_lat_build(void)
             }
         }
         if (i >= yy_node[FS_UV3_NY - 1]) { ix = FS_UV3_NY - 2; fx = 256; }
-        fs_lat_tab[0][i] = ((uint32_t)(ix * 3) << 9) | (uint32_t)fx;
+        fs_lat_tab[0][i] = ((uint32_t)ix << 9) | (uint32_t)fx;
 
         /* chroma nodes step by 16 (see se_look_bake_yuv3); the last node
          * covers 240..255 */
@@ -545,8 +545,8 @@ static void fs_lat_build(void)
             ix = i >> 4;
             fx = (i & 15) << 4;
         }
-        fs_lat_tab[1][i] = ((uint32_t)(ix * (FS_UV3_NY * 3)) << 9) | (uint32_t)fx;
-        fs_lat_tab[2][i] = ((uint32_t)(ix * (FS_UV3_NY * FS_UV3_NC * 3)) << 9) | (uint32_t)fx;
+        fs_lat_tab[1][i] = ((uint32_t)(ix * FS_UV3_NY) << 9) | (uint32_t)fx;
+        fs_lat_tab[2][i] = ((uint32_t)(ix * (FS_UV3_NY * FS_UV3_NC)) << 9) | (uint32_t)fx;
     }
     fs_lat_ready = 1;
 }
@@ -581,7 +581,7 @@ static void fs_lat_build(void)
 #define FS_HOT
 #endif
 FS_HOT
-static void fs_core_process_rows3(const unsigned char *curve, const signed char *uv,
+static void fs_core_process_rows3(const unsigned char *curve, const uint32_t *uv,
                                   const void *src, void *dst,
                                   int pitch, int row0, int row1,
                                   int grain, unsigned int *rnd_state)
@@ -592,7 +592,7 @@ static void fs_core_process_rows3(const unsigned char *curve, const signed char 
     const unsigned int * sp = (const unsigned int *)src + (unsigned int)row0 * words;
     unsigned int * dp = (unsigned int *)dst + (unsigned int)row0 * words;
 
-    const int ky = 3, ku = FS_UV3_NY * 3, kv = FS_UV3_NY * FS_UV3_NC * 3;
+    const int ky = 1, ku = FS_UV3_NY, kv = FS_UV3_NY * FS_UV3_NC;
     const int ko = ky + ku + kv;
 
     if (!fs_lat_ready) fs_lat_build();
@@ -627,9 +627,9 @@ static void fs_core_process_rows3(const unsigned char *curve, const signed char 
                 uint32_t mv = fs_lat_tab[2][((px >> 16) & 0xFF) ^ 0x80];
                 /* offsets and fractions are added separately: three fractions
                  * can sum past 512 and would carry into the offset */
-                const signed char *base = uv + (int)((my >> 9) + (mu >> 9) + (mv >> 9));
+                const uint32_t *base = uv + (int)((my >> 9) + (mu >> 9) + (mv >> 9));
                 int fy = (int)(my & 0x1FF), fu = (int)(mu & 0x1FF), fv = (int)(mv & 0x1FF);
-                const signed char *ca, *cb2;
+                const uint32_t *ca, *cb2;
                 int w0, wa, wb, wc;
 
                 /*
@@ -648,15 +648,19 @@ static void fs_core_process_rows3(const unsigned char *curve, const signed char 
                 }
                 w0 = 256 - wa - wb - wc;
 
-                dy = (base[0] * w0 + ca[0] * wa + cb2[0] * wb
-                      + base[ko] * wc + 128) >> 8;    /* round, do not bias down */
+                /* byte 1 holds dy as a signed 8-bit value */
+                dy = (((int)(base[0] << 16) >> 24) * w0
+                      + ((int)(ca[0] << 16) >> 24) * wa
+                      + ((int)(cb2[0] << 16) >> 24) * wb
+                      + ((int)(base[ko] << 16) >> 24) * wc + 128) >> 8;
 
                 {
-                    /* chroma is already biased by +128 in the table */
-                    uint32_t n0 = ((uint32_t)(uint8_t)base[2] << 16) | (uint32_t)(uint8_t)base[1];
-                    uint32_t na = ((uint32_t)(uint8_t)ca[2]  << 16) | (uint32_t)(uint8_t)ca[1];
-                    uint32_t nb = ((uint32_t)(uint8_t)cb2[2] << 16) | (uint32_t)(uint8_t)cb2[1];
-                    uint32_t n1 = ((uint32_t)(uint8_t)base[ko + 2] << 16) | (uint32_t)(uint8_t)base[ko + 1];
+                    /* bytes 0 and 2 are Cb+128 and Cr+128: already in the
+                     * 0x00VV00UU order the packed multiply wants */
+                    uint32_t n0 = base[0] & 0x00FF00FFu;
+                    uint32_t na = ca[0] & 0x00FF00FFu;
+                    uint32_t nb = cb2[0] & 0x00FF00FFu;
+                    uint32_t n1 = base[ko] & 0x00FF00FFu;
                     /* +128 per lane rounds to nearest; a lane peaks at
                      * 255*256 = 65280, so it still cannot carry into the
                      * other lane */

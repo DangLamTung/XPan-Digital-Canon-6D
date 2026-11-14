@@ -728,7 +728,7 @@ void se_look_bake_yuv3(const se_look *lk, se_yuv3 *t)
         int vv = (iv == NC - 1) ? 127 : -128 + iv * 16;
         int r, g, b, o[3], y2;
         /* y innermost, so this MUST match fs_core_process_rows3's strides */
-        size_t k = (((size_t)iv * NC + (size_t)iu) * NY + (size_t)iy) * 3;
+        size_t k = ((size_t)iv * NC + (size_t)iu) * NY + (size_t)iy;
 
         ycc_px(yy, u, vv, &r, &g, &b);
         /*
@@ -744,7 +744,9 @@ void se_look_bake_yuv3(const se_look *lk, se_yuv3 *t)
             int dy = y2 - t->y[yy];                   /* vs grey of the same luma */
             if (dy < -128) dy = -128;
             if (dy > 127) dy = 127;
-            t->v[k] = (int8_t)dy;
+            /* byte0 Cb+128, byte1 dy, byte2 Cr+128: the two chroma bytes are
+             * then already in SWAR order under one mask, and dy is one shift */
+            t->v[k] = (uint32_t)(uint8_t)dy << 8;
         }
         /*
          * Cb and Cr are stored biased by +128, i.e. as 0..255 in a signed
@@ -752,8 +754,8 @@ void se_look_bake_yuv3(const se_look *lk, se_yuv3 *t)
          * multiply, so biasing them here removes eight adds and eight sign
          * extensions from every pixel pair.
          */
-        t->v[k + 1] = (int8_t)(clamp_c(div_round((o[2] - y2) * 256, 454)) + 128);
-        t->v[k + 2] = (int8_t)(clamp_c(div_round((o[0] - y2) * 256, 359)) + 128);
+        t->v[k] |= (uint32_t)(uint8_t)(clamp_c(div_round((o[2] - y2) * 256, 454)) + 128);
+        t->v[k] |= (uint32_t)(uint8_t)(clamp_c(div_round((o[0] - y2) * 256, 359)) + 128) << 16;
     }
 }
 

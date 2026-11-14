@@ -291,7 +291,14 @@ typedef struct {
      * not a lossy saving. It halves the table from 20.8 KB to 10.4 KB, which
      * is the difference between spilling L1 and fitting in it.
      */
-    int8_t v[SE_YUV3_NODES * 3];           /* dy, Cb, Cr per (y,u,v)        */
+    /*
+     * One 32-bit word per node: dy in the low byte, then Cb and Cr already
+     * biased by +128, and a pad byte. Three bytes per node forced the
+     * interpolator to read eight separate bytes and OR them together for
+     * every pixel pair; a word load gives the whole node in one instruction.
+     * 3468 nodes * 4 = 13.6 KB, still inside L1.
+     */
+    uint32_t v[SE_YUV3_NODES];
 } se_yuv3;
 
 void se_look_bake_yuv3(const se_look *lk, se_yuv3 *t);
