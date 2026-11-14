@@ -329,6 +329,7 @@ static unsigned char eng_rgb[5760 * 3];
 /* the fitted look, kept so the run can be re-begun at the frame's real width */
 static se_look eng_fitted;
 static int     eng_fitted_ok;
+static unsigned char *eng_arena_used;   /* cached alias of eng_arena_mem */
 static unsigned char *eng_dst;
 static int eng_stride, eng_row;
 
@@ -472,6 +473,7 @@ static void eng_prepare(const se_look *lk)
             se_log("eng: arena at 0x%x, used at 0x%x", (unsigned)(uintptr_t)raw,
                    (unsigned)(uintptr_t)cached);
         }
+        eng_arena_used = (unsigned char *)cached;
         se_arena_init(&eng_arena, cached, sizeof eng_arena_mem);
     }
 #else
@@ -499,7 +501,8 @@ uint32_t fs_yuvlook_apply_engine(unsigned char *buf, int width, int height, int 
         /* reset, do not flush: flushing would emit the old pass's rows into
          * a destination that belongs to the previous frame */
         se_look_reset(eng_run);
-        se_arena_init(&eng_arena, eng_arena_mem, sizeof eng_arena_mem);
+        se_arena_init(&eng_arena, eng_arena_used ? eng_arena_used : eng_arena_mem,
+                      sizeof eng_arena_mem);
         if (se_look_begin(&eng_run, &eng_fitted, width, &eng_arena) != SE_OK)
             eng_run = NULL;
         if (!eng_run) return 0;
