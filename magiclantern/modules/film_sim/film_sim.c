@@ -8450,6 +8450,11 @@ static MENU_SELECT_FUNC(fs_fuji_name_select) {
   }
 }
 
+static MENU_UPDATE_FUNC(fs_fuji_wb_update) {
+    MENU_SET_VALUE("R%+d  B%+d",
+                   (int)film_sim_wbs_ba, (int)film_sim_wbs_gm);
+}
+
 static const char *fs_grain_size_names[] = { "Small", "Large" };
 
 static struct menu_entry fs_menu_fuji[] = {
@@ -8510,10 +8515,11 @@ static struct menu_entry fs_menu_fuji[] = {
     },
     {
         .name = "WB Shift R/B",
+        .update = fs_fuji_wb_update,
         .select = fs_wb_trigger,
         .icon_type = IT_ACTION,
-        .help = "Fuji's Red and Blue WB shift. Written to the camera, not to "
-                "the recipe: it is a white balance, not part of a look.",
+        .help = "Fuji's Red and Blue WB shift, as numbers. MENU opens the "
+                "grid; the two rows are the same offset.",
     },
     {
         .name = "Dynamic Range",
