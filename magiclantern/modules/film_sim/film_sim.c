@@ -317,6 +317,7 @@ static int fs_auto_graded_seen;
 static fs_lut_t fs_lut;
 static unsigned int fs_signature = 0;
 static unsigned int fs_signature2 = 0;
+static unsigned int fs_signature3 = 0;
 static int fs_signature_valid = 0;
 static int fs_valid_frame = 0;
 static unsigned int fs_rnd = 0x9E3779B9;
@@ -1077,11 +1078,28 @@ static void fs_sync() {
    * wrapped signature is worse than a second compare. */
   unsigned int sig2 = ((unsigned)fs_clamp_i(film_sim_satboost, 20, 200) & 0xFF) |
                        ((unsigned)fs_clamp_i(film_sim_grainsize + 1, 0, 101) << 8);
+  /*
+   * Framing, header, engine mode and style-check move nothing the bake depends
+   * on, but they are applied below, after the early return: with them left out
+   * of the signature, turning the header off (or changing the aspect, or the
+   * shot engine) changed nothing at all until some other setting moved.
+   */
+  unsigned int sig3 =
+      ((unsigned)(film_sim_frame ? 1 : 0) & 1) |
+      ((unsigned)fs_clamp_i(film_sim_aspect, 0, 7) << 1) |
+      ((unsigned)fs_clamp_i(film_sim_shotmode, 0, 3) << 4) |
+      ((unsigned)fs_clamp_i(film_sim_lvmode, 0, 3) << 6) |
+      ((unsigned)(film_sim_stylecheck ? 1 : 0) << 8) |
+      ((unsigned)(film_sim_sharp & 7) << 9) |
+      ((unsigned)(film_sim_pad & 1) << 12) |
+      ((unsigned)(film_sim_wbs_ba != 0 || film_sim_wbs_gm != 0) << 13);
 
-  if (fs_signature_valid && sig == fs_signature && sig2 == fs_signature2)
+  if (fs_signature_valid && sig == fs_signature && sig2 == fs_signature2 &&
+      sig3 == fs_signature3)
     return;
   fs_signature = sig;
   fs_signature2 = sig2;
+  fs_signature3 = sig3;
   fs_signature_valid = 1;
 
   int preset = preset_now;
