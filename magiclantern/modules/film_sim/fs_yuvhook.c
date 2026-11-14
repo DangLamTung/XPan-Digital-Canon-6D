@@ -102,6 +102,7 @@ static int fs_g_y0, fs_g_y1;
 static long fs_g_rows;
 int fs_yuvhook_last_gar0(void) { return fs_g_y0; }
 int fs_yuvhook_last_gar1(void) { return fs_g_y1; }
+long fs_yuvhook_graded_rows(void) { return fs_g_rows; }
 
 void fs_yuvhook_header(const se_frame *f, unsigned char *scratch) {
     if (f && scratch) {

@@ -9216,7 +9216,8 @@ static void fs_lv_monitor_task(void *unused) {
         last_calls = nc;
         if (g > 0) {
           fs_log("yuvgrade: %d shot(s) graded, buf=0x%08x size=%d, %dx%d "
-                 "stride %d, %d rows in %d ms (%.1f ms/shot, last span %d..%d); "
+                 "stride %d, %d rows in %d ms (%d.%d ms/shot, %ld rows graded, "
+                 "%d ns/pair, last span %d..%d); "
                  "chunks %d used %d [%d %d %d %d]; "
                  "not graded: %d (last bad size %d) sniff 0x%x "
                  "sites jpeg %d/%d ssraw %d/%d",
@@ -9224,7 +9225,13 @@ static void fs_lv_monitor_task(void *unused) {
                  (int)fs_yuvhook_last_size(), fs_yuvhook_last_w(),
                  fs_yuvhook_last_h(), fs_yuvhook_last_stride(),
                  fs_yuvhook_last_rows(), (int)fs_yuvhook_grade_ms(),
-                 g ? (double)fs_yuvhook_grade_ms() / (double)g : (double)0,
+                 g ? (int)(fs_yuvhook_grade_ms() * 10 / (uint32_t)g / 10) : 0,
+                 g ? (int)(fs_yuvhook_grade_ms() * 10 / (uint32_t)g % 10) : 0,
+                 fs_yuvhook_graded_rows(),
+                 fs_yuvhook_graded_rows() > 0
+                   ? (int)((long)fs_yuvhook_grade_ms() * 1000000L
+                           / (fs_yuvhook_graded_rows() * (fs_yuvhook_last_w() / 2)))
+                   : 0,
                  fs_yuvhook_last_gar0(), fs_yuvhook_last_gar1(),
                  fs_yuvhook_chunks(), fs_yuvhook_chunk_used(),
                  (int)fs_yuvhook_chunk_size(0), (int)fs_yuvhook_chunk_size(1),
