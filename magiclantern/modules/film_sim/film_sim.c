@@ -119,12 +119,21 @@ static CONFIG_INT("film.sim.lvmode", film_sim_lvmode, 1);
  * and it writes a line every 60 frames. */
 static CONFIG_INT("film.sim.lvfps", film_sim_lvfps, 0);
 /*
- * 1: copy the sensor frame once, then grade the copy. That copy is what keeps
- * Canon from rewriting a row while it is being graded; turning it off grades
- * the live buffer and saves ~11 ms a frame, at the risk of seams when the
- * sensor refreshes mid-pass.
+ * Whether to copy the sensor frame before grading it.
+ *
+ *   0  never: grade Canon's completed buffer straight into the display buffer
+ *   1  always: copy first, then grade the copy
+ *   2  auto (default): grade directly while a pass stays inside the buffer's
+ *      reuse window, copy once it does not
+ *
+ * display_filter_get_buffers() hands out the buffer Canon has *finished*
+ * writing, not the one it is filling, and the 6D cycles through three of them
+ * (YUV422_LV_BUFFER_1..3). The buffer we are reading is therefore reused after
+ * about two frame periods -- roughly 66 ms at 30 fps. A pass shorter than that
+ * can read it directly; a longer one can see the top from one frame and the
+ * bottom from the next, which is the tear the copy exists to prevent.
  */
-static CONFIG_INT("film.sim.lvcopy", film_sim_lvcopy, 1);
+static CONFIG_INT("film.sim.lvcopy", film_sim_lvcopy, 2);
 /* Defined up here because fs_sync() decides from it whether the bars are
  * honest: only a develop-and-replace shot is actually cropped. */
 static CONFIG_INT("film.sim.replace", film_sim_replace, 1);
@@ -1274,6 +1283,11 @@ static void fs_lv_grade(const void *src, void *dst, int pitch, int row0, int row
   }
 }
 
+/* duration of the last LiveView pass, for the auto copy decision */
+static int fs_lv_last_pass_ms;
+static int fs_lv_last_copy = -1;   /* what the auto rule chose last time */
+static int fs_lv_use_copy = 1;
+
 static void FAST fs_process_frame(void *src, void *dst) {
   if (!src || !dst)
     return;
@@ -1395,7 +1409,35 @@ static void FAST fs_process_frame(void *src, void *dst) {
       fs_snap_size = fs_snap ? total : 0;
     }
 
-    if (film_sim_lvcopy && fs_snap && fs_snap_size >= total) {
+    /*
+     * Auto mode trusts the previous pass time: if it fitted inside the reuse
+     * window the grade reads Canon's buffer directly and saves the 691 KB copy.
+     */
+    /*
+     * Judge on the grade alone, not on the whole pass: a pass that copies is
+     * longer than its grade, so using the pass time would keep choosing the
+     * copy for ever. 60 ms is two frame periods at 30 fps, minus room for the
+     * copy and the bars.
+     */
+    {
+      int g = (int)fs_stat_grade_ms;
+      int fs_use_copy = film_sim_lvcopy == 1 ||
+                        (film_sim_lvcopy == 2 && (g == 0 || g + 15 > 60));
+      fs_lv_use_copy = fs_use_copy;
+      if (fs_use_copy != fs_lv_last_copy) {
+        static int logged;
+        fs_lv_last_copy = fs_use_copy;
+        if (logged < 3) {
+          logged++;
+          fs_log("lv: %s the frame (grade %d ms, window 60 ms)",
+                 fs_use_copy ? "copying" : "grading Canon's buffer without copying",
+                 g);
+          fs_log_flush();
+        }
+      }
+    }
+
+    if (fs_lv_use_copy && fs_snap && fs_snap_size >= total) {
       uint32_t tc = get_ms_clock();
       /*
        * tmp_malloc hands out the uncached alias (0x4xxxxxxx). Reading and
@@ -1459,6 +1501,7 @@ static void FAST fs_process_frame(void *src, void *dst) {
   }
 
   int dt = get_ms_clock() - t0;
+  fs_lv_last_pass_ms = dt;
   if (dt < 0)
     dt = 0;
   fs_stat_copy_ms = copy_ms;
