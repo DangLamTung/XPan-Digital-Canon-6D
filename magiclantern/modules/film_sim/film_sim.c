@@ -112,7 +112,7 @@ static const char *fs_own_lut_path(void)
  * switches (film.sim.lv3d, film.sim.lvexact) sitting in two different menus,
  * which is how a panel could end up on a path nobody intended. */
 static const char *fs_lvmode_names[] = {
-  "(unused)", "Lattice (default)", "Engine (slow)",
+  "Off", "Fast - 3D lattice", "Exact - full engine",
 };
 static CONFIG_INT("film.sim.lvmode", film_sim_lvmode, 1);
 /* Per-frame LiveView timing in the log. Off by default: it is a diagnostic
@@ -174,9 +174,9 @@ static CONFIG_INT("film.sim.frame", film_sim_frame, 0);
 /* Grade even when the picture style is not Neutral (the body may refuse to
  * stay on it). Off by default: stacking a look on Canon's is worse. */
 static CONFIG_INT("film.sim.stylecheck", film_sim_stylecheck, 1);
-/* Shot grade path: 0 flat table, 1 lattice (default), higher = engine. */
+/* Shot grade path: 0 off, 1 3D lattice (default), 2 full engine. */
 static const char *fs_shotmode_names[] = {
-  "(unused)", "Lattice (default)", "Engine (slow)",
+  "Off", "Fast - 3D lattice", "Exact - full engine",
 };
 static CONFIG_INT("film.sim.shotmode", film_sim_shotmode, 1);
 
@@ -1122,8 +1122,8 @@ static void fs_sync() {
    * not letterbox the sensor into the picture */
   fs_yuvhook_bars(film_sim_aspect);
   fs_yuvhook_stylecheck(film_sim_stylecheck);
-  if (film_sim_shotmode < 1 || film_sim_shotmode > 2) film_sim_shotmode = 1;
-  if (film_sim_lvmode   < 1 || film_sim_lvmode   > 2) film_sim_lvmode   = 1;
+  if (film_sim_shotmode < 0 || film_sim_shotmode > 2) film_sim_shotmode = 1;
+  if (film_sim_lvmode   < 0 || film_sim_lvmode   > 2) film_sim_lvmode   = 1;
   fs_yuvhook_shot(film_sim_shotmode);
   fs_capture_header();
 
@@ -1191,6 +1191,15 @@ static int fs_lv3d_logged = -1;
 static void fs_lv_grade_body(const void *src, void *dst, int pitch, int row0, int row1)
 {
   const se_yuv3 *t3 = (film_sim_lvmode == 1) ? fs_yuvlook_uv3() : NULL;
+
+  /* Off: show the sensor picture, ungraded. */
+  if (film_sim_lvmode == 0) {
+    if (dst != src)
+      memcpy((unsigned char *)dst + (size_t)row0 * pitch,
+             (const unsigned char *)src + (size_t)row0 * pitch,
+             (size_t)(row1 - row0) * pitch);
+    return;
+  }
 
   /* Exact LiveView: the develop's own engine, colour only. Works on one
    * buffer, so a separate destination is filled first. */
@@ -8481,14 +8490,15 @@ static struct menu_entry fs_menu_fuji[] = {
 
 static struct menu_entry fs_menu_live[] = {
     {
-        .name = "Preview Engine",
+        .name = "Preview Grade",
         .priv = &film_sim_lvmode,
-        .min = 1, .max = 2,
+        .min = 0, .max = 2,
         .choices = fs_lvmode_names,
-        .help = "How LiveView is graded. Tables: the flat 64x64 sample of the "
-                ".fs -- fastest, ~2.9 dE off the develop on colour. Lattice: "
-                "12x17x17 interpolated, ~1.0 dE off and ~2x the cost. Engine: "
-                "the real grade, colour only, exact but ~8x slower.",
+        .help = "How LiveView is graded. Off: the sensor picture, ungraded. "
+                "Fast - 3D lattice: 12x17x17 interpolated, ~1 dE off the "
+                "develop, fits the frame budget. Exact - full engine: the "
+                "develop's grade, colour only, several times slower and only "
+                "usable at a low frame rate.",
     },
     {
         .name = "LiveView Frame",
@@ -8643,13 +8653,16 @@ static struct menu_entry fs_menu_header[] = {
 /* Quality: the knobs that trade shutter wait against accuracy. */
 static struct menu_entry fs_menu_quality[] = {
     {
-        .name = "Shot Engine",
+        .name = "Shot Grade",
         .priv = &film_sim_shotmode,
-        .min = 1, .max = 2,
+        .min = 0, .max = 2,
         .choices = fs_shotmode_names,
-        .help = "How the JPEG is graded. Lattice: the joint (y,u,v) table baked "
-                "from the .fs and interpolated -- ~1 dE off the develop. "
-                "Engine: the grade itself, exact, around a minute per shot.",
+        .help = "How the in-shutter JPEG is graded. Off: Canon's frame, no "
+                "film look. Fast - 3D lattice: a (y,u,v) table baked from the "
+                ".fs and interpolated, about 1 dE off the develop, ~1 s a "
+                "shot. Exact - full engine: the develop's own grade, exact, "
+                "around 80 s a shot -- use it for a frame you really care "
+                "about, not for a burst.",
     },
     {
         .name = "Style Check",

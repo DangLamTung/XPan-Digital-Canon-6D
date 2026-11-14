@@ -281,12 +281,14 @@ static uint32_t fs_yuv_grade_cached(void *buf, int width, int rows, int stride,
         {
             unsigned char *g = gp + (size_t)gy0 * stride;
             int gh = gy1 - gy0;
-            if (fs_yuv_shot_mode == 2 && width <= 5760 && fs_yuvlook_engine_ready())
+            if (fs_yuv_shot_mode == 0)
+                ms = 0;                    /* Off: Canon's frame, untouched */
+            else if (fs_yuv_shot_mode == 2 && width <= 5760 && fs_yuvlook_engine_ready())
                 ms = fs_yuvlook_apply_engine(g, width, gh, stride);
             else if (fs_yuv_shot_mode == 1 && fs_yuvlook_lattice_ready())
                 ms = fs_yuvlook_apply_lattice(g, width, gh, stride);
             else
-                ms = fs_yuvlook_apply(g, width, gh, stride);
+                ms = fs_yuvlook_apply(g, width, gh, stride);   /* fallback table */
         }
     }
     fs_tr_grade = get_ms_clock();
