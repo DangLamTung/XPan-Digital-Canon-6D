@@ -8368,9 +8368,60 @@ static MENU_UPDATE_FUNC(fs_fuji_name_update) {
   MENU_SET_VALUE("%s", fs_fuji.name);
 }
 
+/* Read a recipe back from its own comment line, so picking a slot shows that
+ * slot's numbers instead of the previous one's. Returns 0 when the file has no
+ * such line (an older recipe) and the caller leaves the values alone. */
+static int fs_fuji_read_slot(int slot)
+{
+  char path[64], text[1024];
+  int n, got = 0;
+  FILE *f;
+
+  snprintf(path, sizeof path, "ML/FILM/%s.fs", fs_fuji_names[slot]);
+  f = FIO_OpenFile(path, O_RDONLY);
+  if (!f) return 0;
+  n = FIO_ReadFile(f, text, sizeof text - 1);
+  FIO_CloseFile(f);
+  if (n <= 0) return 0;
+  text[n] = 0;
+  {
+    char *p = strstr(text, "# FUJI ");
+    if (p) {
+      /* no sscanf on the camera: walk the seven numbers by hand */
+      int v[7], k;
+      p += 7;
+      for (k = 0; k < 7; k++) {
+        while (*p == ' ') p++;
+        if (*p < '0' || *p > '9') { if (*p != '-' || p[1] < '0' || p[1] > '9') break; }
+        v[k] = atoi(p);
+        if (*p == '-') p++;
+        while (*p >= '0' && *p <= '9') p++;
+      }
+      if (k == 7) {
+        fs_fuji.highlight  = v[0];
+        fs_fuji.shadow     = v[1];
+        fs_fuji.color      = v[2];
+        fs_fuji.chrome     = v[3];
+        fs_fuji.fx_blue    = v[4];
+        fs_fuji.grain      = v[5];
+        fs_fuji.grain_size = v[6];
+        got = 1;
+      }
+    }
+  }
+  return got;
+}
+
 static MENU_SELECT_FUNC(fs_fuji_name_select) {
-  fs_fuji_slot = (fs_fuji_slot + 1) % 4;
+  fs_fuji_slot = (fs_fuji_slot + (delta < 0 ? 3 : 1)) % 4;
   snprintf(fs_fuji.name, sizeof fs_fuji.name, "%s", fs_fuji_names[fs_fuji_slot]);
+  if (!fs_fuji_read_slot(fs_fuji_slot)) {
+    fs_fuji_t keep = fs_fuji;
+    fs_fuji_defaults(&fs_fuji);
+    snprintf(fs_fuji.name, sizeof fs_fuji.name, "%s", fs_fuji_names[fs_fuji_slot]);
+    fs_fuji.grain = keep.grain;
+    fs_fuji.grain_size = keep.grain_size;
+  }
 }
 
 static const char *fs_grain_size_names[] = { "Small", "Large" };

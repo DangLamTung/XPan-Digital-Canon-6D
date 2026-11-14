@@ -89,6 +89,10 @@ int fs_fuji_write(const fs_fuji_t *f, char *buf, int cap)
 #define PUT(...) do { n = append(buf, cap, n, __VA_ARGS__); if (n < 0) return -1; } while (0)
 
     PUT("VERSION   3\n");
+    /* one comment line carries the recipe back: the curve below is a sampled
+     * form of these numbers, and reading them back from knots would round */
+    PUT("# FUJI %d %d %d %d %d %d %d\n", f->highlight, f->shadow, f->color,
+        f->chrome, f->fx_blue, f->grain, f->grain_size);
     PUT("NAME      %s\n", f->name[0] ? f->name : "RECIPE");
     PUT("DESC      FUJI RECIPE (TONE CURVE, COLOR, CHROME, GRAIN)\n");
     PUT("WB        AS_SHOT\n");
