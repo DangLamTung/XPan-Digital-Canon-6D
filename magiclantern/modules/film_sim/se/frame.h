@@ -62,6 +62,9 @@ void se_frame_bottom_row(uint8_t *row, int width, const se_frame *f, int y);
 
 /* Format the three exposure values for the band, no libc float needed. */
 void se_frame_fmt_iso(char *out, int cap, int iso);
+
+/* rows of the band that carry content; the rest is paper */
+void se_frame_band_extent(const se_frame *f, int *y0, int *y1);
 void se_frame_fmt_ap(char *out, int cap, int ap_x10);   /* 28 -> "2.8" */
 void se_frame_fmt_ss(char *out, int cap, int denom);    /* 200 -> "1/200" */
 

@@ -3442,6 +3442,33 @@ void se_frame_top_row(uint8_t *row, int width, const se_frame *f, int y) {
     se_frame_fill_row(row, width, f);
 }
 
+/*
+ * The rows of the band that carry something.
+ *
+ * Everything outside this range is plain paper. The shot path fills those rows
+ * with the paper word directly instead of drawing a row of RGB and converting
+ * it to UYVY, which is most of the band at 20 MP.
+ */
+void se_frame_band_extent(const se_frame *f, int *y0, int *y1) {
+    int s = f->scale;
+    int pad = 10 * s;
+    int inner = f->bottom - 2 * pad;
+    int mid_h = (LOGO_H + 6 + FONT_H) * s;
+    int stats_h = (FONT_H + 4 + FONT_H) * s;
+    int logo_top = pad + (inner - mid_h) / 2;
+    int model_top = logo_top + (LOGO_H + 6) * s;
+    int label_top = pad + (inner - stats_h) / 2;
+    int value_top = label_top + (FONT_H + 4) * s;
+    int top = logo_top < label_top ? logo_top : label_top;
+    int bot = (model_top + FONT_H * s) > (value_top + FONT_H * s)
+            ? (model_top + FONT_H * s) : (value_top + FONT_H * s);
+    if (top < 0) top = 0;
+    if (bot > f->bottom) bot = f->bottom;
+    if (bot < top) bot = top;
+    if (y0) *y0 = top;
+    if (y1) *y1 = bot;
+}
+
 void se_frame_bottom_row(uint8_t *row, int width, const se_frame *f, int y) {
     int s = f->scale;
     int pad = 10 * s;

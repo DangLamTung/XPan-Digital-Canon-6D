@@ -176,6 +176,27 @@ static void fs_hdr_row_uyvy(unsigned char *dst, const unsigned char *rgb, int w)
  * bottom of the picture instead, because a header that silently disappears on
  * half the framings is worse than one that covers a strip of the frame.
  */
+
+/* Fill rows with the paper word: U 0, Y 255, V 0, Y 255. One 32-bit store
+ * per pixel pair, over a contiguous block of rows, so the compiler emits a
+ * tight loop instead of a call per row. */
+static void fs_fill_paper_rows(unsigned char *gp, int stride, int width,
+                               int y0, int y1)
+{
+    int y;
+    uint32_t *w;
+    int n = width >> 1;
+    if (y1 <= y0) return;
+    {
+        unsigned char *p = gp + (size_t)y0 * stride;
+        for (y = y0; y < y1; y++, p += stride) {
+            int i;
+            w = (uint32_t *)p;
+            for (i = 0; i < n; i++) w[i] = 0xFF00FF00u;
+        }
+    }
+}
+
 static void fs_hdr_burn(unsigned char *gp, int width, int rows, int stride,
                         int num, int den) {
     int box_h = (num > 0 && den > 0) ? (width * num) / den : rows;
@@ -223,14 +244,25 @@ static void fs_hdr_burn(unsigned char *gp, int width, int rows, int stride,
         y0 = rows - band_h;
     }
 
-    for (y = 0; y < band_h; y++) {
-        unsigned char *row = gp + (size_t)(y0 + y) * stride;
-        se_frame_fill_row(fs_hdr_scratch, width, &fs_hdr);
-        if (y == 0)
-            se_frame_edge_row(fs_hdr_scratch, width, &fs_hdr);
-        else
-            se_frame_bottom_row(fs_hdr_scratch, width, &fs_hdr, y);
-        fs_hdr_row_uyvy(row, fs_hdr_scratch, width);
+    /*
+     * Only the rows the band actually draws on need the RGB row and the
+     * per-pixel conversion; the rest of the band is plain paper. At 20 MP that
+     * is most of it.
+     */
+    {
+        int cy0, cy1;
+        se_frame_band_extent(&fs_hdr, &cy0, &cy1);
+        fs_fill_paper_rows(gp, stride, width, y0 + cy1, y0 + band_h);
+        for (y = 0; y < cy1; y++) {
+            unsigned char *row = gp + (size_t)(y0 + y) * stride;
+            se_frame_fill_row(fs_hdr_scratch, width, &fs_hdr);
+            if (y == 0)
+                se_frame_edge_row(fs_hdr_scratch, width, &fs_hdr);
+            else
+                se_frame_bottom_row(fs_hdr_scratch, width, &fs_hdr, y);
+            fs_hdr_row_uyvy(row, fs_hdr_scratch, width);
+        }
+        (void)cy0;
     }
     fs_hdr_burned++;
 }
