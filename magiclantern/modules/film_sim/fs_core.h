@@ -538,6 +538,20 @@ static void fs_lat_build(void)
  *     previous output, which only holds when grain is off because grain
  *     consumes the random state per pixel.
  */
+/*
+ * -O3 for this function only.
+ *
+ * The module is built -Os to keep the .mo small, and on ARMv5TE that leaves
+ * this loop spilling registers: it keeps 13 live values across six branch
+ * arms. The attribute costs about 1 KB of code once and cannot change the
+ * result (same integer arithmetic, verified byte for byte).
+ */
+#if defined(__GNUC__) && !defined(__clang__)
+#define FS_HOT __attribute__((optimize("O3")))
+#else
+#define FS_HOT
+#endif
+FS_HOT
 static void fs_core_process_rows3(const unsigned char *curve, const short *uv,
                                   const void *src, void *dst,
                                   int pitch, int row0, int row1,
