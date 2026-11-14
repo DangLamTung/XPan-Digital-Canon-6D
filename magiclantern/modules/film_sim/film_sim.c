@@ -1277,6 +1277,52 @@ static void fs_lv_grade(const void *src, void *dst, int pitch, int row0, int row
   }
 }
 
+/* the LiveView snapshot: grading Canon's buffer directly tore the picture, so
+ * the frame is copied once and the grade reads that copy */
+static unsigned char *fs_snap;
+static size_t fs_snap_size;
+
+
+/*
+ * Repainting the letterbox every frame is the biggest single cost in LiveView:
+ * with 65:24 on, fs_aspect_bars() memsets about a third of the frame, ~60 ms,
+ * and the frame rate falls to a slideshow. The bars live in the display buffer
+ * and the grade only writes the picture rows, so they are still there from the
+ * previous frame. Sample them and skip the repaint when they are already black.
+ */
+static int fs_lv_bars_are_black(void *dst, int pitch, int width,
+                                int row0, int row1)
+{
+  int num, den, box_h, top, bot, y, x;
+  if (!fs_core_aspect_ratio(film_sim_aspect, &num, &den)) return 0;
+  box_h = (width * num) / den;
+  if (box_h <= 0 || box_h >= row1 - row0) return 0;
+  top = row0 + ((row1 - row0) - box_h) / 2;
+  bot = top + box_h;
+  for (y = row0; y < top; y += (top - row0) / 4 + 1) {
+    const unsigned char *row = (const unsigned char *)dst + (size_t)y * pitch;
+    for (x = 0; x < width; x += width / 8 + 1)
+      if (row[x * 2] || row[x * 2 + 1]) return 0;
+  }
+  for (y = bot; y < row1; y += (row1 - bot) / 4 + 1) {
+    const unsigned char *row = (const unsigned char *)dst + (size_t)y * pitch;
+    for (x = 0; x < width; x += width / 8 + 1)
+      if (row[x * 2] || row[x * 2 + 1]) return 0;
+  }
+  return 1;
+}
+
+static void fs_lv_paint_bars(void *dst, int pitch, int width,
+                             int row0, int row1)
+{
+  static int last_sig = -1;
+  int sig = film_sim_aspect * 1000003 + pitch * 31 + width * 7 + row0 + row1;
+  if (sig == last_sig && fs_lv_bars_are_black(dst, pitch, width, row0, row1))
+    return;
+  fs_aspect_bars(dst, pitch, row0, row1);
+  last_sig = sig;
+}
+
 static void FAST fs_process_frame(void *src, void *dst) {
   if (!src || !dst)
     return;
@@ -1381,17 +1427,35 @@ static void FAST fs_process_frame(void *src, void *dst) {
      */
 
     /*
-     * Grade straight from Canon's completed buffer into the display buffer.
+     * Copy the frame once, then grade the copy.
      *
-     * This used to copy the frame into fs_snap first (691 KB, ~11 ms) to shut
-     * the window in which the sensor can rewrite a row mid-pass. The lattice
-     * now grades a 720x480 frame in a few milliseconds, well inside the ~66 ms
-     * before display_filter_get_buffers() reuses that buffer, so the copy is
-     * pure cost. If a frame ever tears, this is the line to put back.
+     * Grading Canon's buffer directly was measurably faster but the picture
+     * tore: the sensor rewrites that buffer while a pass that takes longer
+     * than a frame period is still reading it. The copy through the cached
+     * alias costs ~11 ms and removes the whole class of problem.
      */
+    size_t total = (size_t)pitch * (size_t)height;
+    if ((!fs_snap || fs_snap_size < total) && total > 0) {
+      if (fs_snap) free(fs_snap);
+      fs_snap = tmp_malloc(total);
+      fs_snap_size = fs_snap ? total : 0;
+    }
     {
       uint32_t tg = get_ms_clock();
-      fs_lv_grade(src, dst, pitch, row0, row1);
+      if (fs_snap && fs_snap_size >= total) {
+        unsigned char *snap = (unsigned char *)CACHEABLE(fs_snap);
+        if (row0 > 0 || row1 < height)
+          memcpy(snap + (size_t)row0 * pitch,
+                 (const char *)src + (size_t)row0 * pitch,
+                 (size_t)(row1 - row0) * pitch);
+        else
+          memcpy(snap, src, total);
+        grade_ms += get_ms_clock() - tg;
+        tg = get_ms_clock();
+        fs_lv_grade(snap, dst, pitch, row0, row1);
+      } else {
+        fs_lv_grade(src, dst, pitch, row0, row1);
+      }
       grade_ms += get_ms_clock() - tg;
       if (src != dst) {
         if (row0 > 0)
@@ -1402,10 +1466,10 @@ static void FAST fs_process_frame(void *src, void *dst) {
                  (size_t)(height - row1) * pitch);
       }
     }
-    fs_aspect_bars(dst, pitch, row0, row1);
+    fs_lv_paint_bars(dst, pitch, pitch / 2, row0, row1);
   } else if (film_sim_enable) {
     fs_lv_grade(src, dst, pitch, row0, row1);
-    fs_aspect_bars(dst, pitch, row0, row1);
+    fs_lv_paint_bars(dst, pitch, pitch / 2, row0, row1);
   } else {
     if (src != dst) {
       if (row0 > 0)
@@ -1418,7 +1482,7 @@ static void FAST fs_process_frame(void *src, void *dst) {
              (const char *)src + (size_t)row0 * pitch,
              (size_t)(row1 - row0) * pitch);
     }
-    fs_aspect_bars(dst, pitch, row0, row1);
+    fs_lv_paint_bars(dst, pitch, pitch / 2, row0, row1);
   }
 
   int dt = get_ms_clock() - t0;
