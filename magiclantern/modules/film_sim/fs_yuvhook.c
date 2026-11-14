@@ -99,6 +99,7 @@ static unsigned char *fs_hdr_scratch;
 static int fs_hdr_burned;
 /* the rows the last shot actually graded, so the log can show the span */
 static int fs_g_y0, fs_g_y1;
+static int fs_hbar;                 /* the aspect leaves top/bottom bars */
 static long fs_g_rows;
 int fs_yuvhook_last_gar0(void) { return fs_g_y0; }
 int fs_yuvhook_last_gar1(void) { return fs_g_y1; }
@@ -280,12 +281,15 @@ static uint32_t fs_yuv_grade_cached(void *buf, int width, int rows, int stride,
     {
         int gy0 = 0, gy1 = rows;
         int num, den;
+        fs_hbar = 0;
         if (fs_bars_mode > 0 && rows == frame_h &&
             fs_core_aspect_ratio(fs_bars_mode, &num, &den)) {
             int box_h = (width * num) / den;
             if (box_h > 0 && box_h < rows) {
                 gy0 = (rows - box_h) / 2;
                 gy1 = gy0 + box_h;
+                /* horizontal bars: the header's paper fill covers all of it */
+                fs_hbar = 1;
             }
         }
         {
@@ -312,7 +316,7 @@ static uint32_t fs_yuv_grade_cached(void *buf, int width, int rows, int stride,
      * header takes over the job, and paints the bars itself in the one case
      * where it cannot: when the band does not fit in the bar.
      */
-    if (fs_bars_mode > 0 && !(fs_hdr.on && rows == frame_h)) {
+    if (fs_bars_mode > 0 && !(fs_hdr.on && rows == frame_h && fs_hbar)) {
         int num, den;
         /* Geometry from the whole frame, not from the rows this pass graded:
          * a partial grade (film.sim.yuvrows) would put the bars in the wrong
