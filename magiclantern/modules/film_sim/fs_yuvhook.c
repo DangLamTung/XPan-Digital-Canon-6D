@@ -591,7 +591,7 @@ static int fs_yuv_picture(const void *p, uint32_t bytes)
     /* Deliberately wide: a dark frame, a flat wall and a grainy ISO 6400 shot
      * must all pass.  What must NOT pass is zeroed memory (0/0/0) and random
      * memory (64/84/255). */
-    return mc <= 64 && md <= 60 && sp >= 16;
+    return mc <= 64 && md <= 60 && sp >= 8;
 }
 
 /*
@@ -957,7 +957,14 @@ static void fs_yuv_hook_body(uint32_t *regs, uint32_t *stack, uint32_t pc)
              * measure the stride, and write only as far as the buffer
              * demonstrably reaches.
              */
-            uint32_t win = 1024u * 1024u;
+            /*
+             * 16 MB, not 1 MB. At 10944 bytes a row the old window sampled
+             * the top 95 rows only, and a frame whose top strip is flat -- a
+             * dark room, a lens cap, a wall -- came back with a spread under
+             * the threshold and was refused: a real photo that was never
+             * graded. A wider window spreads the 16 samples down the frame.
+             */
+            uint32_t win = 16u * 1024u * 1024u;
             uint32_t st, pb;
             int r;
 

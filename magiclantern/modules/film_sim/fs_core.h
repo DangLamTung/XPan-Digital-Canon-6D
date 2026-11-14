@@ -648,11 +648,11 @@ static void fs_core_process_rows3(const unsigned char *curve, const uint32_t *uv
                 }
                 w0 = 256 - wa - wb - wc;
 
-                /* byte 1 holds dy as a signed 8-bit value */
-                dy = (((int)(base[0] << 16) >> 24) * w0
-                      + ((int)(ca[0] << 16) >> 24) * wa
-                      + ((int)(cb2[0] << 16) >> 24) * wb
-                      + ((int)(base[ko] << 16) >> 24) * wc + 128) >> 8;
+                /* byte 3 holds dy: one arithmetic shift sign-extends it */
+                dy = (((int)base[0] >> 24) * w0
+                      + ((int)ca[0] >> 24) * wa
+                      + ((int)cb2[0] >> 24) * wb
+                      + ((int)base[ko] >> 24) * wc + 128) >> 8;
 
                 {
                     /* bytes 0 and 2 are Cb+128 and Cr+128: already in the

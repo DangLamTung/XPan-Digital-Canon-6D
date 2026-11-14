@@ -744,9 +744,10 @@ void se_look_bake_yuv3(const se_look *lk, se_yuv3 *t)
             int dy = y2 - t->y[yy];                   /* vs grey of the same luma */
             if (dy < -128) dy = -128;
             if (dy > 127) dy = 127;
-            /* byte0 Cb+128, byte1 dy, byte2 Cr+128: the two chroma bytes are
-             * then already in SWAR order under one mask, and dy is one shift */
-            t->v[k] = (uint32_t)(uint8_t)dy << 8;
+            /* byte0 Cb+128, byte2 Cr+128, byte3 dy: the two chroma bytes sit
+             * in SWAR order under one mask, and dy is a single sign-extending
+             * shift from the top byte */
+            t->v[k] = (uint32_t)(uint8_t)dy << 24;
         }
         /*
          * Cb and Cr are stored biased by +128, i.e. as 0..255 in a signed

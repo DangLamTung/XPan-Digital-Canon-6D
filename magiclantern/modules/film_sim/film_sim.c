@@ -1288,8 +1288,9 @@ static void fs_lv_grade(const void *src, void *dst, int pitch, int row0, int row
   fs_lv_grade_body(src, dst, pitch, row0, row1);
   acc += get_ms_clock() - t0;
   if (film_sim_lvfps && ++n >= 60) {
-    fs_log("lv: %d frames, %d ms total, %.1f ms/frame",
-           n, (int)acc, (double)acc / n);
+    fs_log("lv: %d frames, %d ms total, %d.%d ms/frame",
+           n, (int)acc, n ? (int)(acc / n) : 0,
+           n ? (int)((acc * 10 / n) % 10) : 0);
     fs_log_flush();
     acc = 0; n = 0;
   }

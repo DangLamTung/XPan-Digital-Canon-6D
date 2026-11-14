@@ -15,8 +15,8 @@ int main(int argc, char **argv)
     static se_yuv3 t;
     se_look_bake_yuv3(&lk, &t);
     int mdy = 0, mcb = 0, mcr = 0;
-    for (int i = 0; i < (int)(sizeof t.v / sizeof t.v[0]); i += 3) {
-        int dy = t.v[i], cb = t.v[i+1], cr = t.v[i+2];
+    for (int i = 0; i < (int)(sizeof t.v / sizeof t.v[0]); i++) {
+        int dy = (int)(int8_t)(t.v[i] >> 24), cb = (int)(t.v[i] & 0xFF), cr = (int)((t.v[i] >> 16) & 0xFF);
         if (dy < 0) dy = -dy; if (cb < 0) cb = -cb; if (cr < 0) cr = -cr;
         if (dy > mdy) mdy = dy;
         if (cb > mcb) mcb = cb;
