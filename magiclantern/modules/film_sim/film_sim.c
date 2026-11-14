@@ -5787,6 +5787,10 @@ static void fs_register_look(const char *file, const char *label,
   snprintf(f.description, sizeof f.description, "%s", desc ? desc : "MADE IN COLOR CREATOR");
   f.base = 0x84;        /* Neutral: the look lives in the .fs, not the style */
   f.sharpness = 3;
+  /* the recipe's own WB offset travels with it, so picking it on the shelf
+   * restores the balance the recipe was tuned under */
+  f.wbs_ba = (int16_t)fs_clamp_i(film_sim_wbs_ba, -9, 9);
+  f.wbs_gm = (int16_t)fs_clamp_i(film_sim_wbs_gm, -9, 9);
   /* One XML per slot: re-saving a slot overwrites its entry instead of
    * leaving a second one behind under the previous name. */
   snprintf(path, sizeof path, FILM_DIR "/90_%s.xml", file);
