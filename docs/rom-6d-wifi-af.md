@@ -292,3 +292,37 @@ ML's `platform/6D.116/consts.h` declares `ROM1_ADDR 0xF8000000` and
 `ML/LOGS/ROM1.BIN`. So the next dump has to extend to at least
 `0xF8000000 + 0x02000000` before the Wi-Fi stack can be read, the same way the
 `0xFF` alias had to be found before the AF handlers would decode.
+
+## Round 6: the AF control surface ML already uses is the one found in the ROM
+
+ML's own code and the ROM handlers line up exactly:
+
+| ML call | property | ROM handler |
+|---|---|---|
+| `set_af_point()` (`src/af_patterns.c`) writes `PROP_AFPOINT` (`0x8000000A`) | 9-byte payload | `0xFF3131F4` (copies 2 bytes, dispatches to `0x5FB8`) |
+| AF result consumers read `PROP_LV_AF_RESULT` (`0x80050029`) | 9-byte payload | `0xFF3131A0` |
+| `lens_focus()` (`src/lens.c`) writes a focus-command property with a step in `-3..3` (`0x8000 - step` for negative) | drives the lens | not a property handler: the command path is `0xFF1302E8` |
+| `set_afma()` (`src/afma.c`) writes the micro-adjust values | AFMA storage | handler group `0xFF3120A0` |
+
+So the control half of goal 2 is not just located, it is already exercised by ML:
+`af_patterns.c` moves the AF point, `lens.c` drives the lens in steps, `afma.c`
+sets the per-lens offset -- and each of those lands on a handler whose address is
+in the table from round 3.
+
+A second table format also turned up: **(handler, property) pairs**, e.g. at
+`0xF8313F28` `0xFFB6EAB8 / 0x8000004E`, at `0xF8313F70` `0xFF312884 /
+0x80030001`. That table is what the property manager walks at registration.
+
+### What remains for the algorithm
+
+The evaluation loop is the AF controller task, not a property handler. The AF
+state object is a single global pointer (`0x0007B408`, held at `0xFF3125C8`);
+only three literals reference it directly, and two of those are tables, so the
+controller reaches the state through another path. Reaching the loop needs
+either:
+
+1. a DryOS task-list walk (the task name strings `AfController`,
+   `AfAeController`, `AfComplete` are in the ROM at `0xF824B2D4` and around),
+   or
+2. a live trace from ML: log the PC of the task that writes
+   `PROP_LV_AF_RESULT` while a shot focuses.
