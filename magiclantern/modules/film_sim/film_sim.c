@@ -2910,6 +2910,14 @@ static int fs_prov_tick(void) {
 /* A 0x54 arrived. Nothing is taken yet: the body follows it with the real code
  * about a millisecond later, and fs_prov_tick() covers the case where it does
  * not. Returns 1 when the screen needs redrawing. */
+/*
+ * 0x54 is GMT_GUICMD_PRESS_BUTTON_SOMETHING: the body says a button happened
+ * and does not say which one, so no screen can turn it into a direction. The
+ * shelf and the darkroom only need "one step", which is why they can use it;
+ * the Color Creator and the WB grid need to know which way, and guessing would
+ * move a value the wrong way half the time. They wait for the real key code
+ * instead.
+ */
 static int fs_prov_step(void) {
   uint32_t now = get_ms_clock();
 
