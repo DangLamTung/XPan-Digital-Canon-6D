@@ -326,6 +326,9 @@ static se_arena     eng_arena;
  * close to what a develop uses; the tables never needed it at all. */
 static unsigned char eng_arena_mem[800 * 1024];
 static unsigned char eng_rgb[5760 * 3];
+/* the fitted look, kept so the run can be re-begun at the frame's real width */
+static se_look eng_fitted;
+static int     eng_fitted_ok;
 static unsigned char *eng_dst;
 static int eng_stride, eng_row;
 
@@ -392,9 +395,16 @@ uint32_t fs_yuvlook_apply_engine_lv(unsigned char *buf, int width, int height, i
         unsigned char *src = buf + (size_t)y * (size_t)stride;
         int x;
         for (x = 0; x < width; x++) {
+            /*
+             * UYVY is [U, Y0, V, Y1]: a pair of pixels shares one U and one
+             * V, and the pair starts at an even x. Reading src[x*2] and
+             * src[x*2+2] per pixel is right for x even and swaps U with V for
+             * x odd -- half the frame came out with the wrong chroma.
+             */
+            const unsigned char *pair = src + (size_t)(x & ~1) * 2;
             int Y = src[x * 2 + 1];
-            int U = (int)(signed char)src[x * 2 + 0];
-            int V = (int)(signed char)src[x * 2 + 2];
+            int U = (int)(signed char)pair[0];
+            int V = (int)(signed char)pair[2];
             int r = Y + ((183 * V) >> 8);
             int g = Y - ((44 * U + 91 * V) >> 8);
             int b = Y + ((227 * U) >> 8);
@@ -444,6 +454,7 @@ static void eng_prepare(const se_look *lk)
     if (lv_run) { se_look_end(lv_run, eng_drop, NULL); lv_run = NULL; }
 
     se_look_fit(&fitted, 5760, sizeof eng_arena_mem);
+    eng_fitted = fitted;
     /*
      * The engine's working set is the ring buffer plus the RGB rows it hands
      * back, and it is touched once per pixel. The array is static, so where it
@@ -468,6 +479,7 @@ static void eng_prepare(const se_look *lk)
 #endif
     if (se_look_begin(&eng_run, &fitted, 5760, &eng_arena) != SE_OK)
         eng_run = NULL;
+    eng_fitted_ok = 1;
 }
 
 uint32_t fs_yuvlook_apply_engine(unsigned char *buf, int width, int height, int stride)
@@ -477,14 +489,34 @@ uint32_t fs_yuvlook_apply_engine(unsigned char *buf, int width, int height, int 
     uint32_t t0 = get_ms_clock();
 #endif
     if (!eng_run || !buf || width < 2 || width > 5760) return 0;
+    /*
+     * The run was begun at 5760 because that was the largest row the arena
+     * must fit. A 6D frame is 5472 wide, so grading through a 5760-wide run
+     * read 288 graded pixels that were never filled and emitted them into the
+     * next row. Re-begin at the width actually being graded.
+     */
+    if (eng_fitted_ok && se_look_width(eng_run) != width) {
+        se_look_end(eng_run, eng_emit, NULL);
+        se_arena_init(&eng_arena, eng_arena_mem, sizeof eng_arena_mem);
+        if (se_look_begin(&eng_run, &eng_fitted, width, &eng_arena) != SE_OK)
+            eng_run = NULL;
+        if (!eng_run) return 0;
+    }
     eng_dst = buf; eng_stride = stride; eng_row = 0;
     for (y = 0; y < height; y++) {
         unsigned char *src = buf + (size_t)y * (size_t)stride;
         int x;
         for (x = 0; x < width; x++) {
+            /*
+             * UYVY is [U, Y0, V, Y1]: a pair of pixels shares one U and one
+             * V, and the pair starts at an even x. Reading src[x*2] and
+             * src[x*2+2] per pixel is right for x even and swaps U with V for
+             * x odd -- half the frame came out with the wrong chroma.
+             */
+            const unsigned char *pair = src + (size_t)(x & ~1) * 2;
             int Y = src[x * 2 + 1];
-            int U = (int)(signed char)src[x * 2 + 0];
-            int V = (int)(signed char)src[x * 2 + 2];
+            int U = (int)(signed char)pair[0];
+            int V = (int)(signed char)pair[2];
             int r = Y + ((183 * V) >> 8);
             int g = Y - ((44 * U + 91 * V) >> 8);
             int b = Y + ((227 * U) >> 8);

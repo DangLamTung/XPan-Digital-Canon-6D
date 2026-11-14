@@ -1480,6 +1480,8 @@ static se_err emit_delayed(se_look_run *r, int p, se_look_emit emit,
   return emit_one(r, dly, emit, ctx);
 }
 
+int se_look_width(const se_look_run *r) { return r ? r->w : 0; }
+
 se_err se_look_rows(se_look_run *r, const uint8_t *rgb, int nrows,
                     se_look_emit emit, void *ctx) {
   int i;
@@ -1555,5 +1557,14 @@ se_err se_look_end(se_look_run *r, se_look_emit emit, void *ctx) {
     if (e != SE_OK)
       return e;
   }
+  /*
+   * The delay line is flushed, but it is not empty: `pushed` still counts the
+   * rows of this frame, so the next se_look_rows() would skip priming and
+   * blend its first rows with this frame's last ones. Two shots in a row
+   * showed the seam along the top edge. Reset what the next pass reads.
+   */
+  r->pushed = 0;
+  r->y_out = 0;
+  memset(r->colsum, 0, (size_t)w * sizeof(int));
   return SE_OK;
 }

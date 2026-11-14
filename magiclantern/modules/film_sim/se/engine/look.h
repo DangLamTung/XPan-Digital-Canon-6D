@@ -339,6 +339,9 @@ se_err se_look_begin(se_look_run **run, const se_look *lk,
 /* Each finished row is handed to `emit`, which returns 0 to continue. */
 typedef int (*se_look_emit)(void *ctx, const uint8_t *row, int width);
 
+/* width the run was begun at (the row stride it reads and emits) */
+int se_look_width(const se_look_run *run);
+
 se_err se_look_rows(se_look_run *run, const uint8_t *rgb, int nrows,
                     se_look_emit emit, void *ctx);
 
