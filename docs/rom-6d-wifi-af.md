@@ -114,3 +114,77 @@ it: ROM0 is `0xF0000000`, ROM1 is `0xF8000000`, and `film_eval/rom/RAM4.BIN`
 To finish either goal the next dump has to cover `0xFF000000`-`0xFFFFFFFF`
 (16 MB). ML's Debug -> "Dump ROM and RAM" writes ROM0/ROM1; the IROM region
 needs either that dump extended or a separate read through ML's memory browser.
+
+## Round 3: the missing dump was an alias
+
+ROM1 is mapped **twice**: the dump starts at `0xF8000000`, and the firmware's
+own pointers use **`0xFF000000`**. Both name the same bytes, so an address in
+`0xFF0xxxxx`-`0xFF3xxxxx` is at file offset `addr - 0xFF000000`. Verified by
+disassembling handler `0xFF3131F4`: it decodes as a real function
+(`push {r3, lr}`, byte loads, `bl`), not as data.
+
+`tools/rom/romscan.py dis 0xFF000000,<start>,<end>` now disassembles that alias.
+
+### AF property handlers, extracted from the table at `0xF83149DC`
+
+| property ids | handler (`0xFF…`) |
+|---|---|
+| `0x80050000 0x80050002 0x80050005 0x8005000A` (0x0A = `PROP_AFPOINT`) | `0xFF3131F4` |
+| `0x8005000B 0x8005000C 0x8005000D` | `0xFF313128` |
+| `0x80050008` | `0xFF313164` |
+| `0x80050010 0x8005001B 0x8005001E 0x80050027` | `0xFF3120A0` |
+| **`0x80050029` = `PROP_LV_AF_RESULT`** | **`0xFF3131A0`** |
+| `0x80050028` | `0xFF3131DC` |
+| `0x8005002B` | `0xFF3132FC` |
+| `0x80050033` | `0xFF313340` |
+
+`PROP_LV_AF_RESULT` handler, in full:
+
+```
+ff3131a0  push {r2, r3, r4, lr}
+ff3131a4  mov  r4, r0            @ payload
+ff3131a8  mov  r2, #7            @ 7 bytes
+ff3131ac  mov  r0, sp            @ to the stack
+ff3131b0  bl   0x6bb98           @ copy
+ff3131b4  mov  r0, #0
+ff3131b8  strb r0, [sp, #6]      @ terminator
+ff3131bc  ldr  r0, [r4, #4]
+ff3131c4  and  r1, r0, #255
+ff3131c8  ldr  r0, [r4]
+ff3131d0  and  r0, r0, #255
+ff3131d4  bl   0x5fb8            @ dispatch into low RAM
+ff3131d8  pop  {r2, r3, r4, pc}
+```
+
+The AF point handler `0xFF3131F4` has the same shape with 3 bytes, and a
+`PROP_AF_MODE`-style signature handler sits at `0xFF3131DC` (24-byte block,
+reads `[r0+0x48]`).
+
+### Wi-Fi: the socket layer is code, not just strings
+
+The string `halt all sockets` has an alias literal at `0xFFBA3B64`, and it is
+referenced from code at **`0xF84F3F60`**:
+
+```
+f84f3f7c  ldr  r0, [r5, r4, lsl #2]   @ socket slot
+f84f3f80  bl   0xF833FECC
+f84f3f88  mov  r2, r6
+f84f3f8c  add  r0, pc, #76            @ format string
+f84f3f90  bl   0xF80C1F28             @ log
+f84f3f98  cmp  r4, r7
+f84f3f9c  blt  0xF84F3F60             @ next socket
+f84f3fa4  pop  {r4, r5, r6, r7, r8, pc}
+```
+
+So the WLAN stack's socket table and its logging are in ROM1 around
+`0xF84F3F60`, and the SDIO/PTP transport is around `0xF82A0xxx`.
+
+### What is proven, and what is not
+
+Proven: the handlers exist at these addresses; the property→handler table is
+readable; the socket code is present and calls into `0xF833FECC`; the SDIO
+driver strings sit next to `InitializeSDIODriver`.
+
+Not yet: the AF **algorithm** (the evaluation/ramp code) and the WLAN **init and
+socket entry points** ML could call. Both need the code to be walked from the
+handlers above, which is the next pass.

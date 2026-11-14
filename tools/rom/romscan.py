@@ -4,14 +4,18 @@
     ./romscan.py find WLAN            # strings matching WLAN, with addresses
     ./romscan.py refs 0xf8caedf0      # 32-bit literals pointing at an address
     ./romscan.py near 0xf84324c4      # code locations referencing that region
+    ./romscan.py dis 0xFF000000,0xFF3131A0,0xFF3131F4   # disassemble a range
 
 The dumps are qemu/6D/ROM0.BIN (base 0xF0000000) and ROM1.BIN (0xF8000000).
 """
 import sys, struct, os
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# ROM1 is mapped twice: 0xF8000000 (the dump base) and 0xFF000000 (where the
+# handler tables point). Both name the same bytes; offset = addr - base.
 ROMS = [("ROM0", os.path.join(ROOT, "qemu/6D/ROM0.BIN"), 0xF0000000),
-        ("ROM1", os.path.join(ROOT, "qemu/6D/ROM1.BIN"), 0xF8000000)]
+        ("ROM1", os.path.join(ROOT, "qemu/6D/ROM1.BIN"), 0xF8000000),
+        ("ROM1@FF", os.path.join(ROOT, "qemu/6D/ROM1.BIN"), 0xFF000000)]
 
 
 def strings(minlen=6):
@@ -68,5 +72,10 @@ if __name__ == "__main__":
         refs(int(arg, 16))
     elif cmd == "near":
         cmd_near(int(arg, 16))
+    elif cmd == "dis":
+        os.system("arm-none-eabi-objdump -D -b binary -m arm --adjust-vma=%s "
+                  "--start-address=%s --stop-address=%s %s" %
+                  (arg.split(",")[0], arg.split(",")[1], arg.split(",")[2],
+                   os.path.join(ROOT, "qemu/6D/ROM1.BIN")))
     else:
         print(__doc__)
