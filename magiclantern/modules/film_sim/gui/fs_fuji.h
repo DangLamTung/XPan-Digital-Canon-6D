@@ -38,6 +38,7 @@ typedef struct
      * and this module already expresses it as an offset on the stock's
      * balance. Kept here so one page can show the whole recipe.
      */
+    int base_sim;     /* index into the base simulation list, 0 = none      */
     int wb_r;         /* -9 .. +9  Fuji Red axis                            */
     int wb_b;         /* -9 .. +9  Fuji Blue axis                           */
 } fs_fuji_t;
@@ -45,6 +46,6 @@ typedef struct
 void fs_fuji_defaults(fs_fuji_t *f);
 
 /* Format as a .fs recipe. Returns bytes written, or -1 if it did not fit. */
-int  fs_fuji_write(const fs_fuji_t *f, char *buf, int cap);
+int  fs_fuji_write(const fs_fuji_t *f, const char *base_text, char *buf, int cap);
 
 #endif

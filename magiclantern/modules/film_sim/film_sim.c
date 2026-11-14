@@ -6441,6 +6441,17 @@ static void fs_fuji_ensure_init(void)
   }
 }
 
+/* base film simulations the recipe can be built on: the .fs files the module
+ * already ships */
+static const char *fs_fuji_base_names[] = {
+    "None (flat)", "Provia", "Velvia", "Astia", "Classic Chrome",
+    "Classic Neg", "Eterna", "Acros",
+};
+static const char *fs_fuji_base_files[] = {
+    "", "provia.fs", "velvia.fs", "astia.fs", "classicchrome.fs",
+    "classicneg.fs", "eterna.fs", "acros.fs",
+};
+
 static void fs_fuji_save_task(void *unused) {
   char buf[2048];
   char path[64];
@@ -6449,7 +6460,25 @@ static void fs_fuji_save_task(void *unused) {
 
   fs_log("fuji: recipe save task started");
   fs_log_flush();
-  n = fs_fuji_write(&fs_fuji, buf, sizeof buf);
+  {
+    static char base_text[4096];
+    base_text[0] = 0;
+    if (fs_fuji.base_sim > 0 && fs_fuji.base_sim < 8) {
+      char bp[64];
+      FILE *bf;
+      snprintf(bp, sizeof bp, "ML/FILM/%s", fs_fuji_base_files[fs_fuji.base_sim]);
+      bf = FIO_OpenFile(bp, O_RDONLY);
+      if (bf) {
+        int got = FIO_ReadFile(bf, base_text, sizeof base_text - 1);
+        FIO_CloseFile(bf);
+        base_text[got > 0 ? got : 0] = 0;
+      } else {
+        fs_log("fuji: base %s is not on the card, saving the flat version", bp);
+        fs_log_flush();
+      }
+    }
+    n = fs_fuji_write(&fs_fuji, base_text, buf, sizeof buf);
+  }
   if (n < 0) {
     NotifyBox(1600, "Fuji: recipe did not fit");
     fs_fuji_save = 0;
@@ -8465,12 +8494,22 @@ static MENU_UPDATE_FUNC(fs_fuji_wb_update) {
 
 static const char *fs_grain_size_names[] = { "Small", "Large" };
 
+
 static struct menu_entry fs_menu_fuji[] = {
     {
         .name = "Name",
         .update = fs_fuji_name_update,
         .select = fs_fuji_name_select,
         .help = "Which C-slot this recipe is saved as: ML/FILM/<NAME>.fs.",
+    },
+    {
+        .name = "Base Sim",
+        .priv = &fs_fuji.base_sim,
+        .min = 0, .max = 7,
+        .choices = fs_fuji_base_names,
+        .help = "The film simulation this recipe is built on. Its colour "
+                "tables (per-channel curves, hue, split tone) are copied into "
+                "the saved .fs; the rows below adjust on top of them.",
     },
     {
         .name = "TONE CURVE Hi",

@@ -81,7 +81,40 @@ static const char *level_word(int v)
     return v == 2 ? "STRONG" : (v == 1 ? "WEAK" : "OFF");
 }
 
-int fs_fuji_write(const fs_fuji_t *f, char *buf, int cap)
+/*
+ * A Fuji recipe is a base film simulation plus adjustments. The base carries
+ * the colour: per-channel curves, the hue tables, the split tone. Those lines
+ * are copied from the base .fs; everything this page owns (TONE CURVE, SAT,
+ * CHROME, FX BLUE, GRAIN) is written afterwards and wins.
+ */
+static void copy_base_tables(const char *base, char *buf, int cap, int *pos)
+{
+    static const char *want[] = {
+        "CURVE_R ", "CURVE_G ", "CURVE_B ",
+        "HUE_SAT", "HUE_ROT", "HUE_LUM",
+        "SPLIT_SH", "SPLIT_MID", "SPLIT_HI",
+    };
+    const char *p = base;
+    if (!base) return;
+    while (*p && *pos < cap - 1) {
+        const char *e = p;
+        int len, k, keep = 0;
+        while (*e && *e != '\n') e++;
+        len = (int)(e - p);
+        for (k = 0; k < (int)(sizeof want / sizeof want[0]); k++) {
+            int wl = (int)strlen(want[k]);
+            if (len >= wl && !strncmp(p, want[k], wl)) { keep = 1; break; }
+        }
+        if (keep && len > 0 && len < cap - *pos) {
+            memcpy(buf + *pos, p, (size_t)len);
+            *pos += len;
+            buf[(*pos)++] = '\n';
+        }
+        p = *e ? e + 1 : e;
+    }
+}
+
+int fs_fuji_write(const fs_fuji_t *f, const char *base_text, char *buf, int cap)
 {
     static const int curve_in[5] = { 0, 64, 128, 192, 255 };
     int n = 0, i;
@@ -102,9 +135,14 @@ int fs_fuji_write(const fs_fuji_t *f, char *buf, int cap)
     for (i = 0; i < 5; i++)
         PUT("%s%d,%d", i ? " " : "", curve_in[i], tone_out(f, curve_in[i]));
     PUT("\n");
-    PUT("CURVE_R   0,0 128,128 255,255\n");
-    PUT("CURVE_G   0,0 128,128 255,255\n");
-    PUT("CURVE_B   0,0 128,128 255,255\n");
+    if (base_text && base_text[0]) {
+        copy_base_tables(base_text, buf, cap, &n);
+        if (n < 0) return -1;
+    } else {
+        PUT("CURVE_R   0,0 128,128 255,255\n");
+        PUT("CURVE_G   0,0 128,128 255,255\n");
+        PUT("CURVE_B   0,0 128,128 255,255\n");
+    }
 
     PUT("SAT       %d\n", 100 + f->color * 12);
     PUT("COLOR_CHROME %s\n", level_word(f->chrome));
