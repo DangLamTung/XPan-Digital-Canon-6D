@@ -1163,34 +1163,55 @@ static se_err cr2_decode_core(const void *buf, size_t len,
              * lets a file-backed sink write sequentially.
              */
             int run_row = -1, run_col0 = 0, run_n = 0;
+            /*
+             * The row/slice mapping is piecewise linear in jcol, so it is
+             * walked with counters instead of three divisions per sample.
+             * A sliced 20 MP frame has ~20 M samples, and on this CPU a
+             * 64-bit divide is a library call: this removes ~60 M of them.
+             * Proven equal to the division form over 8.3 M combinations of
+             * widths, slice counts and heights (se/hosttest/cr2_key_check.c).
+             */
+            const long step = (long)info->slice_width * jh->high;
+            long jidx0 = (long)jrow * jwide;
+            long k = jidx0;
+            int  i = (int)(jidx0 / step);
+            int  j = (i >= info->slice_count);
+            if (j) i = info->slice_count;
+            k -= (long)i * step;
+            {
+                int w = j ? info->slice_last : info->slice_width;
+                int row = (int)(k / w), coff = (int)(k % w);
 
-            for (jcol = 0; jcol < jwide; jcol++) {
-                long jidx = (long)jrow * jwide + jcol;
-                int  i    = (int)(jidx / ((long)info->slice_width * jh->high));
-                int  j, row, col, w;
-                if ((j = (i >= info->slice_count)) != 0) i = info->slice_count;
-                jidx -= (long)i * info->slice_width * jh->high;
-                w   = j ? info->slice_last : info->slice_width;
-                row = (int)(jidx / w);
-                col = (int)(jidx % w) + i * info->slice_width;
+                for (jcol = 0; jcol < jwide; jcol++) {
+                    int col = coff + i * info->slice_width;
 
-                if (row >= info->raw_height || col >= info->raw_width) {
-                    /* Out of frame: close any open run and skip. */
-                    if (run_n && sink(ctx, run_row, run_col0, run_n,
-                                      rowbuf + (jcol - run_n)) != 0)
-                        return SE_E_IO;
-                    run_n = 0; run_row = -1;
-                    continue;
+                    if (row < info->raw_height && col < info->raw_width) {
+                        if (run_n && row == run_row && col == run_col0 + run_n) {
+                            run_n++;                  /* extend the current run */
+                        } else {
+                            if (run_n && sink(ctx, run_row, run_col0, run_n,
+                                              rowbuf + (jcol - run_n)) != 0)
+                                return SE_E_IO;
+                            run_row = row; run_col0 = col; run_n = 1;
+                        }
+                    } else {
+                        /* out of frame: close any open run and skip */
+                        if (run_n && sink(ctx, run_row, run_col0, run_n,
+                                          rowbuf + (jcol - run_n)) != 0)
+                            return SE_E_IO;
+                        run_n = 0; run_row = -1;
+                    }
+
+                    /* advance one sample */
+                    k++;
+                    if (k == step && i < info->slice_count) {
+                        i++; k = 0; row = 0; coff = 0;
+                        w = (i >= info->slice_count) ? info->slice_last
+                                                     : info->slice_width;
+                    } else if (++coff == w) {
+                        coff = 0; row++;
+                    }
                 }
-
-                if (run_n && row == run_row && col == run_col0 + run_n) {
-                    run_n++;                      /* extend the current run */
-                    continue;
-                }
-                if (run_n && sink(ctx, run_row, run_col0, run_n,
-                                  rowbuf + (jcol - run_n)) != 0)
-                    return SE_E_IO;
-                run_row = row; run_col0 = col; run_n = 1;
             }
             if (run_n && sink(ctx, run_row, run_col0, run_n,
                               rowbuf + (jwide - run_n)) != 0)

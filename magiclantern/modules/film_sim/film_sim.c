@@ -1390,10 +1390,23 @@ static void FAST fs_process_frame(void *src, void *dst) {
 
     if (fs_snap && fs_snap_size >= total) {
       uint32_t tc = get_ms_clock();
-      memcpy(fs_snap, src, total);
+      /*
+       * tmp_malloc hands out the uncached alias (0x4xxxxxxx). Reading and
+       * writing the copy through it costs a DRAM round trip per word; the
+       * same RAM at 0x0xxxxxxx goes through the caches, and nothing else
+       * ever sees this buffer, so no clean is needed afterwards.
+       */
+      unsigned char *snap = (unsigned char *)CACHEABLE(fs_snap);
+      static int snap_logged;
+      if (!snap_logged) {
+        snap_logged = 1;
+        fs_log("lv: frame copy at 0x%x, graded at 0x%x",
+               (unsigned)(uintptr_t)fs_snap, (unsigned)(uintptr_t)snap);
+      }
+      memcpy(snap, src, total);
       copy_ms += get_ms_clock() - tc;
       tc = get_ms_clock();
-      fs_lv_grade(fs_snap, dst, pitch, row0, row1);
+      fs_lv_grade(snap, dst, pitch, row0, row1);
       grade_ms += get_ms_clock() - tc;
       if (row0 > 0)
         memcpy(dst, src, (size_t)row0 * pitch);
@@ -3198,10 +3211,12 @@ static int fs_view_sink(void *ctx, const unsigned char *rgb, int nrows,
       int y0, u0, v0, y1, u1, v1;
       fs_view_px(src, width, ox, &y0, &u0, &v0);
       fs_view_px(src, width, ox + 1, &y1, &u1, &v1);
-      dst[0] = (unsigned char)((u0 + u1) >> 1); /* UYVY */
-      dst[1] = (unsigned char)y0;
-      dst[2] = (unsigned char)((v0 + v1) >> 1);
-      dst[3] = (unsigned char)y1;
+      /* one 32-bit store, not four byte stores: this VRAM is uncached, so
+       * every separate byte write is its own bus transaction */
+      *(uint32_t *)dst = ((uint32_t)(unsigned char)((u0 + u1) >> 1))
+                       | ((uint32_t)(unsigned char)y0 << 8)
+                       | ((uint32_t)(unsigned char)((v0 + v1) >> 1) << 16)
+                       | ((uint32_t)(unsigned char)y1 << 24);
       dst += 4;
     }
     if (fs_view_pw & 1) { /* odd width: last pixel on its own */
