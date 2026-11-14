@@ -281,7 +281,17 @@ typedef struct {
      * brightness as a grey one. That is the hue->luma relation the separable
      * form carries as dy[cell].
      */
-    int16_t v[SE_YUV3_NODES * 3];          /* dy, Cb, Cr per (y,u,v)        */
+    /*
+     * dy, Cb, Cr per node as signed bytes.
+     *
+     * Every value this lattice can hold is already clamped to [-128, 127] --
+     * cb/cr by clamp_c(), dy because it is a difference of two 8-bit lumas
+     * after the stock's own tone curve. Checked across all 46 recipes: the
+     * widest was |dy| 127, |cb| 125, |cr| 126, so the narrower type is exact,
+     * not a lossy saving. It halves the table from 20.8 KB to 10.4 KB, which
+     * is the difference between spilling L1 and fitting in it.
+     */
+    int8_t v[SE_YUV3_NODES * 3];           /* dy, Cb, Cr per (y,u,v)        */
 } se_yuv3;
 
 void se_look_bake_yuv3(const se_look *lk, se_yuv3 *t);

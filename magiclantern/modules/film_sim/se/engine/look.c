@@ -732,9 +732,14 @@ void se_look_bake_yuv3(const se_look *lk, se_yuv3 *t)
          */
         bake_px(lk, clamp8(r), clamp8(g), clamp8(b), o);
         y2 = luma8(o[0], o[1], o[2]);
-        t->v[k]     = (int16_t)(y2 - t->y[yy]);   /* vs grey of the same luma */
-        t->v[k + 1] = (int16_t)clamp_c(div_round((o[2] - y2) * 256, 454));
-        t->v[k + 2] = (int16_t)clamp_c(div_round((o[0] - y2) * 256, 359));
+        {
+            int dy = y2 - t->y[yy];                   /* vs grey of the same luma */
+            if (dy < -128) dy = -128;
+            if (dy > 127) dy = 127;
+            t->v[k] = (int8_t)dy;
+        }
+        t->v[k + 1] = (int8_t)clamp_c(div_round((o[2] - y2) * 256, 454));
+        t->v[k + 2] = (int8_t)clamp_c(div_round((o[0] - y2) * 256, 359));
     }
 }
 

@@ -552,7 +552,7 @@ static void fs_lat_build(void)
 #define FS_HOT
 #endif
 FS_HOT
-static void fs_core_process_rows3(const unsigned char *curve, const short *uv,
+static void fs_core_process_rows3(const unsigned char *curve, const signed char *uv,
                                   const void *src, void *dst,
                                   int pitch, int row0, int row1,
                                   int grain, unsigned int *rnd_state)
@@ -598,9 +598,9 @@ static void fs_core_process_rows3(const unsigned char *curve, const short *uv,
                 uint32_t mv = fs_lat_tab[2][((px >> 16) & 0xFF) ^ 0x80];
                 /* offsets and fractions are added separately: three fractions
                  * can sum past 512 and would carry into the offset */
-                const short *base = uv + (int)((my >> 9) + (mu >> 9) + (mv >> 9));
+                const signed char *base = uv + (int)((my >> 9) + (mu >> 9) + (mv >> 9));
                 int fy = (int)(my & 0x1FF), fu = (int)(mu & 0x1FF), fv = (int)(mv & 0x1FF);
-                const short *ca, *cb2;
+                const signed char *ca, *cb2;
                 int w0, wa, wb, wc;
 
                 /*
