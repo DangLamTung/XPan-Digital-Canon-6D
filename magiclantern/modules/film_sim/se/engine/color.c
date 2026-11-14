@@ -65,6 +65,8 @@ se_err se_color_setup(se_color *c, const se_cr2_info *info,
     memset(c, 0, sizeof *c);
     c->white        = info->white;
     c->exposure_ev  = exposure_ev;
+    /* on by default: without it a highlight ramps through pink before white */
+    c->highlight_mode = 1;
 
     for (i = 0; i < 4; i++) {
         c->black_cfa[i] = info->black_measured ? info->black_cfa[i] : info->black;
@@ -201,8 +203,36 @@ void se_color_matrix_row(const se_color *c, uint16_t *rgb, int width)
         int64_t G = (int64_t)m[3] * r + (int64_t)m[4] * g + (int64_t)m[5] * b;
         int64_t B = (int64_t)m[6] * r + (int64_t)m[7] * g + (int64_t)m[8] * b;
         R >>= SE_Q; G >>= SE_Q; B >>= SE_Q;
-        rgb[x * 3 + 0] = (uint16_t)SE_CLAMP(R, 0, 65535);
-        rgb[x * 3 + 1] = (uint16_t)SE_CLAMP(G, 0, 65535);
-        rgb[x * 3 + 2] = (uint16_t)SE_CLAMP(B, 0, 65535);
+        R = SE_CLAMP(R, 0, 65535);
+        G = SE_CLAMP(G, 0, 65535);
+        B = SE_CLAMP(B, 0, 65535);
+        /*
+         * Highlight desaturation.
+         *
+         * The white balance gains are normalised so the weakest channel is
+         * 1.0, which means red and blue reach full scale before green does:
+         * on the way into a blown highlight they clip first and the ramp
+         * turns pink before it turns white. Clipping each channel on its own
+         * is what makes that fringe. Pulling the colour towards its own luma
+         * as the brightest channel approaches full scale removes it, and does
+         * nothing to tones that are not near the ceiling.
+         *
+         * highlight_mode was declared in the header for this and never used.
+         */
+        if (c->highlight_mode) {
+            int32_t mx = R > G ? (R > B ? R : B) : (G > B ? G : B);
+            const int32_t knee = 56000;      /* ~85% of full scale */
+            if (mx > knee) {
+                int32_t y  = (R * 77 + G * 150 + B * 29) >> 8;
+                int32_t k  = ((mx - knee) << 8) / (65535 - knee);  /* 0..256 */
+                if (k > 256) k = 256;
+                R = y + (((R - y) * (256 - k)) >> 8);
+                G = y + (((G - y) * (256 - k)) >> 8);
+                B = y + (((B - y) * (256 - k)) >> 8);
+            }
+        }
+        rgb[x * 3 + 0] = (uint16_t)R;
+        rgb[x * 3 + 1] = (uint16_t)G;
+        rgb[x * 3 + 2] = (uint16_t)B;
     }
 }
