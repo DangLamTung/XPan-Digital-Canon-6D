@@ -158,13 +158,19 @@ void se_develop_dither_row(const uint16_t *row, uint8_t *out8, int width,
             int thr = ((int)dr[x & 7] * 65535) >> 6;
             int c;
             for (c = 0; c < 3; c++) {
-                int v = ((int)row[x * 3 + c] * 255 + thr) / 65535;
+                /* exact division by 65535 without a divide: the identity holds
+                 * for every u < 65535 * 256 (checked exhaustively) */
+                int u = (int)row[x * 3 + c] * 255 + thr;
+                int v = (u + 1 + (u >> 16)) >> 16;
                 out8[x * 3 + c] = (uint8_t)SE_CLAMP(v, 0, 255);
             }
         }
     } else {
         for (x = 0; x < width * 3; x++)
-            out8[x] = (uint8_t)(((int)row[x] * 255 + 32767) / 65535);
+            {
+                int u = (int)row[x] * 255 + 32767;
+                out8[x] = (uint8_t)((u + 1 + (u >> 16)) >> 16);
+            }
     }
 }
 

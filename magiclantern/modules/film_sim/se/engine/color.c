@@ -178,7 +178,8 @@ void se_color_scale_row(const se_color *c, const uint16_t *src, uint16_t *dst,
         int32_t w;
         if (v < 0) v = 0;
         /* v <= 16383 and scale <= ~8 in Q14, so this stays inside int32. */
-        w = (int32_t)(((int64_t)v * scale + (SE_QONE / 2)) >> SE_Q);
+        /* 16383 * 131072 = 2,147,352,576 < 2^31 - 1, so 32 bits are enough */
+        w = (int32_t)(((int32_t)v * scale + (SE_QONE / 2)) >> SE_Q);
         if (w > clip) w = clip;
         /* the film stock, one lookup per sample */
         if (te) w = se_lut1_eval(odd ? to : te, (uint16_t)w);

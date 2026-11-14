@@ -229,7 +229,13 @@ void fsg_text(int x, int y, int size, int fg, int bg, const char *fmt, ...)
  * when it closes, so the module's own .bss does not have to carry them. */
 void *fsg_alloc(int n)
 {
-  return n > 0 ? __mem_malloc(n, MEM_TEMPORARY, __FILE__, __LINE__) : NULL;
+  /*
+   * MEM_TEMPORARY hands back the uncached alias (0x4xxxxxxx). The shelf blits
+   * tens of KB out of these buffers every frame, so take the cached alias --
+   * same RAM, and nothing else ever reads them.
+   */
+  void *p = n > 0 ? __mem_malloc(n, MEM_TEMPORARY, __FILE__, __LINE__) : NULL;
+  return p ? CACHEABLE(p) : NULL;
 }
 
 void fsg_free(void *p)
