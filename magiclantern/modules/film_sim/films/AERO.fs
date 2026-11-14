@@ -1,7 +1,7 @@
-# Kodak ColorPlus 200: warm-peach, radiant skin, cyan shadows, consumer.
+# Kodak Aerocolor IV 125: aerial negative, thin shadows, vivid and clean.
 #
-# Calibrated against Dehancer Desktop Kodak ColorPlus 200 reference renders.
-# De-yellowed skin tone, radiant midtone luma, 48-sector non-banding matrix.
+# Built from the ColorPlus 200 recipe and fitted to the Dehancer reference on
+# all 102 frames, then the blue band was corrected at 48-knot resolution.
 VERSION   3
 NAME AEROCOLOR IV 125
 DESC Aerial negative: thin shadows, vivid, clean.

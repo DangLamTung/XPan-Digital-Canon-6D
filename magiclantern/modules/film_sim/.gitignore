@@ -52,3 +52,7 @@ se/hosttest/*.dSYM/
 # The glob above only caught tools/sim/*.ppm, not the subdirectory.
 tools/sim/*/*.ppm
 tools/sim/*/*.png
+
+# host-test binaries built from the sources next to them
+se/hosttest/ship3
+se/hosttest/shipgrade

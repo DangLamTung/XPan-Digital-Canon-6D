@@ -532,8 +532,9 @@ uint32_t fs_yuvlook_apply(unsigned char *buf, int width, int height, int stride)
                 /* NORMAL keeps the luma gain and the matrix, drops the cells. */
                 int cgg  = cg * g;
                 int ru, rv;
-                if (jm && (jm[0] | jm[1] | jm[2] | jm[3])) {
-                    /* per-cell rotation + gain: the recipe's HUE_ROT survives */
+                /* every cell carries a transform: the bake fills empty ones
+                 * from the global matrix, so this is unconditional now */
+                if (jm) {
                     ru = (jm[0] * u + jm[1] * v) >> 8;
                     rv = (jm[2] * u + jm[3] * v) >> 8;
                     ru = (ru * g) >> 6;

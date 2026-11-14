@@ -1,11 +1,7 @@
-# Kodak Ektar 100: vivid reds and blues, tight, fine grain, cool.
+# Kodak Ektar 25: the slow, sharp, saturated Ektar.
 #
-# Ektar is the negative that behaves like a slide: blacks on the floor, a
-# steep middle, and saturation high enough that reds and blues are the reason
-# people shoot it.  The 128,131 in the red curve is the other half of its
-# reputation -- Ektar leans magenta in the highlights, and a red curve that
-# lifts slightly after mid-grey is how that reads without a cast.
-#
+# Built from the Ektar 100 recipe and fitted to the Dehancer reference on all
+# 102 frames: tone curve, saturation and the R/B channel balance.
 VERSION   3
 NAME EKTAR 25
 DESC Slow, sharp, saturated: the finest-grain Ektar.

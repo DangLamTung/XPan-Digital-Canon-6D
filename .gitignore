@@ -33,3 +33,11 @@ DehancerDesktop_Installer*
 gfx100II-*
 gfx100ii_luts/
 magiclantern/modules/film_sim/tools/calib/models/
+
+# session artifacts from the 2048 ground-truth campaign (not source)
+/gt2048/
+/groundtruth_2048.zip
+/card_backup/
+/Film+recipes+PARVEC+Pack+1.zip
+/cbasic_card.zip
+/DIGIC_X_IBus_and_Memory_Guide.pdf

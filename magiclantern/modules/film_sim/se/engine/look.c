@@ -664,6 +664,23 @@ void se_look_bake_yuv(const se_look *lk, se_yuvtbl *t)
             }
         }
     }
+
+    /*
+     * A cell whose probes all failed carries no transform. Fill it from the
+     * global matrix so the shot loop can use jm unconditionally: testing for
+     * an empty cell per pixel cost a branch and four loads in the hot path.
+     */
+    {
+        int i;
+        for (i = 0; i < SE_YUV_CELLS; i++) {
+            if (!(t->jm[i][0] | t->jm[i][1] | t->jm[i][2] | t->jm[i][3])) {
+                t->jm[i][0] = (int16_t)t->matrix[0];
+                t->jm[i][1] = (int16_t)t->matrix[1];
+                t->jm[i][2] = (int16_t)t->matrix[2];
+                t->jm[i][3] = (int16_t)t->matrix[3];
+            }
+        }
+    }
 }
 
 /*

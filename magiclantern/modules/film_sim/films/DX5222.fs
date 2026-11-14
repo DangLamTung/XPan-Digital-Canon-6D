@@ -1,11 +1,8 @@
-# Kodak Tri-X 400: contrasty b&w, deep blacks, visible grain.
+# Kodak Double-X 5222: cinema black and white, soft shoulder, wide range.
 #
-# Tri-X at box speed: 48,26 puts the shadows down fast, 176,196 keeps a long
-# straight middle, and the shoulder at 251 means the highlights still hold.
-# All three per-channel curves are the identity because SAT 0 has already
-# thrown the colour away -- a coloured curve here would only reintone the
-# grey.
-#
+# Built from the Tri-X recipe and fitted to the Dehancer reference on all 102
+# frames. Grain and halation come from the base; the tone came from matching
+# Dehancer's luma distribution, and the tint from SPLIT_MID/HI.
 VERSION   3
 NAME DOUBLE-X 5222
 DESC Cinema black and white: soft shoulder, wide range.

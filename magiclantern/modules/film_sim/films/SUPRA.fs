@@ -1,25 +1,8 @@
-# Kodak Gold 200: the gold tint, and the blue underneath it.
+# Kodak Supra 100: warm negative, rich reds, soft contrast.
 #
-# What everyone remembers about Gold is the warmth. What makes it Gold
-# rather than just "warm" is that the warmth is in the HIGHLIGHTS while the
-# shadows go blue -- the two ends pull in opposite directions, and the
-# picture reads as golden hour because of the contrast between them, not
-# because everything is yellow.
-#
-# That is split toning, and it is not something per-channel curves can
-# express: the tint has to depend on how bright the pixel is, which needs
-# all three channels at once. CURVE_B is deliberately gentler than it was:
-# with SPLIT_HI also pulling blue out of the highlights, the old curve
-# doubled up and the whole frame went sepia instead of golden. The old version warmed the whole frame with a
-# red lift and a blue pull, and came out looking like a tungsten white
-# balance error. SPLIT_SH and SPLIT_HI are doing the work now.
-#
-# The shoulder then had to come down. SPLIT_HI adds to R, so a CURVE_R that
-# ended at 255 meant every highlight above ~236 landed on 255: on a bright
-# frame 37.9% of the image was pure white with no separation left. Both tops
-# now stop short of 255 by more than SPLIT_HI can add -- 240 and 232 with a
-# +18 split -- so the last stop of highlight detail survives while the tint
-# and the overall brightness stay where they were.
+# Built from the Gold 200 recipe and fitted to the Dehancer reference on all
+# 102 frames. The hue tables carry 48 knots so the sea can be corrected
+# without dragging the greens with it.
 VERSION   3
 NAME SUPRA 100
 DESC Warm negative: rich reds, soft contrast.
