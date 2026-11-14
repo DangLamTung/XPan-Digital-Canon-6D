@@ -104,25 +104,6 @@ static void apply_grain(uint16_t *row, int width, int y,
         }
     }
 }
-#if 0
-static void apply_grain_old(uint16_t *row, int width, int y,
-                            int cell, int amp_q, uint32_t seed)
-{
-    int x;
-    for (x = 0; x < width; x++) {
-        int v = row[x * 3 + 1];                 /* weight on green/luma */
-        int w = (v * (65535 - v)) >> 14;        /* 4v(1-v), 0..65535-ish */
-        int n, d, c;
-        if (w <= 0) continue;
-        n = (int)(grain_hash((uint32_t)(x / cell), (uint32_t)(y / cell), seed) & 0xffff);
-        d = ((n - 32768) * amp_q >> 15) * w >> 16;
-        for (c = 0; c < 3; c++) {
-            int t = (int)row[x * 3 + c] + d;
-            row[x * 3 + c] = (uint16_t)SE_CLAMP(t, 0, 65535);
-        }
-    }
-}
-#endif
 
 /* Bayer 8x8 ordered dither, scaled to one 8-bit step. */
 static const uint8_t g_dither[8][8] = {
