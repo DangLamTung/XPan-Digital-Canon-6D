@@ -282,10 +282,12 @@ static void fs_core_aspect_bars(void *dst, int pitch, int width_px,
     if (box_h < active) {
         int top = row0 + (active - box_h) / 2;
         int bot = top + box_h;
-        for (int y = row0; y < top; y++)
-            memset((char *)dst + (size_t)y * pitch, 0, (size_t)pitch);
-        for (int y = bot; y < row1; y++)
-            memset((char *)dst + (size_t)y * pitch, 0, (size_t)pitch);
+        /* the rows of each bar are contiguous, so one memset does the work of
+         * one per row (a 65:24 frame has ~680 bar rows per side) */
+        if (top > row0)
+            memset((char *)dst + (size_t)row0 * pitch, 0, (size_t)(top - row0) * pitch);
+        if (row1 > bot)
+            memset((char *)dst + (size_t)bot * pitch, 0, (size_t)(row1 - bot) * pitch);
         return;
     }
 

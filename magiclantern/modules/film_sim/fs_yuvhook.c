@@ -162,6 +162,21 @@ static void fs_hdr_row_uyvy(unsigned char *dst, const unsigned char *rgb, int w)
  * bottom of the picture instead, because a header that silently disappears on
  * half the framings is worse than one that covers a strip of the frame.
  */
+/* Paper: U 0, Y 255, V 0, Y 255 -- the same four bytes for every pixel pair,
+ * so one 32-bit word fills a row instead of four byte stores. */
+static void fs_fill_paper(unsigned char *gp, int width, int stride, int y0, int y1)
+{
+    for (int y = y0; y < y1; y++) {
+        uint32_t *row = (uint32_t *)(gp + (size_t)y * stride);
+        int words = width >> 1;
+        for (int i = 0; i < words; i++) row[i] = 0xFF00FF00u;
+        if (width & 1) {
+            unsigned char *p = (unsigned char *)row + (size_t)words * 4;
+            p[0] = 0; p[1] = 255;
+        }
+    }
+}
+
 static void fs_hdr_burn(unsigned char *gp, int width, int rows, int stride,
                         int num, int den) {
     int box_h = (num > 0 && den > 0) ? (width * num) / den : rows;
@@ -182,24 +197,8 @@ static void fs_hdr_burn(unsigned char *gp, int width, int rows, int stride,
 
     if (band_h <= bar_h) {
         /* in the bar, on paper */
-        for (y = 0; y < top; y++) {
-            unsigned char *row = gp + (size_t)y * stride;
-            for (int x = 0; x + 1 < width; x += 2) {
-                row[x * 2 + 0] = 0;
-                row[x * 2 + 1] = 255;
-                row[x * 2 + 2] = 0;
-                row[x * 2 + 3] = 255;
-            }
-        }
-        for (y = top + box_h + band_h; y < rows; y++) {
-            unsigned char *row = gp + (size_t)y * stride;
-            for (int x = 0; x + 1 < width; x += 2) {
-                row[x * 2 + 0] = 0;
-                row[x * 2 + 1] = 255;
-                row[x * 2 + 2] = 0;
-                row[x * 2 + 3] = 255;
-            }
-        }
+        fs_fill_paper(gp, width, stride, 0, top);
+        fs_fill_paper(gp, width, stride, top + box_h + band_h, rows);
         y0 = top + box_h;
     } else {
         y0 = rows - band_h;      /* no room: draw over the picture */
