@@ -506,3 +506,47 @@ processing actually live. The region holds 241 functions; the heaviest
 (`0xFF5DB528`, 10,904 bytes, 332 `ldrb` + 425 `ldr`) is where the next pass starts.
 
 Everything in rounds 38-42 that used the `0xFF2A0000` window stays withdrawn.
+
+## Round 44: the metering loop, and the weighted sum behind it
+
+Inside the metering window the tightest accumulation loop is at
+`0xFF5C4A5C`-`0xFF5C4AB4`. It walks a list of **zone records of 16 bytes**
+(`add r5, r4, sl, lsl #4`), and for each one:
+
+```
+ff5c4a70  ldrh r1, [r5, #40]     @ zone field at +0x28
+ff5c4a78  sub  r0, r0, r1
+ff5c4a7c  add  r0, r0, #56
+ff5c4a80  strh r0, [r5, #46]     @ store at +0x2E
+ff5c4a8c  add  r0, r5, #40
+ff5c4a90  bl   0xFF42EEEC        @ clamp/update helper
+ff5c4aac  cmp  sl, r7
+ff5c4ab0  blt  0xFF5C4A5C        @ next zone
+```
+
+So metering is organised as **zones with 16-bit coordinates**, each evaluated by a
+call into `AECalc` (`0xFF42xxxx`), not as one pass over the frame.
+
+The helper that does the arithmetic sits at `0xFF42EF18`:
+
+```
+ff42ef1c  ldrh r3, [r0]
+ff42ef20  ldr  ip, [r2, #4]
+ff42ef28  mul  r3, ip, r3           @ weight * zone value
+ff42ef2c  add  r3, r3, r3, lsl #1   @ *3
+ff42ef30  lsr  ip, r3, #10          @ /1024
+ff42ef34  ldrh r3, [r0, #2]
+ff42ef38  mul  r3, r4, r3           @ next weight * next value
+ff42ef44  add  ip, ip, r3, lsr #10  @ accumulate
+```
+
+That is a **weighted sum with a 1/1024 scale** over the 16-bit fields of a zone
+record -- the AE metering core, at `0xFF42EF18`, reached from the zone loop at
+`0xFF5C4A5C`.
+
+`0xFF42EEEC` is a saturation clamp for the same records (`ldrsh ip, [r0, #6]`,
+compare against two limits, `strh` the result, write a flag at `+0x0E`).
+
+Next: the same shape should exist for AF over the AF frame -- a weighted or
+difference-based sum -- and that is what the next pass looks for in
+`0xFF4324C4` (`LiveViewAFPUtility.c`) and its neighbours.
