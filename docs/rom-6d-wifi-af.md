@@ -57,8 +57,11 @@ A generated, always-current version of this table is `docs/af-property-map.txt`
 `property.h` in one pass).
 
 The AF property family has **30 descriptors** in the table at `0xF8B6EB64`
-(16-byte entries: id, flags, size, index), and all of them are **9-byte**
-payloads except `0x80050045`, which is 14.
+(16-byte entries: id, flags, a third field, index). The third field is **not**
+the payload length: `PROP_AFPOINT` has 1 there while ML's `property.h` records
+`len=70`, and the handlers copy 3 and 11 bytes for properties whose field is 9.
+What the field means is still open; it is printed as `field3` in
+`docs/af-property-map.txt` rather than being called a size.
 Full list: `docs/property-descriptors.txt`.
 
 The handlers are thin. `0xFF3131F4` copies two bytes of payload into a 3-byte
