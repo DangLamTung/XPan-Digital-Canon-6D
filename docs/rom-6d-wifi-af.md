@@ -580,3 +580,45 @@ which the metering loop reaches through `r4` and which I have not resolved.
 
 Stating the round honestly: one window mapped, one hypothesis formed, no new
 metric found.
+
+## Round 46: AF code calls into the metering module, 30 times
+
+The hypothesis from round 45 -- that LiveView AF consumes metering values instead
+of computing its own -- gets its first structural support from call directions:
+
+| direction | calls |
+|---|---|
+| AF window (`0xFF43xxxx`) -> metering (`0xFF5Cxxxx`) | **30** |
+| AF window -> `AECalc` (`0xFF42xxxx`) | 0 |
+| metering -> AF window | 73 |
+| metering -> `AECalc` | 157 |
+
+The AF window's metering calls concentrate on one function:
+
+```
+16 x 0xFF5CD3F8     3 x 0xFF5CDA98     then 0xFF5CF488/4B0/4D8/508/D14/EB4, once each
+```
+
+`0xFF5CD3F8` is a **jump-table dispatcher**:
+
+```
+ff5cd3f8  push {r4-r8, lr}
+ff5cd404  ldr  r0, [r0, #12]      @ a type/id
+ff5cd424  cmp  r0, #12
+ff5cd430  addcc pc, pc, r0, lsl #2   @ 13-entry table
+ff5cd43c  b    ... (case 1)
+ff5cd440  b    ... (case 2)
+...
+```
+
+with cases that move 16-bit fields between the caller's record and a state
+structure (`ldrh r0, [r5, #10]; strh r0, [r4, #6]`) and one that calls
+`0xFF7661F0` for the actual value, returning `-6`/`-8` on failure.
+
+So AF queries metering through a typed dispatcher rather than through a shared
+buffer, which is why no AF code reads a frame: the numbers arrive as records.
+This still does not show *what* is summed, and the 73 calls the other way mean the
+two modules are coupled in both directions.
+
+Statement of the round: call directions measured; the AF-consumes-metering
+hypothesis is now supported but not proven.
