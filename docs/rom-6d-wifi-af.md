@@ -328,10 +328,24 @@ from pixels:
    far too few.
 3. **The AF code block in RAM has no 64-bit maths either** -- 20 `mul`, no
    `umull`/`smlal` (`docs/af-function-map.txt`).
-4. **AEWB touches peripherals**: `0xC0080000`, `0xC0080500`, `0xC0080700`,
-   `0xC0E00000`, `0xC0E2008C` appear as literals in that region, and the trace
-   string `AEWB_AEL_SET_AFAE:%X Bv:%X` describes the firmware *publishing* an
-   AE/AF value it was given.
+4. **AEWB reads a 7-bit value out of a peripheral block.** This one is an
+   instruction sequence, not a literal count:
+
+   ```
+   ff2a3dcc  ldr   r0, [pc, #376]   @ 0xff2a3f4c -> 0xC0080500
+   ff2a3dd0  ldrh  r0, [r0, #8]     @ read a 16-bit register at 0xC0080508
+   ff2a3dd8  and   r5, r0, #127     @ keep 7 bits
+   ff2a3ddc  ldr   r0, [r4, #64]
+   ff2a3de4  cmp   r0, r5
+   ff2a3de8  movcc r5, r0           @ clamp against a computed value
+   ```
+
+   Confirmed by pc-relative-load analysis: of the five peripheral addresses in
+   the AEWB region, `0xC0080000` is loaded at `0xFF2A1E58` and `0xFF2A7360`,
+   `0xC0080500` at `0xFF2A3DCC`, `0xFF2A594C` and `0xFF2A1E28`-adjacent slots,
+   `0xC0080700` at `0xFF2A2E14`, and `0xC0E2008C` at `0xFF2B0EA4`. Several other
+   occurrences of the same constants are table data, not code -- so counting
+   literals would have overstated this, and the instruction is what makes it real.
 
 The reading: the DIGIC evaluates the LiveView frame in hardware (the interrupt
 name table even carries a `WB_AE` block), and the firmware's autofocus is the
