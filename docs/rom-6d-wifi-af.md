@@ -52,11 +52,17 @@ The property dispatch table is at `0xF83149DC`, entries of the form
 | `0x8005002B` | `0xFF3132FC` |
 | `0x80050033` | `0xFF313340` |
 
-A generated, always-current version of this table is `docs/af-property-map.txt`
+A generated version of this table is `docs/af-property-map.txt`
 (`tools/rom/afmap.py`, which reads the dispatch table, the descriptors and ML's
-`property.h` in one pass).
+`property.h` in one pass). **It is a partial view**: it covers the dispatch table
+at `0xF83149DC` only. `PROP_LV_LENS_DRIVE_REMOTE` (`0x80050013`) is used by ML's
+own `lens_focus()` (`src/lens.c:808`) to move the lens, and it appears in three
+property-id lists in the ROM (`0xF8B69860`, `0xF8B698F8`, `0xF8D48A38`) but has
+neither a descriptor in the tables found so far nor an entry in this dispatch
+table. So the AF family is larger than what is mapped, and the unqualified
+phrasing "the AF property family" should not be used for it.
 
-The AF property family has **30 descriptors** in the table at `0xF8B6EB64`
+The dispatch table covers **30 descriptors** in the table at `0xF8B6EB64`
 (16-byte entries: id, flags, a third field, index). The third field is **not**
 the payload length: `PROP_AFPOINT` has 1 there while ML's `property.h` records
 `len=70`, and the handlers copy 3 and 11 bytes for properties whose field is 9.
