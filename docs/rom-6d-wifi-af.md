@@ -281,7 +281,10 @@ SPECIAL_OPTION_AFAE DEBUG MODE ON
 SPECIAL_OPTION ULTRA DEBUG MODE ON
 ```
 
-and a property that gates the diagnostic modes:
+and a property that gates the diagnostic modes. Note where that property is read:
+the strings next to `PROP_SPECIAL_OPTION = %d` are `fmChangeProperty : Unknown ID`,
+`fmSuspend`, `fmResume`, `fmSetInitialCardInfo`, so the reader is the **file
+manager**, not the AF subsystem -- the flag is global, not lens state:
 
 ```
 PROP_SPECIAL_OPTION = %d
