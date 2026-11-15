@@ -127,7 +127,7 @@ Reading: the AF controller only **queues** work; AEWB evaluates each frame;
 Where the AF code lives: **RAM `0x03C000`-`0x043000`, 83 functions**, next to the
 names `AfWrDmacCompleteCBR`, `AfWrDmacAbortCBR`, `AfCompleteCBR`,
 `AfOverRunErrorCBR` (`docs/af-function-map.txt`). That block is mostly property
-reads (82 calls to the getter `0xFF1319C4` out of 291 calls into the ROM), so the
+reads (82 calls to the getter `0xFF1319C4` out of 289 calls into the ROM), so the
 metric is not there.
 
 **Not established:** the metric formula itself.
