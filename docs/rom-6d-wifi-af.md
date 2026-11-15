@@ -238,3 +238,30 @@ re-check rather than trust.
 Two rules this table enforces: a claim derived from a string is weaker than one
 read out of a table, and a claim contradicted by code elsewhere in this repository
 loses regardless of how often it was repeated.
+
+## Where the firmware actually touches pixels (measured)
+
+Counting `ldrb` instructions per 256 KB of ROM1 gives a rough map of which code
+reads bytes in bulk, and therefore where image work happens at all. Top windows
+(full table in `docs/rom-code-density.txt`):
+
+| window | ldrb |
+|---|---|
+| `0xFFFC0000` | 20,048 |
+| `0xFFA40000` | 10,237 |
+| `0xFFA80000` | 8,815 |
+| `0xFF580000` | 7,999 |
+| `0xFF3C0000` | 7,772 |
+| `0xFFCC0000` | 7,041 |
+
+The AF unit (`0xFF130000`, 326 `ldrb` over 64 KB) and AEWB
+(`0xFF2A0000`/`0xFF2B0000`, 554 each) are **an order of magnitude below** these.
+The dense regions hold tables that look like codec tables (Huffman-shaped), so the
+heavy byte work in this firmware is JPEG and image transport, not metering.
+
+What this establishes: there is **no full-frame pixel loop in the AF or AEWB
+code**. What it does *not* establish is where the metering happens -- the AEWB
+code does touch peripherals (`0xC0080000`, `0xC0080500`, `0xC0080700`,
+`0xC0E00000`, `0xC0E2008C`), which is consistent with a hardware evaluation block
+reading the LiveView stream and the firmware reading results, but I have not
+identified those blocks and cannot claim it.

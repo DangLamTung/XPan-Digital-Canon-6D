@@ -1,0 +1,11 @@
+# Pixel-read density by 256 KB window in ROM1 (ldrb instructions)
+# measured with tools/rom/romscan.py's counting rules; see the AF/Wi-Fi doc
+# address          ldrb
+0xfffc0000  20048
+0xffa40000  10237
+0xffa80000   8815
+0xff580000   7999
+0xff3c0000   7772
+0xffcc0000   7041
+0xff400000   6912
+0xff1c0000   6795
