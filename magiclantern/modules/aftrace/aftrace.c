@@ -31,15 +31,28 @@ static void alog(const char *fmt, ...)
     if (logf) { FIO_WriteFile(logf, buf, n); FIO_WriteFile(logf, "\n", 1); }
 }
 
+/* Handlers run inside PropMgrTask. They must not do file I/O or sleep, so a
+ * change is only recorded into a small ring; a separate task drains it. */
+struct afr_ev { uint32_t val; const char *task; uint32_t t; const char *what; };
+static volatile struct afr_ev afr_ring[64];
+static volatile uint32_t afr_head, afr_tail;
+
 #define AFTRACE_PROP(id, name) \
     static volatile uint32_t name##_val; \
     static uint32_t name##_last, name##_n; \
     PROP_HANDLER(id) { \
-        name##_val = buf ? buf[0] : 0; name##_n++; \
-        if (name##_val != name##_last) { \
-            name##_last = name##_val; \
-            alog("%s = %d  task=%s  t=%d", #id, (int)name##_val, \
-                 get_current_task_name(), (int)get_ms_clock()); \
+        uint32_t v = buf ? buf[0] : 0; \
+        name##_val = v; name##_n++; \
+        if (v != name##_last) { \
+            name##_last = v; \
+            uint32_t h = afr_head; \
+            if (h - afr_tail < (uint32_t)COUNT(afr_ring)) { \
+                afr_ring[h % COUNT(afr_ring)].val = v; \
+                afr_ring[h % COUNT(afr_ring)].task = get_current_task_name(); \
+                afr_ring[h % COUNT(afr_ring)].t = get_ms_clock(); \
+                afr_ring[h % COUNT(afr_ring)].what = #id; \
+                afr_head = h + 1; \
+            } \
         } \
     }
 
@@ -68,7 +81,19 @@ static void atrace_task(void *unused)
 {
     if (alog_open() != 0) return;
     alog("=== aftrace: watching AF props, task names in each line ===");
-    msleep(30000);
+    uint32_t until = get_ms_clock() + 30000;
+    while ((uint32_t)get_ms_clock() < until)
+    {
+        while (afr_tail != afr_head)
+        {
+            uint32_t t = afr_tail;
+            struct afr_ev e = *(struct afr_ev *)&afr_ring[t % COUNT(afr_ring)];
+            alog("%s = %d  task=%s  t=%d", e.what, (int)e.val,
+                 e.task ? e.task : "?", (int)e.t);
+            afr_tail = t + 1;
+        }
+        msleep(100);
+    }
     alog("=== aftrace: done, %d results, %d points, %d modes ===",
          (int)afres_n, (int)afpoint_n, (int)afmode_n);
     alog_close();
