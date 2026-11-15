@@ -793,3 +793,37 @@ MLW_NIDS=116 but registered=115
 
 and a handler containing `FIO_WriteFile` is reported as
 `handler 0x80050029u calls FIO_ (runs in PropMgrTask)`.
+
+## Round 29: the switch may not be the blocker, and what that table really is
+
+Two things came out of chasing the Wi-Fi on/off id further.
+
+**The table at file `0xC02D90` is an interrupt-name table, not a function
+table.** Its records point into a blob at `0xFFCD0400` holding 126 hardware block
+names -- `INTR_PRIMA`, `TMU_SWA`, `FENCING_A/B/C`, `SUSAN_A/B`, `TCU_IPCOUT4B/5B`,
+`ADDA_ADB/ADFB/ASAD`, `ROMC`, `A2BIF`, `USBSS_EHCI/OHCI`, `WB_AE`, `SAFARI`.
+That is DIGIC's interrupt source list, useful for interrupt tracing and not for
+resolving function addresses. `WB_AE` is the only entry near the AE/AF subsystem.
+
+**`PROP_WIFI_SETTING` looks like a setting, not a registered property.** Three
+observations now agree:
+
+* no descriptor matched it -- `0x80040055` was rejected because the ids run
+  `0x80040053` -> `0x80040056`;
+* no dispatch table entry reaches it, unlike every property in
+  `docs/property-map.txt`;
+* its name sits in a log-name blob (`PROP_ADAPTER_DEVICE_ACTIVE`,
+  `PROP_WIFI_SETTING`, `PROP_GPS_DEVICE_ACTIVE`, `PROP_GPS_AUTO_TIME_SETTING`)
+  next to GPS settings, which are configuration, not live properties.
+
+If that is right, then **ML does not need to write a switch at all**: the user
+turns Wi-Fi on in Canon's own menu, and the camera brings up the interface. The
+job for ML then starts *after* that, and `docs/wifi-recipes-plan.md` already
+puts the cheapest usable path first: files written into `DCIM/nnnCANON/` are what
+Canon's app lists, so a developed JPEG placed there is transferable with no
+firmware call at all. That plan marks the `.CR2` question as unverified -- two
+minutes on the camera with the app open would settle it.
+
+This reframing matters because it moves goal 1 from "find an id nobody can name
+statically" to "write to the folder Canon already serves", which is code ML can
+do and can be tested.
