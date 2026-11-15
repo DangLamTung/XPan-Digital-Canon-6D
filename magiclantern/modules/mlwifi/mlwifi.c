@@ -651,7 +651,7 @@ static void mlw_boot_task(void *unused)
     int nz = 0;
 
     msleep(2000);
-    mlw_log("=== boot: mlwifi build 2026-11-12c, %d ids watched (0x80030000..0x8003002f + 0x80010000) ===",
+    mlw_log("=== boot: mlwifi build 2026-11-15a, %d ids watched (0x8003 block + 0x8004 family + 0x80010000) ===",
             MLW_NIDS);
 
     for (k = 0; k < MLW_NIDS; k++)

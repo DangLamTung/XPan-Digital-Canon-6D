@@ -33,7 +33,7 @@ static void alog(const char *fmt, ...)
 
 /* Handlers run inside PropMgrTask. They must not do file I/O or sleep, so a
  * change is only recorded into a small ring; a separate task drains it. */
-struct afr_ev { uint32_t val; const char *task; uint32_t t; const char *what; };
+struct afr_ev { uint32_t w0, w1, w2; uint32_t len; const char *task; uint32_t t; const char *what; };
 static volatile struct afr_ev afr_ring[64];
 static volatile uint32_t afr_head, afr_tail;
 
@@ -42,15 +42,20 @@ static volatile uint32_t afr_head, afr_tail;
     static uint32_t name##_last, name##_n; \
     PROP_HANDLER(id) { \
         uint32_t v = buf ? buf[0] : 0; \
+        uint32_t l = len; \
         name##_val = v; name##_n++; \
-        if (v != name##_last) { \
+        if (v != name##_last || l != 4) { \
             name##_last = v; \
             uint32_t h = afr_head; \
             if (h - afr_tail < (uint32_t)COUNT(afr_ring)) { \
-                afr_ring[h % COUNT(afr_ring)].val = v; \
-                afr_ring[h % COUNT(afr_ring)].task = get_current_task_name(); \
-                afr_ring[h % COUNT(afr_ring)].t = get_ms_clock(); \
-                afr_ring[h % COUNT(afr_ring)].what = #id; \
+                uint32_t k = h % COUNT(afr_ring); \
+                afr_ring[k].w0 = v; \
+                afr_ring[k].w1 = (buf && l >= 8) ? buf[1] : 0; \
+                afr_ring[k].w2 = (buf && l >= 12) ? buf[2] : 0; \
+                afr_ring[k].len = l; \
+                afr_ring[k].task = get_current_task_name(); \
+                afr_ring[k].t = get_ms_clock(); \
+                afr_ring[k].what = #id; \
                 afr_head = h + 1; \
             } \
         } \
@@ -85,9 +90,13 @@ static void alog_close(void)
     if (logf) { FIO_CloseFile(logf); logf = NULL; }
 }
 
+static volatile int afr_running;
+
 static void atrace_task(void *unused)
 {
-    if (alog_open() != 0) return;
+    if (afr_running) return;
+    afr_running = 1;
+    if (alog_open() != 0) { afr_running = 0; return; }
     alog("=== aftrace: watching AF props, task names in each line ===");
     uint32_t until = get_ms_clock() + 30000;
     while ((uint32_t)get_ms_clock() < until)
@@ -96,8 +105,8 @@ static void atrace_task(void *unused)
         {
             uint32_t t = afr_tail;
             struct afr_ev e = *(struct afr_ev *)&afr_ring[t % COUNT(afr_ring)];
-            alog("%s = %d  task=%s  t=%d", e.what, (int)e.val,
-                 e.task ? e.task : "?", (int)e.t);
+            alog("%s len=%u  %08x %08x %08x  task=%s  t=%u", e.what,
+                 e.len, e.w0, e.w1, e.w2, e.task ? e.task : "?", e.t);
             afr_tail = t + 1;
         }
         msleep(100);
@@ -105,6 +114,7 @@ static void atrace_task(void *unused)
     alog("=== aftrace: done, %d results, %d points, %d modes ===",
          (int)afres_n, (int)afpoint_n, (int)afmode_n);
     alog_close();
+    afr_running = 0;
 }
 
 static void atrace_go(void *priv, int delta)
