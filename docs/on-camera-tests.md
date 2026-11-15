@@ -9,16 +9,21 @@ mlwifi), power-cycle, and keep the card where you can read `ML/LOGS/`.
 
 ## Test 1 — which task publishes the AF result (closes the AF algorithm)
 
-`aftrace` watches five properties and records, for each change, the value, the
+`aftrace` watches six properties and records, for each change, the value, the
 **task name** and the millisecond clock:
 
 ```
-0x80050029  PROP_LV_AF_RESULT    0 = focus ok, 1 = failed
-0x80050027  PROP_LV_FOCUS_CMD    the lens drive command
-0x80050002  PROP_LV_FOCUS_DONE   drive finished
-0x80050008  PROP_LV_BV           LiveView brightness
-0x80050010  PROP_BV              brightness
+0x80050029  PROP_LV_AF_RESULT          0 = focus ok, 1 = failed
+0x80050027  PROP_LV_FOCUS_CMD          the lens drive command
+0x80050002  PROP_LV_FOCUS_DONE         drive finished
+0x80050013  PROP_LV_LENS_DRIVE_REMOTE  what ML's own lens_focus() writes
+0x80050008  PROP_LV_BV                 LiveView brightness
+0x80050010  PROP_BV                    brightness
 ```
+
+The remote-drive id matters most: ML drives the lens through it, so a log where
+Canon's own AF also touches it proves the two paths meet, and a log where it does
+not says Canon's AF uses a different property on this body.
 
 Procedure:
 

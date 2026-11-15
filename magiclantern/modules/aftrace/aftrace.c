@@ -62,6 +62,10 @@ AFTRACE_PROP(0x80050029u, afres)
  * completion: the pair that shows one AF step being issued and finished */
 AFTRACE_PROP(0x80050027u, focuscmd)
 AFTRACE_PROP(0x80050002u, focusdone)
+/* PROP_LV_LENS_DRIVE_REMOTE is what ML's own lens_focus() writes; seeing it
+ * beside Canon's own AF traffic tells us which properties a real focus run
+ * uses on this body */
+AFTRACE_PROP(0x80050013u, drive_remote)
 /* brightness values the same component publishes, for the frame cadence */
 AFTRACE_PROP(0x80050008u, lvbv)
 AFTRACE_PROP(0x80050010u, bv)
@@ -137,6 +141,7 @@ MODULE_PROPHANDLERS_START()
     MODULE_PROPHANDLER(0x80050029u)
     MODULE_PROPHANDLER(0x80050027u)
     MODULE_PROPHANDLER(0x80050002u)
+    MODULE_PROPHANDLER(0x80050013u)
     MODULE_PROPHANDLER(0x80050008u)
     MODULE_PROPHANDLER(0x80050010u)
     MODULE_PROPHANDLER(0x8000000Au)
