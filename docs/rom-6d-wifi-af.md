@@ -362,3 +362,44 @@ What is still open is whether point 4 is the whole story. The blocks are
 unidentified, `0xC008xxxx`/`0xC0E0xxxx` are documented nowhere in this repository,
 and I have not seen a register map or a datasheet. Until one of those exists, this
 stays a conclusion from four consistent measurements, not a proven fact.
+
+## Round 40: the peripheral in point 4 is probably a data path, not a meter
+
+Following the block whose base is `0xC0080000` further weakens the
+"hardware metering" reading of round 38.
+
+The function at `0xFF2A1E2C` initialises it like this:
+
+```
+ff2a1e40  mov  r0, #36            @ allocate 36 bytes
+ff2a1e44  bl   0xD068
+ff2a1e58  ldr  r0, [pc, #1068]    @ 0xFF2A228C -> 0xC0080000
+ff2a1e5c  str  r1, [r0, #16]      @ 0xC0080010
+ff2a1e64  str  r1, [r0, #84]      @ 0xC0080054
+ff2a1e68  mov  r1, #0x7000
+ff2a1e6c  add  r0, r0, #0x4000
+ff2a1e70  str  r1, [r0, #128]     @ 0xC0084080
+ff2a1e78  str  r1, [r0, #132]     @ 0xC0084084  (512)
+ff2a1e80  add  r0, r0, #0x2000
+ff2a1e84  str  r5, [r0, #268]     @ 0xC008610C
+ff2a1e8c  str  r5, [r0, #428]     @ 0xC00861AC
+```
+
+Writing a count (`0x7000`), a size (`0x200`), then clearing a run of offsets
+(`0x10C`, `0x18C`, `0x1AC`, `0x0C`) is the shape of a **DMA / transfer engine**
+being set up, not of a metering block. Strings near the same constant mention
+`ASIF` (`/ASIF/ASIF.c`) and USB endpoints, which fits an image/data path.
+
+So the correct statement of point 4 is narrower than round 38 made it:
+
+* true: AEWB **reads** a 16-bit register and keeps **7 bits** of it
+  (`ldrh r0, [r0, #8]`; `and r5, r0, #127` at `0xFF2A3DD0`),
+* true: the same address range is initialised like a transfer engine,
+* **not established**: that this block computes the AE/AF metric. The earlier
+  sentence "the DIGIC evaluates the frame in hardware" is now an unproven
+  hypothesis, and the four measurements in round 38 support only the weaker claim
+  that **the metric is not computed in the AF or AEWB firmware**.
+
+I am leaving the round-38 text in place rather than deleting it, because the
+correction matters more than the tidy document: two rounds in a row, a plausible
+reading of the same evidence changed direction.
