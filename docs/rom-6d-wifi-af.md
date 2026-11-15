@@ -538,3 +538,23 @@ The 6D's built-in hardware has no Wi-Fi radio; its official Wi-Fi path is an
 Eye-Fi card, and the ROM carries 88 Eye-Fi strings. Any "Wi-Fi" this body can do
 has to come through the SD slot (an SDIO Wi-Fi card, for which the 88W8787
 driver is present) or an Eye-Fi card.
+
+## Round 17: the property descriptor tables, and a candidate rejected
+
+`tools/rom/propscan.py` extracts every run of property descriptors from ROM1
+(16-byte entries: id, flags, size, index). Seven runs, the largest with 99 and
+86 entries; the full dump is `docs/property-descriptors.txt`.
+
+The 0x8004xxxx family has **67 descriptors**, and it settles one thing:
+
+> **`0x80040055` is not a property.** The ids run
+> `0x80040053` -> `0x80040056` with nothing between them, so the word that
+> happened to sit next to `[NWCOM] WIFI_SETTING OFF` (round 16) is not a
+> registered property id. That candidate is rejected.
+
+What is still missing for the WiFi switch is the same thing as before: a name.
+The descriptor tables give ids and sizes, the name blob at `0xFF19637C` gives
+names (`PROP_ADAPTER_DEVICE_ACTIVE`, `PROP_WIFI_SETTING`,
+`PROP_GPS_DEVICE_ACTIVE`, `PROP_GPS_AUTO_TIME_SETTING`, ...), but nothing in the
+image points from one to the other -- the name list is reached by index, the
+same way the trace strings are.
