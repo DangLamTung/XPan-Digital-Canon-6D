@@ -62,3 +62,39 @@ XP2 Super 4.38 → 1.78 (100/101 ≤4.0), Provia 100F 9.23 → 2.96.
   green-hue behaviour, not tone.
 - **Portra 160NC/VC** clip above their reference (10.5/8.3 % vs 8.7/6.0 %).
 - **ColorChecker parity** is only certified for 50D; other stocks need a Dehancer chart export.
+
+## Classic Negative is Superia, and the numbers say so
+
+Fujifilm's *Classic Negative* simulation reproduces **Fujicolor Superia**, the
+consumer colour negative Fuji launched in 1998; the look is Superia pushed --
+harder contrast, cyan-green shadows, greens that read olive.
+
+This repository already carries Superia in two forms:
+
+* **recipes**: `films/SUP200.fs` (Superia 200), `films/SUP400.fs`, `films/SUPRA.fs`
+* **ground truth**: `gt2048/Fujicolor_Superia_200_+_3513/` -- 102 Dehancer
+  references plus a chart, matching the `batch110b/` source frames by name
+
+So Classic Negative can be measured against a real reference instead of judged by
+eye. On frame `001_IMG_6883.jpg`, median CIEDE2000 against the Dehancer Superia
+200 reference:
+
+| recipe | median dE00 |
+|---|---|
+| `SUP200.fs` (our Superia 200) | **3.07** |
+| `classicneg.fs` (our Classic Neg) | **9.43** |
+
+`classicneg.fs` is not a Superia recipe that is slightly off; it is a different,
+much bluer and harder rendering, and it was never calibrated (it has no entry in
+the standings above and no corpus of its own). Three times the error of `SUP200`
+on the same frame is the measurement behind "it looks wrong".
+
+The honest options, in order:
+
+1. use `SUP200.fs` when the intent is Classic Negative -- it is measured, and it
+   is the film the simulation is named after;
+2. rebuild `classicneg.fs` as `SUP200` plus a controlled push (contrast up, shadow
+   split toward cyan), then measure it on this corpus until the number drops;
+3. keep it out of calibrated comparisons until (2) is done.
+
+The comparison image is `renders/dalat-calib/compare-superia-vs-classicneg.jpg`.
