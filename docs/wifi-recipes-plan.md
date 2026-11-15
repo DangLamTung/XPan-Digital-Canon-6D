@@ -204,3 +204,22 @@ What still needs the camera, and is cheap:
    plan has carried as "not verified" since 2026-11-06.
 
 Both are observations, not code.
+
+## Round 36-37: the file path checked line by line
+
+The earlier round asserted that Develop already writes a Canon-visible JPEG. Here
+is the chain, with the exact places it was checked:
+
+| step | code | what it does |
+|---|---|---|
+| folder | `src/fio-ml.c:332` | `get_dcim_dir()` = `"%s:/DCIM/%03d%s"` from the shooting card's drive letter and **current folder number**, so output lands in the folder the camera is actually using |
+| name | `modules/film_sim/film_sim.c:1016, 7130, 7143` | `"%s/IMG_%s.JPG"`, a DCF-legal name; the shot's own number is used when it is free, otherwise the next free number |
+| replace | `film_sim.c:123` | `CONFIG_INT("film.sim.replace", film_sim_replace, 1)` -- by default the developed JPEG takes the camera's own JPEG slot |
+| atomicity | `film_sim.c:7149-7165, 965` | written as `IMG_nnnn.TMP` and `FIO_RenameFile()`d to `.JPG` on success, with `fs_recover_tmp_files()` cleaning a `.TMP` at boot |
+
+So the file Canon's app lists is a normal `IMG_nnnn.JPG` in the current
+`DCIM/<folder>`, containing the film-sim look. No firmware address, no NWCOM
+call, no switch id.
+
+The one thing code cannot answer is whether Canon's app offers it: that is one
+look on the camera (`docs/on-camera-tests.md`, Test 2).
