@@ -174,3 +174,33 @@ The WiFi module's data is contiguous at file `0x26xxxx` (x10 the range
 `0xFF200000`-`0xFF270000` under the alias base). Its code is the region
 immediately before that. A Ghidra project on ROM1 at `0xFF000000`, starting in
 `0xFF1E0000`-`0xFF270000`, is the shortest route that does not depend on strings.
+
+## Round 30: step 1 is already implemented, and it is not "_F"
+
+The plan above says "Develop writes `IMG_nnnn_F.JPG`, which is not a DCF name, so
+give Develop an option to write the DCF-legal `IMG_nnnn.JPG`". The code no longer
+does that. In `modules/film_sim/film_sim.c` the developed file is written to
+
+```
+DCIM/<dir>/IMG_<nnnn>.JPG        (snprintf at lines 1016, 7130, 7143)
+```
+
+with `film.sim.replace` defaulting to **1** (`CONFIG_INT("film.sim.replace",
+film_sim_replace, 1)`), so the developed JPEG takes the number of the shot it came
+from and **replaces the camera's own JPEG** at that name. The only `_F` left in
+the file is in two comments describing an older measurement.
+
+Consequence for the Wi-Fi question: the "works today" path in this plan is not a
+to-do, it is the shipped behaviour. A phone running Canon's app should see a
+normal `IMG_nnnn.JPG` that already contains the film-sim look, because from the
+camera's point of view it is the same file it wrote. That needs no firmware
+address, no NWCOM call and no switch id.
+
+What still needs the camera, and is cheap:
+
+1. with Wi-Fi on and the app connected, confirm the app lists `IMG_nnnn.JPG` and
+   transfers it;
+2. confirm whether a `.CR2` in the same folder is offered -- the question this
+   plan has carried as "not verified" since 2026-11-06.
+
+Both are observations, not code.
