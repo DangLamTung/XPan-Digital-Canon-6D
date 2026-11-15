@@ -758,3 +758,38 @@ the `change:` line names it.
 
 Candidates to look for in that log, in order of likelihood:
 `0x80040055`, then anything in `0x80030000`-`0x8003003F` and `0x80010000`.
+
+## Round 26: a checker for the failures that build clean
+
+Three defects shipped in the modules during this work, each of which compiled
+and each of which would have misled a camera run:
+
+1. `aftrace` defined property handlers but never listed them in
+   `MODULE_PROPHANDLERS`, so it loaded and never fired;
+2. `mlwifi`'s `mlw_ptrs[]` had 49 entries for 116 ids -- C zero-fills the rest,
+   so the watcher would have dereferenced NULL on every `0x8004` id;
+3. `aftrace` did card I/O inside a property handler, which runs in `PropMgrTask`.
+
+`tools/modcheck.py` now checks all three offline:
+
+```
+$ ./tools/modcheck.py magiclantern/modules/mlwifi magiclantern/modules/aftrace
+mlwifi: 0 problem(s)
+aftrace: 0 problem(s)
+```
+
+It compares `MLW_NIDS` against the handler, pointer, id and registration counts,
+looks for `FIO_*`/`msleep`/`NotifyBox`/`task_create`/`printf` inside any
+`PROP_HANDLER` body, and checks every import in the module's `.dep` against
+`6D_116.sym` so a module cannot be shipped that the camera will refuse to load.
+
+Negative test, to prove it is not vacuous: removing one pointer and one
+registration from a copy of `mlwifi.c` yields
+
+```
+MLW_NIDS=116 but ptrs=115
+MLW_NIDS=116 but registered=115
+```
+
+and a handler containing `FIO_WriteFile` is reported as
+`handler 0x80050029u calls FIO_ (runs in PropMgrTask)`.
