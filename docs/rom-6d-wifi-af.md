@@ -496,3 +496,45 @@ which needs the camera.
 
 So both halves stand on data that is not in this workspace: a 32 MB ROM dump, or
 the camera itself.
+
+## Round 12: the phase-difference AF's calibration model is in the ROM
+
+The `dl_Set*` debug parameters (133 names in total) include a complete set of
+**AF sensor calibration** entries, which say how the phase-difference measurement
+is organised:
+
+```
+dl_SetPhaseDiffCarrierWaveCenterL2R / R2L
+dl_SetPhaseDiffCarrierWaveSideL2R / R2L
+dl_SetPhaseDiffStationaryWaveReverse / Same
+dl_SetAdjustPhaseDiffCarrierWaveCenterL2R / R2L
+dl_SetAdjustPhaseDiffCarrierWaveSideL2R / R2L
+dl_SetAdjustPhaseDiffCarrierWaveSideL2RLoTemp / R2LLoTemp
+dl_SetDutyAForCarrierWaveCenterL2R / R2L
+dl_SetDutyAForCarrierWaveSideL2R / R2L
+dl_SetDutyAForStationaryWaveReverse / Same
+```
+
+Reading: the AF sensor has **two line pairs** (center and side), each measured in
+**both directions** (L2R, R2L); the "carrier wave" is the sensor's stripe pattern
+and its **duty (A/B duty cycle)** is calibrated; there is a **low-temperature**
+calibration variant (`LoTemp`); and a **stationary-wave** case is calibrated for
+the same and reversed phase. That is the measurement model behind the
+`PhaseDiffCarrierWave* : %d(angle)` runtime logs.
+
+So the viewfinder AF is: correlate the paired line images in both directions,
+apply the temperature/duty calibration, and convert the correlation minimum to
+an angle -> defocus -> lens drive, with the `AfCtrl_Act_*` state machine driving
+and the `EmdDriveResult` deciding.
+
+## The ROM is a 6D, not a 6D Mark II
+
+* `"EOS 6D"` is present; **`"Mark II"` appears zero times** in ROM1.
+* In the RAM dump the WLAN components are absent as runtime state
+  (`WlanPowerOn` 0, `WlanMgr` 0, `w8787` 0), which means the WLAN stack was
+  never initialised on this body.
+
+The 6D's built-in hardware has no Wi-Fi radio; its official Wi-Fi path is an
+Eye-Fi card, and the ROM carries 88 Eye-Fi strings. Any "Wi-Fi" this body can do
+has to come through the SD slot (an SDIO Wi-Fi card, for which the 88W8787
+driver is present) or an Eye-Fi card.
