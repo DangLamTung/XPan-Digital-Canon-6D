@@ -429,3 +429,42 @@ in AF/AEWB is a **measured absence**, not a measurement artifact.
 That strengthens exactly one claim, and only this one: **the focus metric is not
 computed by the AF or AEWB firmware**. It says nothing about where it *is*
 computed, and the round-40 correction about the `0xC0080000` block still stands.
+
+## Round 42: the region I called "AEWB" is the SDIO driver -- rounds 38-41 measured the wrong bytes
+
+While checking the audio/ASIF finding, I read the strings inside
+`0xFF2A0000`-`0xFF2C0000`, the window that rounds 38-41 called "AEWB":
+
+```
+InitializeSDIODriver : sdioDrvCreateStateObject Error
+./SdioDrv/SdioDrv.c
+OpenSDIODataPipe : Parameter Error
+sdioDrvExecAsyncFunction : Length Error
+```
+
+That is the **SDIO driver**, not AE/AF. The name "AEWB" was attached by proximity
+in an early round and never checked against the window's contents.
+
+So these conclusions from rounds 38, 39 and 41 are **withdrawn** as stated, because
+their measurements were taken on the wrong bytes:
+
+* "AEWB has no DSP maths" -- the window was SDIO;
+* "the peripheral in the AEWB code is a data path / a meter" -- the peripheral
+  belongs to whatever module lives there, and the neighbouring strings are
+  `/ASIF/ASIF.c` with `SetSamplingRateToASIF`, `StartASIFDMAADC`,
+  `SetASIFADCModeInterleaveINT16` -- **ASIF is the audio ADC/DAC with DMA**, so
+  that block is audio, not metering.
+
+What remains true: the AF **command** function at `0xFF1302E8` is AF (it is
+reached by a tail call from the `PROP_LV_AF_*` handler, verified), and the
+property handlers at `0xFF31xxxx` are AF (reached from the dispatch table).
+
+Where the AF/AE *evaluation* code actually is: the AEWB and `AfCtrl` **strings**
+live at `0xFFB68xxx`, `0xFFCCDxxx`, `0xFFCFAxxx` and `0xFFD04xxx`, so the
+subsystem is in the `0xFFB6xxxx`-`0xFFD1xxxx` range. A first measurement there
+gives, over 1,728 KB: **33,812 `ldrb`, 1,050 `SMLAxy`, 3,281 `mul`** -- far more
+DSP-shaped than the window I was looking at. That range has not been split into
+modules yet, so it is a place to look, not a conclusion.
+
+The lesson is the same one that cost round 40: a region label guessed from a
+nearby string is not evidence, and every measurement inherits that guess.
