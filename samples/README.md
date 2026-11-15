@@ -74,3 +74,27 @@ cd magiclantern/modules/film_sim/se/hosttest && make grade_jpeg
 
 It reports what it wrote, including the share of neutral pixels, so a file that
 came out grey cannot pass for a graded one.
+
+## Calibrated-stock sheet
+
+`tools/dalat_calib_sheet.py` renders these eleven frames through the module's own
+develop colour path (`se/hosttest/grade_jpeg`, the same code the camera runs) for
+every stock that `docs/stock-calibration.md` lists as verified, and writes:
+
+```
+renders/dalat-calib/<stock>/<photo>.jpg     132 renders, 11 photos x 12 stocks
+renders/dalat-calib/sheet-1..3.jpg          no look, then five stocks per sheet
+```
+
+The stocks are ordered by their verified CIEDE2000 median, best first: XP2,
+Acros, Provia, HP5, ColorPlus, Gold, Ektar, Portra 160, Portra 400, Velvia 50,
+Pro 400H, Classic Neg.
+
+One honest caveat, and the reason the script computes it rather than assuming:
+these frames are **already developed JPEGs**, while the stocks are raw-domain
+looks. Applied at exposure 0 they came out roughly a stop dark (mean 65 against
+the source's 88). The script therefore measures the source mean once and picks
+the exposure per stock that lands the graded mean back on it -- 0.4 to 1.2 EV
+depending on the stock -- so the sheet compares colour, not brightness. Rendering
+from the original CR2s would not need that step; those files are not in this
+repository.
