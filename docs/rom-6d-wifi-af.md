@@ -667,3 +667,36 @@ The lesson repeats a third time in a different form: a function's *role* was
 assumed from the handler that called it, when a symbol table in the repository
 already had the answer. The earlier rounds never grepped the 58 `ff` addresses in
 `6D_116.sym`; that grep takes a second and would have caught this in round 4.
+
+## Round 48: a property watch list that names the AF controls
+
+At `0xFFD48A30` there is a plain array of property ids, and it contains exactly the
+controls that matter for autofocus:
+
+```
+ffd48a34  0x80050015
+ffd48a38  0x80050013   PROP_LV_LENS_DRIVE_REMOTE   (what ML's lens_focus writes)
+ffd48a40  0x80050016
+ffd48a48  0x80050027   PROP_LV_FOCUS_CMD
+ffd48a64  0x80050005   PROP_LV_LENS_STABILIZE
+ffd48a68  0x80050000   PROP_LV_LENS
+ffd48a74  0x80050029   PROP_LV_AF_RESULT
+ffd48a78  0x8005003B
+ffd48a7c  0x8000004A
+ffd48a80  0x80000049
+ffd48a84  0x80000026
+ffd48a88  0x80040033
+```
+
+That is a **watch list for the AE/AF subsystem**: lens parameters, the focus
+command, the focus result, AF modes and AF points. It is the first place where the
+whole control surface appears as one block.
+
+What I could not resolve: who owns it. There is no string near it (the surrounding
+bytes are not text), no `ldr rd, [pc, ...]` in the preceding 8 KB targets it, and
+none of the 105 callers of `prop_register_slave` (`0xFF12FB7C`) sits in the
+`0xFFC0xxxx`-`0xFFD6xxxx` window. So the list is real and readable, but the code
+that consumes it is still unreached.
+
+Useful as an anchor: anything that walks this list is AE/AF property plumbing, and
+the ids in it are a verified superset of the ones this document has been using.
