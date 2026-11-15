@@ -41,6 +41,7 @@ ML_MODULES = \
     film_lv \
     film_sim \
     mlwifi \
+    aftrace \
     ettr \
     dual_iso \
     silent \
