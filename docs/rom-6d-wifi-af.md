@@ -717,3 +717,37 @@ that consumes it is still unreached.
 
 Useful as an anchor: anything that walks this list is AE/AF property plumbing, and
 the ids in it are a verified superset of the ones this document has been using.
+
+## Round 50: a systematic sweep of the AF window finds no metric
+
+Instead of sampling, this round ranked all 194 functions in
+`0xFF430000`-`0xFF440000` by two signals a focus metric would have: calls into the
+metering module (`0xFF5Cxxxx`) and arithmetic (`mul`). Seventeen functions scored
+above zero, and the top of the list is:
+
+```
+0xFF43FC84  223 insns  12 calls to metering   0 mul
+0xFF43F548  185        6                      0
+0xFF43C030  171        4                      0
+0xFF43C5A8   94        4                      0
+```
+
+Reading the highest (`0xFF43FC84`) shows state checks and logging: it loads a
+global at `0xFF44003C`, compares `[r0, #64]` with 1, logs at subsystem `0x45`, and
+branches — the metering calls come later in the function as queries, not as a
+loop over data.
+
+Two further probes came back empty:
+
+* no monotonic 16-bit lookup table anywhere in the window (24+ increasing
+  entries): 0 hits, so there is no obvious defocus/step mapping table;
+* the window calls `AECalc` (`0xFF42xxxx`) **zero** times; its metering access is
+  entirely through the typed dispatcher at `0xFF5CD3F8` (round 46).
+
+So the AF module in this image behaves as state and plumbing: it collects records,
+decides, and drives. The metric is not in `LiveViewAFPUtility.c`'s window.
+
+Where that leaves the question: the candidates are now (a) the data stocker
+`0xFFCFE7C0`-`0xFFD10000`, whose heaviest arithmetic loop is a percentage
+interpolation at `0xFFD04DF4` (`(100 - r7) * value / 100`), and (b) outside the
+firmware. Both need more work than a sweep; neither can be ruled out yet.
