@@ -312,3 +312,39 @@ The safe next step is not to write the property blind: it is to watch it. If
 that block) and a service-mode or PTP tool ever toggles the option, the id and
 value appear in the log. Without such a tool, the id has to come from
 disassembling the component that logs `fcsChangeAckCBR`.
+
+## Round 38: the evidence points at hardware metering, which changes what "the algorithm" can be
+
+Four measurements now agree that the firmware does **not** compute a focus metric
+from pixels:
+
+1. **Pixel-read density.** AF (`0xFF130000`, 326 `ldrb`/64 KB) and AEWB
+   (`0xFF2A0000`, 554) are an order of magnitude below the codec regions
+   (`0xFFFC0000`: 20,048 per 256 KB). A full-frame metric over a 5472x3648 buffer
+   would need far more byte reads than either region contains.
+2. **No 64-bit accumulation.** Across the whole AF unit: 56 `mul`, **0**
+   `umull`/`smlal`/`umlal`/`smull`. A correlation over paired lines accumulates
+   products wider than 32 bits; none of that is here. AEWB has 6 `umull`, also
+   far too few.
+3. **The AF code block in RAM has no 64-bit maths either** -- 20 `mul`, no
+   `umull`/`smlal` (`docs/af-function-map.txt`).
+4. **AEWB touches peripherals**: `0xC0080000`, `0xC0080500`, `0xC0080700`,
+   `0xC0E00000`, `0xC0E2008C` appear as literals in that region, and the trace
+   string `AEWB_AEL_SET_AFAE:%X Bv:%X` describes the firmware *publishing* an
+   AE/AF value it was given.
+
+The reading: the DIGIC evaluates the LiveView frame in hardware (the interrupt
+name table even carries a `WB_AE` block), and the firmware's autofocus is the
+**control loop around those results** -- which is exactly what the `AfCtrl_Act_*`
+state machine and the AEWB decisions describe.
+
+What that means for the goal, stated plainly: the part of Canon's AF that a ROM
+image can give -- the control surface, the state machine, the drive/decision
+sequence, the phase-difference **calibration model** -- is mapped. The metric
+itself, if it is computed in the DIGIC's metering block, is **not in this image at
+all** and cannot be recovered by disassembly.
+
+What is still open is whether point 4 is the whole story. The blocks are
+unidentified, `0xC008xxxx`/`0xC0E0xxxx` are documented nowhere in this repository,
+and I have not seen a register map or a datasheet. Until one of those exists, this
+stays a conclusion from four consistent measurements, not a proven fact.
