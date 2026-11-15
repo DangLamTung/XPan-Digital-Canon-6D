@@ -8,8 +8,12 @@ the operations the body accepts -- this is where SendObjectInfo/SendObject show
 up or do not) and Upload (send a file, then the camera-side Import Recipes step
 finishes the job).
 
-No frameworks, no dependencies beyond the standard library, and it binds to
-127.0.0.1 only.
+No frameworks and no dependencies beyond the standard library.
+
+Binding: 127.0.0.1 by default (only this machine). Pass --host 0.0.0.0 to reach
+it from a phone that has joined the camera's own Wi-Fi; the camera is an access
+point, so the laptop and the phone can both sit on it and see each other. Do that
+only on a network you trust: the page can upload files to the camera.
 """
 import html, http.server, io, os, socketserver, sys, traceback
 
@@ -152,6 +156,15 @@ class S(socketserver.ThreadingTCPServer):
 
 
 if __name__ == "__main__":
-    port = int(sys.argv[1]) if len(sys.argv) > 1 else 8765
-    print("open http://127.0.0.1:%d" % port)
-    S(("127.0.0.1", port), H).serve_forever()
+    import argparse, socket
+    ap = argparse.ArgumentParser()
+    ap.add_argument("port", nargs="?", type=int, default=8765)
+    ap.add_argument("--host", default="127.0.0.1",
+                    help="0.0.0.0 to be reachable from a phone on the camera's Wi-Fi")
+    a = ap.parse_args()
+    if a.host == "0.0.0.0":
+        ip = socket.gethostbyname(socket.gethostname())
+        print("reachable at http://%s:%d (and http://127.0.0.1:%d)" % (ip, a.port, a.port))
+    else:
+        print("open http://127.0.0.1:%d" % a.port)
+    S((a.host, a.port), H).serve_forever()
