@@ -98,10 +98,20 @@ class Client:
             raise RuntimeError("expected InitCommandAck, got type %d" % ptype)
         self.conn_number = struct.unpack("<I", body[:4])[0]
         self.log("init ok, connection %d" % self.conn_number)
-        self.send(self.packet(INIT_EVT_REQ, struct.pack("<I", self.conn_number)))
-        ptype, _ = self.recv()
-        if ptype not in (INIT_EVT_ACK,):
-            self.log("warning: expected InitEventAck, got type %d" % ptype)
+        # The event channel is a *second* TCP connection to the same port.
+        # It is optional for our purposes: we only poll, we never wait on events,
+        # so a failure here is logged and ignored.
+        try:
+            ev = socket.create_connection((self.ip, self.port), self.timeout)
+            ev.settimeout(self.timeout)
+            ev.sendall(self.packet(INIT_EVT_REQ, struct.pack("<I", self.conn_number)))
+            head = ev.recv(8)
+            if len(head) == 8:
+                _len, ptype = struct.unpack("<II", head)
+                self.log("event channel: type %d" % ptype)
+            self.ev_sock = ev
+        except Exception as e:
+            self.log("event channel unavailable (%s); continuing" % e)
 
     # ---- operations -----------------------------------------------------
     def op(self, code, params=(), data=b"", dataphase=None):

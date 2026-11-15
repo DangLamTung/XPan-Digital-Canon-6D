@@ -283,6 +283,14 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("port", nargs="?", type=int, default=8766)
     ap.add_argument("--host", default="127.0.0.1")
+    ap.add_argument("--mock", action="store_true",
+                    help="also run a fake camera on 127.0.0.1:15740, so the panel "
+                         "can be tried without the body")
     a = ap.parse_args()
+    if a.mock:
+        import ptpip_mock, socketserver
+        srv = ptpip_mock.S(("127.0.0.1", 15740), ptpip_mock.Handler)
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        print("mock camera on 127.0.0.1:15740 (fake files, accepts uploads)")
     print("open http://127.0.0.1:%d" % a.port)
     S((a.host, a.port), H).serve_forever()
