@@ -1,560 +1,200 @@
-# 6D ROM: what the firmware holds for Wi-Fi and autofocus
+# The 6D firmware: autofocus and Wi-Fi, what is established
 
-Source of truth: `qemu/6D/ROM0.BIN` (8 MB at `0xF0000000`) and
-`qemu/6D/ROM1.BIN` (16 MB at `0xF8000000`), plus the ML symbol lists and
-`magiclantern/src/property.h`. Method and tool: `tools/rom/romscan.py`.
+Sources: `qemu/6D/ROM0.BIN` (8 MB at `0xF0000000`), `qemu/6D/ROM1.BIN` (16 MB at
+`0xF8000000`), the ML symbol table `platform/6D.116/build/6D_116.sym`,
+`magiclantern/src/property.h`, and `film_eval/rom/RAM4.BIN` (256 MB).
+Tools: `tools/rom/romscan.py`, `tools/rom/propscan.py`.
+This document replaces the round-by-round log that preceded it; the log is in
+git history, the facts are here.
 
-## Wi-Fi: the software is in the ROM, the radio is not on the board
+## Identity of the images
 
-| Evidence | Where |
-|---|---|
-| Marvell 88W8787 SDIO driver banner `w8787-Ax, RF878X, FP197, 14.197.9.p255, BT_SDIO` | ROM1 `0xF8CAEDF0` |
-| `InitializeSDIODriver : sdioDrvCreateStateObject Error`, `sdioDrvExecAsyncFunction` | ROM1 `0xF82A01D8`, `0xF82A05D4` |
-| `./SdioDrv/SdioDrv.c` — the SDIO transport unit | ROM1 `0xF82A02AC` |
-| PTP over SDIO: `./PtpMgr/ComFrame/PTPRspnd/SdioPTPTrnsp2/` (6 units: bulk, event, HDD bulk/op, op, ctrl) | ROM1 |
-| Socket stack: `halt all sockets`, `halt specified sockets`, `%d socket(s) halted.` | ROM1 `0xF8BA3B64` |
-| WPA: `wpa version = %d`, `WIRELESS SETTINGS`, `[WLAN] CommandErr` | ROM1 |
-| UI: `DlgLnWireless*.c`, `LiveViewWifiApp_handler`, `GetLvWLanStatusIcon` | ROM1 + `6D_116.sym` |
-| Eye-Fi support (88 strings): `DlgMnEyeFiSetting.c`, `GetLvEyeFiOperatingStatusIcon` | ROM1 |
-
-Reading: the firmware ships a complete WLAN stack — SDIO driver for the
-88W8787, a TCP/IP socket layer, WPA, PTP over SDIO, and the menus to drive it.
-The EOS 6D body itself has no Wi-Fi radio, so nothing in software can make a
-radio appear; the only radios that can be reached are an **Eye-Fi card** (which
-the firmware already supports) or an **SDIO Wi-Fi card in the card slot**.
-
-Open questions for the next pass:
-1. Does the WLAN init probe the SD slot for an SDIO device? `InitializeSDIODriver`
-   is the entry to read.
-2. Are the socket entry points reachable from a module? The ML symbol list has
-   exactly one WLAN name (`LiveViewWifiApp_handler`), so the socket API is not
-   exported and would have to be found by disassembly and called by address.
-
-## Autofocus: the code units are identified
-
-| Evidence | Where |
-|---|---|
-| `./AEWB/AF/AFProc/LiveViewAFPUtility.c` — the LiveView AF processing unit | ROM1 `0xF84324C4` |
-| `./Gmt/GmtContinuousAf.c` — continuous AF (AI Servo) | ROM1 |
-| `./LiveView/DlgLiveViewAfFrame.c`, `DlgLiveViewQuickAfFrameSetting.c` — the AF frame UI, `PROP_LV_AF_RESULT`, `PROP_AFPOINT` | ROM1 |
-| `./Menu/DlgMnAfShiftSelectLens.c` — AF micro-adjust | ROM1 |
-| `[TAG_AFMICROADJUST] failed` | ROM1 `0xF82EEE6F` |
-| 195 strings mention AF points / frames / micro-adjustment; 178 mention focus | ROM1 |
-
-### The properties that control AF (from ML's `property.h`)
-
-| Property | Id | Notes |
-|---|---|---|
-| `PROP_AF_MODE` | `0x80000004` | 0 one-shot, 3 manual, 101 AI servo, 202 AI focus |
-| `PROP_LVAF_MODE` | `0x80000050` | same value space, LiveView |
-| `PROP_AFPOINT` | `0x8000000A` | 70-byte AF point block |
-| `PROP_LV_AFFRAME` | `0x80050007` | AF frame in LiveView |
-| `PROP_LV_AF_RESULT` | `0x80050029` | 0 = focus OK, 1 = failed; fired when AF ends |
-| `PROP_AF_METHOD_SELECT_FOCUS_AREA` | `0x80000046` | focus-area method |
-| `PROP_AFSHIFT_LVASSIST_STATUS/RESULT` | `0x8003003D/3E` | LV assist (focus shift) |
-
-That is the control surface: mode, point, frame, result. The algorithm itself
-(contrast evaluation, ramp, hysteresis) lives in `LiveViewAFPUtility.c` and the
-`Gmt` continuous-AF unit, both without symbols, so reading it means
-disassembling from the strings outward.
-
-## Round 2: ROM1 holds real ARM code, ROM0 does not
-
-Counting ARM patterns over both dumps:
-
-| dump | `push {..,lr}` | `bl` | reading |
+| image | size | load address | note |
 |---|---|---|---|
-| ROM0 (8 MB, `0xF0000000`) | 0 | 30,964 | no function prologues: data / compressed |
-| ROM1 (16 MB, `0xF8000000`) | 33,381 | 268,575 | **real ARM code** |
+| ROM0 | 8 MB | `0xF0000000` | **no code**: 0 `push {..,lr}` prologues in 8 MB |
+| ROM1 | 16 MB | `0xF8000000`, **also `0xFF000000`** | 33,381 prologues, 268,575 `bl` |
+| RAM4 | 256 MB | — | ML's memory, and **contains the AF/AE code block** |
 
-So ROM1 is the analysable image, and the earlier sample that looked like garbage
-was a data island inside it.
+The second mapping is the important one: every handler and data pointer in the
+firmware uses `0xFF...`, and `file offset = address - 0xFF000000`. Disassembling
+at `0xF8000000 + (addr - 0xFF000000)` gives the same bytes.
 
-### The AF properties are literals in ROM1 code
+ROM1 also references memory above its own end: **2,681** literals point into
+`0xF9000000`-`0xF9FFFFFF` and **1,989** into `0xFA000000`-`0xFAFFFFFF`, and the
+socket code calls `0xF90554F8` / `0xF905555C`. ML's `consts.h` declares
+`ROM1_SIZE 0x01000000`, so the dump stops short of that region.
 
-| property | literals found |
+## Why string search does not find code
+
+Every trace message, task name and debug-parameter name is reached by
+**index**, not by pointer. All three searches come back empty, repeatedly:
+
+- absolute 32-bit literal pointing at the string: 0 hits
+- the `0xFF` alias of the same string: 0 hits
+- PC-relative `add rX, pc, #imm` landing on it: 0 hits
+
+This is the single reason the static work stalls, and it is the same for AF and
+for Wi-Fi. The fix is a live trace from a module, not another search.
+
+## Autofocus: the control surface (established)
+
+The property dispatch table is at `0xF83149DC`, entries of the form
+(property id, handler):
+
+| property ids | handler |
 |---|---|
-| `PROP_AF_MODE` `0x80000004` | 56 |
-| `PROP_AFPOINT` `0x8000000A` | 26 |
-| `PROP_LV_AFFRAME` `0x80050007` | 9 |
-| `PROP_LV_AF_RESULT` `0x80050029` | 7 |
-| `PROP_LVAF_MODE` `0x80000050` | 6 |
-| `PROP_AF_METHOD_SELECT_FOCUS_AREA` `0x80000046` | 4 |
-
-A dispatch table of property ids sits at `0xF83149DC` (`0x80050000`,
-`0x80050002`, `0x80050005`, `0x8005000A`, `0x8005000B`, ...) with handler
-addresses in the `0xFF31xxxx` range.
-
-### A function that registers AF properties (annotated)
-
-```
-f83148e0  ldr   r1, [r5, #24]
-f83148e4  ldr   r2, [pc, #324]      @ 0xf8314a30   (descriptor)
-f83148e8  str   r0, [r1, #72]
-f83148ec  add   r3, r4, #304
-f83148f0  mov   r1, #0
-f83148f4  stm   sp, {r1, r2, r3}
-f83148fc  ldr   r0, [pc, #304]      @ 0xf8314a34   (property id)
-f8314900  mov   r2, #31             @ length 31
-f8314904  add   r1, r4, #316
-f8314908  bl    0xf8311350          @ register / deliver
-```
-
-The same shape repeats with ids from the table and lengths 2 and 9 — that is the
-handler-registration path for the properties around `0x80050000`.
-
-## What is still missing, and why
-
-Both the AF algorithm (`LiveViewAFPUtility.c`, `GmtContinuousAf.c`) and the
-WLAN stack (88W8787 driver, sockets) live in the **`0xFF000000` region** (the
-handler pointers above point there). None of the dumps in the workspace cover
-it: ROM0 is `0xF0000000`, ROM1 is `0xF8000000`, and `film_eval/rom/RAM4.BIN`
-(256 MB) is ML's own memory, not that code.
-
-To finish either goal the next dump has to cover `0xFF000000`-`0xFFFFFFFF`
-(16 MB). ML's Debug -> "Dump ROM and RAM" writes ROM0/ROM1; the IROM region
-needs either that dump extended or a separate read through ML's memory browser.
-
-## Round 3: the missing dump was an alias
-
-ROM1 is mapped **twice**: the dump starts at `0xF8000000`, and the firmware's
-own pointers use **`0xFF000000`**. Both name the same bytes, so an address in
-`0xFF0xxxxx`-`0xFF3xxxxx` is at file offset `addr - 0xFF000000`. Verified by
-disassembling handler `0xFF3131F4`: it decodes as a real function
-(`push {r3, lr}`, byte loads, `bl`), not as data.
-
-`tools/rom/romscan.py dis 0xFF000000,<start>,<end>` now disassembles that alias.
-
-### AF property handlers, extracted from the table at `0xF83149DC`
-
-| property ids | handler (`0xFF…`) |
-|---|---|
-| `0x80050000 0x80050002 0x80050005 0x8005000A` (0x0A = `PROP_AFPOINT`) | `0xFF3131F4` |
+| `0x80050000 0x80050002 0x80050005 0x8005000A` (`0x0A` = `PROP_AFPOINT`) | `0xFF3131F4` |
 | `0x8005000B 0x8005000C 0x8005000D` | `0xFF313128` |
 | `0x80050008` | `0xFF313164` |
 | `0x80050010 0x8005001B 0x8005001E 0x80050027` | `0xFF3120A0` |
-| **`0x80050029` = `PROP_LV_AF_RESULT`** | **`0xFF3131A0`** |
+| `0x80050029` = `PROP_LV_AF_RESULT` | `0xFF3131A0` |
 | `0x80050028` | `0xFF3131DC` |
 | `0x8005002B` | `0xFF3132FC` |
 | `0x80050033` | `0xFF313340` |
 
-`PROP_LV_AF_RESULT` handler, in full:
+The AF property family has **30 descriptors** in the table at `0xF8B6EB64`
+(16-byte entries: id, flags, size, index), and all of them are **9-byte**
+payloads except `0x80050045`, which is 14.
+Full list: `docs/property-descriptors.txt`.
+
+The handlers are thin. `0xFF3131F4` copies two bytes of payload into a 3-byte
+stack block; `0xFF3120A0` copies one byte into a 2-byte block; both then call the
+low-RAM dispatcher `0x5FB8`. `0xFF3131DC` instead tail-calls `0xFF1302E8` with a
+**24-byte command block**.
+
+`0xFF1302E8` is the AF command function: prologue `push {r3-r9, sl, fp, lr}`,
+lock via `0xA5CC`, copy via `0x6BB98`, eight calls to `0xFF130828` (a wrapper
+around `0x39F54` that logs on error), plus `0x90F4`, `0x91AC`, `0x904C`.
+
+**ML already drives exactly this surface**: `set_af_point()`
+(`src/af_patterns.c`) writes `PROP_AFPOINT`, `lens_focus()` (`src/lens.c`)
+sends a step command (`-3..3`, `0x8000 - step` for negatives), `set_afma()`
+(`src/afma.c`) writes the micro-adjust values. Those land on the handlers above.
+
+## Autofocus: the algorithm's architecture (established)
+
+Two AF systems, both named in the ROM's trace table.
+
+**Through the viewfinder: phase difference.** The ROM carries the calibration
+model:
 
 ```
-ff3131a0  push {r2, r3, r4, lr}
-ff3131a4  mov  r4, r0            @ payload
-ff3131a8  mov  r2, #7            @ 7 bytes
-ff3131ac  mov  r0, sp            @ to the stack
-ff3131b0  bl   0x6bb98           @ copy
-ff3131b4  mov  r0, #0
-ff3131b8  strb r0, [sp, #6]      @ terminator
-ff3131bc  ldr  r0, [r4, #4]
-ff3131c4  and  r1, r0, #255
-ff3131c8  ldr  r0, [r4]
-ff3131d0  and  r0, r0, #255
-ff3131d4  bl   0x5fb8            @ dispatch into low RAM
-ff3131d8  pop  {r2, r3, r4, pc}
-```
-
-The AF point handler `0xFF3131F4` has the same shape with 3 bytes, and a
-`PROP_AF_MODE`-style signature handler sits at `0xFF3131DC` (24-byte block,
-reads `[r0+0x48]`).
-
-### Wi-Fi: the socket layer is code, not just strings
-
-The string `halt all sockets` has an alias literal at `0xFFBA3B64`, and it is
-referenced from code at **`0xF84F3F60`**:
-
-```
-f84f3f7c  ldr  r0, [r5, r4, lsl #2]   @ socket slot
-f84f3f80  bl   0xF833FECC
-f84f3f88  mov  r2, r6
-f84f3f8c  add  r0, pc, #76            @ format string
-f84f3f90  bl   0xF80C1F28             @ log
-f84f3f98  cmp  r4, r7
-f84f3f9c  blt  0xF84F3F60             @ next socket
-f84f3fa4  pop  {r4, r5, r6, r7, r8, pc}
-```
-
-So the WLAN stack's socket table and its logging are in ROM1 around
-`0xF84F3F60`, and the SDIO/PTP transport is around `0xF82A0xxx`.
-
-### What is proven, and what is not
-
-Proven: the handlers exist at these addresses; the property→handler table is
-readable; the socket code is present and calls into `0xF833FECC`; the SDIO
-driver strings sit next to `InitializeSDIODriver`.
-
-Not yet: the AF **algorithm** (the evaluation/ramp code) and the WLAN **init and
-socket entry points** ML could call. Both need the code to be walked from the
-handlers above, which is the next pass.
-
-## Round 4: the AF handlers are marshals, and one of them forwards into the AF unit
-
-Disassembled from the table in round 3:
-
-```
-ff3131dc  ldr  r0, [pc, #-3100]   @ global at 0xff3125c8
-ff3131e4  ldr  r0, [r0, #24]
-ff3131e8  mov  r2, #24            @ a 24-byte command block
-ff3131ec  ldr  r0, [r0, #72]
-ff3131f0  b    0xff1302e8         @ tail call into the AF unit
-```
-
-`0xFF1302E8` is a real function (prologue `push {r3-r9, sl, fp, lr}`, calls
-`0xA5CC` for a lock and `0x1900` for logging, with two error strings at
-`0xFF130288`/`0xFF13028C`). That is the AF command path: the property handler
-forwards a 24-byte block to it.
-
-The other two handlers are pure marshals into the property dispatcher at
-`0x5FB8` (a low-RAM routine):
-
-```
-ff3131f4  push {r3, lr}      @ PROP_AFPOINT
-ff3131f8  ldrb r2, [r1]      @ copy 2 bytes of the payload
-ff313208  mov  r2, #3        @ 3-byte block on the stack
-ff313224  and  r0, r0, #255
-ff313228  bl   0x5fb8
-
-ff3120a0  push {r3, lr}      @ AF group 0x80050010/1B/1E/27
-ff3120a4  ldrb r1, [r1]
-ff3120ac  mov  r2, #2        @ 2-byte block
-ff3120cc  bl   0x5fb8
-```
-
-So the AF control surface is: property table (`0xF83149DC`) -> handler ->
-`0x5FB8` (status notifications) or `0xFF1302E8` (AF commands). The evaluation
-loop itself is not in these handlers; it is the task that consumes them.
-
-## Wi-Fi: part of the socket code is beyond the dumped ROM
-
-The halt-sockets loop calls out of the 16 MB image:
-
-```
-f84f3f60  ldr  r0, [r5, r4, lsl #2]   @ socket[i]
-f84f3f64  bl   0xf833fecc
-f84f3f68  bl   0xf90554f8             @ 0xF905xxxx -- past ROM1's end
-f84f3f70  ...
-f84f3f40  bl   0xf905555c
-```
-
-ROM1 covers `0xF8000000`-`0xF8FFFFFF` (16 MB), so `0xF90554F8` and
-`0xF905555C` are outside it. ML's `consts.h` only knows ROM0 and ROM1, so the
-dump that would finish the Wi-Fi analysis has to cover **`0xF9000000` and
-above** -- that is the concrete next input needed, the same way the `0xFF`
-alias was for the AF handlers.
-
-## Round 5: the AF property family, and the ROM is bigger than the dump
-
-Walking the descriptor table at `0xF8B6EB64` (16-byte entries: id, flags, size,
-index) gives **30 AF-family properties**, and every one of them is a **9-byte**
-payload except the last:
-
-```
-0x80050000 0x80050002 0x80050005 0x8005000A 0x8005000B 0x8005000C
-0x8005000D 0x80050008 0x80050010 0x8005001B 0x8005001E 0x80050027
-0x80050029 0x80050028 0x8005002B 0x80050033 0x80050035 0x8005003A
-0x8005003B 0x8005003E 0x80050040 0x80050041 0x8005003D 0x8005003F
-0x80050042 0x80050045   (0x80050045 is 14 bytes)
-```
-
-A 9-byte payload is one length byte plus two 4-byte values -- the shape the
-marshalling handlers in round 4 copy onto the stack.
-
-### The AF command chain, verified
-
-```
-property write
-  -> handler 0xFF3131DC   (table 0xF83149DC)
-  -> 0xFF1302E8           prologue push {r3-r9, sl, fp, lr}; takes a 24-byte block
-       calls 0xFF130828   (8 times) -- thin wrapper around 0x39F54 that logs on error
-       calls 0xA5CC       lock
-       calls 0x6BB98      copy
-       calls 0x90F4, 0x91AC, 0x904C   small RAM helpers
-```
-
-So the property layer only *queues* AF work; the evaluation loop is a task that
-consumes it.
-
-### The dumped ROM is not the whole ROM
-
-Across ROM1 there are **2,681** 32-bit literals pointing into
-`0xF9000000`-`0xF9FFFFFF` and **1,989** into `0xFA000000`-`0xFAFFFFFF` -- both
-outside the 16 MB dump. The Wi-Fi socket code itself calls there:
-
-```
-f84f3f40  bl 0xf905555c
-f84f3f68  bl 0xf90554f8
-```
-
-ML's `platform/6D.116/consts.h` declares `ROM1_ADDR 0xF8000000` and
-`ROM1_SIZE 0x01000000`, and `src/debug.c` writes exactly that range to
-`ML/LOGS/ROM1.BIN`. So the next dump has to extend to at least
-`0xF8000000 + 0x02000000` before the Wi-Fi stack can be read, the same way the
-`0xFF` alias had to be found before the AF handlers would decode.
-
-## Round 6: the AF control surface ML already uses is the one found in the ROM
-
-ML's own code and the ROM handlers line up exactly:
-
-| ML call | property | ROM handler |
-|---|---|---|
-| `set_af_point()` (`src/af_patterns.c`) writes `PROP_AFPOINT` (`0x8000000A`) | 9-byte payload | `0xFF3131F4` (copies 2 bytes, dispatches to `0x5FB8`) |
-| AF result consumers read `PROP_LV_AF_RESULT` (`0x80050029`) | 9-byte payload | `0xFF3131A0` |
-| `lens_focus()` (`src/lens.c`) writes a focus-command property with a step in `-3..3` (`0x8000 - step` for negative) | drives the lens | not a property handler: the command path is `0xFF1302E8` |
-| `set_afma()` (`src/afma.c`) writes the micro-adjust values | AFMA storage | handler group `0xFF3120A0` |
-
-So the control half of goal 2 is not just located, it is already exercised by ML:
-`af_patterns.c` moves the AF point, `lens.c` drives the lens in steps, `afma.c`
-sets the per-lens offset -- and each of those lands on a handler whose address is
-in the table from round 3.
-
-A second table format also turned up: **(handler, property) pairs**, e.g. at
-`0xF8313F28` `0xFFB6EAB8 / 0x8000004E`, at `0xF8313F70` `0xFF312884 /
-0x80030001`. That table is what the property manager walks at registration.
-
-### What remains for the algorithm
-
-The evaluation loop is the AF controller task, not a property handler. The AF
-state object is a single global pointer (`0x0007B408`, held at `0xFF3125C8`);
-only three literals reference it directly, and two of those are tables, so the
-controller reaches the state through another path. Reaching the loop needs
-either:
-
-1. a DryOS task-list walk (the task name strings `AfController`,
-   `AfAeController`, `AfComplete` are in the ROM at `0xF824B2D4` and around),
-   or
-2. a live trace from ML: log the PC of the task that writes
-   `PROP_LV_AF_RESULT` while a shot focuses.
-
-## Round 7: the AF module's code is resident in RAM, and it can be disassembled
-
-`film_eval/rom/RAM4.BIN` is not only ML's heap: between `0x03C000` and
-`0x043000` there are **83 functions** with `push {..., lr}` prologues, and the
-data next to them names AF callbacks:
-
-```
-0x03DF64  "AfWrDmacCompleteCBR"
-0x03DF78  "AfWrDmacAbortCBR"
-0x03DF90  "AfCompleteCBR"
-0x03DFBC  "AfOverRunErrorCBR"
-```
-
-The function right after those names (`0x03DFD8`) is AF point handling:
-
-```
-3dfd8  push {r0-r9, sl, fp, lr}
-3dfdc  sub  sp, sp, #180
-3dff4  bl   0x12e78              @ state object
-3dff8  ldr  r0, [r0, #72]        @ the same +0x48 offset the ROM handler uses
-3e018  mov  r3, #128
-3e01c  ldrb r2, [r2, r1]         @ a bitmask of AF points
-3e028  cmp  r4, #6               @ at most 7 points in this loop
-3e030  add  r6, r6, #20          @ 20-byte records
-```
-
-and a second one at `0x03D560` that calls into the AF unit and multiplies two
-16-bit fields of a record:
-
-```
-3d5b0  bl   0xff1319c4           @ AF unit
-3d5b8  ldrh r1, [r0, #70]
-3d5bc  ldrh r0, [r0, #72]
-3d5c0  mul  r1, r0, r1
-3d5c8  bl   0xff4f9eb0
-```
-
-There are 20 `mul`/`mla` instructions in that block and no `smlal` pairs, so the
-correlation-style math of a contrast AF is not concentrated here -- this block is
-the point/state handling, not the evaluation. The evaluation still has to be
-found, but the search space is now a 0x7000-byte RAM region with 83 functions
-rather than a 16 MB image.
-
-Property tables also live in RAM, e.g. at `0x4B2570`:
-
-```
-4b2564  0x80050002  flags 0  handler 0x0046B434
-4b2570  0x80050029  flags 0  handler ...
-4b254c  0x80030021  flags 0  handler 0x0046B574
-```
-
-The `0x0046xxxx` handlers are ML's own loaded module code, so this table is the
-one the firmware fills from ML's registrations.
-
-## Round 8: the RAM AF block, mapped
-
-`docs/af-function-map.txt` lists all 83 functions in the block
-(`0x03C000`-`0x043000`) with their sizes, and the call statistics:
-
-* **521 `bl`** in the block, **289 of them into the ROM** (`0xFF...`),
-* so the RAM code is the driver and the ROM holds the routines it calls.
-
-The three most-called ROM routines are:
-
-| calls | target | what it looks like |
-|---|---|---|
-| 82 | `0xFF1319C4` | a property **getter**: `and r7, r0, #0xf000000`, calls `0xFF130878`, branches to an error log with a format string on failure |
-| 48 | `0xFF47A798` | not yet read |
-| 40 | `0xFF2ADE1C` | not yet read |
-
-`0xFF1319C4` being the most-called thing in the AF block says the block is
-mostly *reading state*, not evaluating focus: 82 property reads against
-521 calls in total. That matches the round-7 observation that the heavy
-`ldrb` loop at `0x041678` is a debug dump (it logs with `0x67C8`), not a metric.
-
-So the contrast evaluation is not in this block either. The candidates left are
-`0xFF47A798` and `0xFF2ADE1C` -- both called from RAM code, both inside the
-ROM's `0xFF` image, which is exactly where the AF unit routines live.
-
-## Round 9: the AF controller is an event/state machine, and its actions are named
-
-The ROM's trace table names every action the AF controller can take:
-
-```
-[AF] AfCtrl_Act_Ready
-[AF] AfCtrl_Act_Suspend
-[AF] AfCtrl_Act_Ignore( %d )
-[AF] AfCtrl_Act_SetLensParameter
-[AF] AfCtrl_Act_SetLensParameterRemote
-[AF] AfCtrl_Act_StartLensDriveRemote
-[AF] AfCtrl_Act_EndLensDriveRemote
-[AF] AfCtrl_Act_EmdDriveResult( Comp:%d )
-[AF] AfCtrl_Act_CompleteEmdDrive
-[AF] AfCtrl_Act_CompleteAe_ForTvAf
-[AF] AfCtrl_Act_CompleteAfResult
-[AF] AfCtrl_Act_ContinuousAfStart
-[AF] AfCtrl_Act_ContinuousAfStop
-[AF] AfCtrl_Act_TvAfStart
-[AF] AfCtrl_Act_TvAfStop
-[AF] AfCtrl_ExecuteEvent : Undefined( Event:%d, State:%d )
-[AF] AfCtrl_PropertyCBR PROP_LV_AF(%#lx)
-[AF] AEWB_AEL_SET_AFAE:%X Bv:%X
-[AF] AEWB_AEL_RESET_AFAE:%X
-```
-
-That is the shape of Canon's autofocus: an **event/state machine** (`ExecuteEvent(Event, State)`) whose actions set lens parameters, start and end a lens drive ("Emd"), wait for the drive result, and complete the AF result. Continuous AF and Tv-AF are separate start/stop actions, and the whole thing is driven by `PROP_LV_AF` property callbacks -- which is why the RAM block from round 8 was mostly property reads.
-
-So the algorithm is not a single metric function: it is a drive-and-measure loop whose states are these actions. A contrast metric must sit behind `EmdDriveResult`, because that is where a drive ends and a decision has to be made.
-
-## Wi-Fi: the WLAN manager has the same shape
-
-```
-WlanMgr            WlanPowerOn        WlanPowerOff
-WlanSDIODriver     WlanSdcom           WlanSdcomDrv        Wlanmode
-[WLAN] ADHOC-CANCEL-> ADHOC-LEAVE 1
-[WLAN] ADHOC-TIMEOUT> ADHOC-LEAVE 1
-```
-
-A manager component, power on/off, an SDIO driver binding, and an ADHOC state
-machine. The pieces named here are the ones that would have to be driven for a
-module to reach the network: `WlanPowerOn` -> `WlanSDIODriver` -> `WlanSdcom`.
-## Round 10: the AF evaluation lives in AEWB, and its decision actions are named
-
-The ROM carries **165 AEWB_\* names** — the AE/WB/AF evaluation subsystem. The ones that matter for autofocus:
-
-```
-AEWB_AEL_RESET_AFAE
-AEWB_AEL_SET_AFAE
-AEWB_AFAE_EMDLOCK_OFF
-AEWB_AFAE_EMDLOCK_ONETIME
-AEWB_CTRL_CompleteFirstAeWb
-AEWB_CTRL_ExecMainProcess
-AEWB_CTRL_Ready
-AEWB_CTRL_RequestEmdDriveWithoutBadFrame
-AEWB_CTRL_SetCntTVAFBadFrame
-AEWB_CTRL_Start
-AEWB_CTRL_Stop
-AEWB_CTRL_Suspend
-AEWB_DSTOCK_GetAFAEControlValue
-AEWB_DSTOCK_GetAFAEInfo
-AEWB_DSTOCK_GetAFBvForAFAE
-AEWB_DSTOCK_GetBadFrameStatus
-```
-
-Reading: `AEWB_CTRL_ExecMainProcess` is the per-frame evaluation loop; it
-asks the DSTOCK getters for AF/AE inputs, and the drive decision comes out as
-`AEWB_CTRL_RequestEmdDriveWithoutBadFrame` (drive again only if the frame was
-not a bad one) plus `AEWB_CTRL_SetCntTVAFBadFrame` (count bad frames in Tv-AF).
-`AEWB_AFAE_EMDLOCK_ONETIME` / `_OFF` is the lens-drive lock around a measurement.
-
-## What is needed to finish, with the evidence for each
-
-**Wi-Fi: a ROM dump wider than 16 MB.** ROM1 references `0xF9000000`-`0xFAFFFFFF`
-in 4,670 32-bit literals, and the socket-halt loop itself calls
-`0xF90554F8`/`0xF905555C`. ML's `consts.h` declares `ROM1_SIZE 0x01000000` and
-`src/debug.c` writes exactly that, so the dump stops 1 MB short of the first
-such call. `qemu/6D/raw_dump/ROM1.BIN`, `qemu/6D/SFDATA.BIN` and `qemu/cf.img`
-in this workspace are all 8-16 MB and contain the same image, not more.
-
-**AF: the metric has no address to reach it.** The AEWB/AF trace strings
-(`AEWB_CTRL_ExecMainProcess`, `AfCtrl_Act_EmdDriveResult`) are not referenced by
-absolute address, by the `0xFF` alias, or by a PC-relative `add`: all three
-searches come back empty, because the trace subsystem indexes them. Without a
-symbol table for this firmware, the only remaining route is a live trace: a
-module that logs the PC that writes `PROP_LV_AF_RESULT` while the camera focuses,
-which needs the camera.
-
-So both halves stand on data that is not in this workspace: a 32 MB ROM dump, or
-the camera itself.
-
-## Round 12: the phase-difference AF's calibration model is in the ROM
-
-The `dl_Set*` debug parameters (133 names in total) include a complete set of
-**AF sensor calibration** entries, which say how the phase-difference measurement
-is organised:
-
-```
-dl_SetPhaseDiffCarrierWaveCenterL2R / R2L
-dl_SetPhaseDiffCarrierWaveSideL2R / R2L
-dl_SetPhaseDiffStationaryWaveReverse / Same
-dl_SetAdjustPhaseDiffCarrierWaveCenterL2R / R2L
-dl_SetAdjustPhaseDiffCarrierWaveSideL2R / R2L
-dl_SetAdjustPhaseDiffCarrierWaveSideL2RLoTemp / R2LLoTemp
-dl_SetDutyAForCarrierWaveCenterL2R / R2L
-dl_SetDutyAForCarrierWaveSideL2R / R2L
+PhaseDiffCarrierWaveCenterL2R / R2L        : %d(angle)
+PhaseDiffCarrierWaveSideL2R / R2L          : %d(angle)
+AdjustPhaseDiffCarrierWaveCenter/Side L2R / R2L
+AdjustPhaseDiffCarrierWaveSideL2RLoTemp / R2LLoTemp
+AdjustPhaseDiffStationaryWaveReverse / Same
+dl_SetDutyAForCarrierWaveCenter/Side L2R / R2L
 dl_SetDutyAForStationaryWaveReverse / Same
 ```
 
-Reading: the AF sensor has **two line pairs** (center and side), each measured in
-**both directions** (L2R, R2L); the "carrier wave" is the sensor's stripe pattern
-and its **duty (A/B duty cycle)** is calibrated; there is a **low-temperature**
-calibration variant (`LoTemp`); and a **stationary-wave** case is calibrated for
-the same and reversed phase. That is the measurement model behind the
-`PhaseDiffCarrierWave* : %d(angle)` runtime logs.
+So: the AF sensor has **two line pairs** (center, side), correlation runs in
+**both directions** (L2R, R2L), a **duty** calibration applies to the sensor's
+carrier (stripe) pattern, there is a **low-temperature** variant, and a
+**stationary-wave** case is calibrated for same and reversed phase. The runtime
+value is an **angle**, which becomes a defocus, which becomes a lens drive.
 
-So the viewfinder AF is: correlate the paired line images in both directions,
-apply the temperature/duty calibration, and convert the correlation minimum to
-an angle -> defocus -> lens drive, with the `AfCtrl_Act_*` state machine driving
-and the `EmdDriveResult` deciding.
+**LiveView ("TvAf"): contrast, evaluated per frame by AEWB.** The ROM has
+**165 `AEWB_*` names**; the ones that matter:
 
-## The ROM is a 6D, not a 6D Mark II
+```
+AEWB_CTRL_ExecMainProcess                  the per-frame evaluation loop
+AEWB_CTRL_RequestEmdDriveWithoutBadFrame    the drive decision
+AEWB_CTRL_SetCntTVAFBadFrame                bad-frame counter
+AEWB_AFAE_EMDLOCK_ONETIME / _OFF            lens-drive lock around a measurement
+AEWB_AEL_SET_AFAE / RESET_AFAE
+AEWB_DSTOCK_GetAFAEInfo / GetAFBvForAFAE / GetBadFrameStatus
+```
 
-* `"EOS 6D"` is present; **`"Mark II"` appears zero times** in ROM1.
-* In the RAM dump the WLAN components are absent as runtime state
-  (`WlanPowerOn` 0, `WlanMgr` 0, `w8787` 0), which means the WLAN stack was
-  never initialised on this body.
+**The controller is an event/state machine.** Actions named in the trace table:
 
-The 6D's built-in hardware has no Wi-Fi radio; its official Wi-Fi path is an
-Eye-Fi card, and the ROM carries 88 Eye-Fi strings. Any "Wi-Fi" this body can do
-has to come through the SD slot (an SDIO Wi-Fi card, for which the 88W8787
-driver is present) or an Eye-Fi card.
+```
+AfCtrl_Act_Ready / Suspend / Ignore(%d)
+AfCtrl_Act_SetLensParameter / SetLensParameterRemote
+AfCtrl_Act_StartLensDriveRemote / EndLensDriveRemote
+AfCtrl_Act_EmdDriveResult( Comp:%d ) / CompleteEmdDrive
+AfCtrl_Act_CompleteAe_ForTvAf / CompleteAfResult
+AfCtrl_Act_ContinuousAfStart / ContinuousAfStop
+AfCtrl_Act_TvAfStart / TvAfStop
+AfCtrl_ExecuteEvent : Undefined( Event:%d, State:%d )
+AfCtrl_PropertyCBR PROP_LV_AF(%#lx)
+```
 
-## Round 17: the property descriptor tables, and a candidate rejected
+Reading: the AF controller only **queues** work; AEWB evaluates each frame;
+`EmdDriveResult` is where a drive ends and the next decision is made;
+`RequestEmdDriveWithoutBadFrame` is that decision.
 
-`tools/rom/propscan.py` extracts every run of property descriptors from ROM1
-(16-byte entries: id, flags, size, index). Seven runs, the largest with 99 and
-86 entries; the full dump is `docs/property-descriptors.txt`.
+Where the AF code lives: **RAM `0x03C000`-`0x043000`, 83 functions**, next to the
+names `AfWrDmacCompleteCBR`, `AfWrDmacAbortCBR`, `AfCompleteCBR`,
+`AfOverRunErrorCBR` (`docs/af-function-map.txt`). That block is mostly property
+reads (82 calls to the getter `0xFF1319C4` out of 291 calls into the ROM), so the
+metric is not there.
 
-The 0x8004xxxx family has **67 descriptors**, and it settles one thing:
+**Not established:** the metric formula itself.
 
-> **`0x80040055` is not a property.** The ids run
-> `0x80040053` -> `0x80040056` with nothing between them, so the word that
-> happened to sit next to `[NWCOM] WIFI_SETTING OFF` (round 16) is not a
-> registered property id. That candidate is rejected.
+## Wi-Fi: the stack is present and this body has the radio
 
-What is still missing for the WiFi switch is the same thing as before: a name.
-The descriptor tables give ids and sizes, the name blob at `0xFF19637C` gives
-names (`PROP_ADAPTER_DEVICE_ACTIVE`, `PROP_WIFI_SETTING`,
-`PROP_GPS_DEVICE_ACTIVE`, `PROP_GPS_AUTO_TIME_SETTING`, ...), but nothing in the
-image points from one to the other -- the name list is reached by index, the
-same way the trace strings are.
+The 6D was the first EOS with built-in Wi-Fi and GPS, and the firmware carries
+the whole stack: `WlanMgr`, `WlanSDIODriver`, `WlanSdcom`, NWCommu, the LAN
+dialogs, DLNA, WFT HTTP, the Marvell **88W8787** SDIO driver banner
+(`w8787-Ax, RF878X, FP197, 14.197.9.p255`), WPA (`wpaTask`), DHCP (`dhcpsTask`),
+and Eye-Fi support.
+
+Where it lives:
+
+| region | contents | inside the 16 MB dump? |
+|---|---|---|
+| `0xFF26xxxx` | NWCOM manager: Init, FTP, discovery, connect, reconnect, GUI events | yes |
+| `0xFFD2xxxx` | SDIO transport (`SDIOAsyncCBR`, async completion) | yes |
+| `0xF905xxxx` | socket/TCP layer | **no** |
+
+Known entry points (from `docs/wifi-functions.md`): `NWCOM Init 0xFF261714`,
+`TransmissionChangeCBR 0xFF2616E8`, `NetworkStatusCBR 0xFF261B00`,
+`Wizard 0xFF261F70`, `Order 0xFF262358`, `FTP 0xFF261974`,
+`ChangeLogicalConnect 0xFF2634B8`, `ReConnect 0xFF2638C4`, `GUIEvent 0xFF266334`.
+
+**`NWCOM Init` cannot be called with `r0 = 0`.** It dereferences its argument:
+
+```
+ff261714  push {r2, r3, r4, r5, r6, lr}
+ff261718  mov  r4, r0
+ff26175c  ldr  r3, [r4, #32]
+ff261768  ldr  r3, [r4, #28]
+ff261778  ldr  r3, [r4, #40]
+```
+
+and it is registered as the **event-1 handler of a component table** at
+`0xF8B69458`, so it is a framework callback with an owned context, not an entry a
+module can jump into. The gated `mlwifi` rung-2 call would data-abort.
+
+The missing piece is the **on/off switch**: the name `PROP_WIFI_SETTING` exists
+in the firmware's name table at `0xFF19637C`, but its id is not tied to it
+anywhere in the image, and modules cannot read properties (`prop_get_value` is
+commented out in `src/property.h`) -- only `PROP_INT`, which fires on change.
+
+## Property descriptor tables
+
+`tools/rom/propscan.py` finds 7 runs of descriptors (16-byte entries:
+id, flags, size, index) in ROM1; `docs/property-descriptors.txt` lists all of
+them. The `0x8004xxxx` family has 67 descriptors. That is how the candidate
+`0x80040055` was **rejected**: the ids run `0x80040053` -> `0x80040056` with
+nothing between, so it is not a registered property.
+
+## What stands between here and the answer
+
+| goal | what is missing | how it is obtained |
+|---|---|---|
+| AF metric | the identity of the task that publishes the AF result | `aftrace` module: logs value + `get_current_task_name()` + ms for `PROP_LV_AF_RESULT`, AF point, mode, BV |
+| Wi-Fi on | the id of `PROP_WIFI_SETTING` | `mlwifi` module: Watch Props (116 ids across `0x8003`/`0x8004`) while toggling Wi-Fi in Canon's menu; List Tasks to see `wpaTask`/`dhcpsTask` |
+| Wi-Fi code past `0xF905xxxx` | a dump wider than 16 MB | set `ROM1_SIZE` to `0x02000000` and re-dump |
+
+Both modules are built into `magiclantern.zip`, both are read-only in every
+path they run today, and both were checked to import only symbols that
+`6D_116.sym` exports.
+
+## The lesson that cost the most rounds
+
+`docs/wifi-functions.md` (2026-11-06) and `docs/wifi-recipes-plan.md` already
+recorded the `0xFF` alias, the index-based string tables, the NWCOM addresses and
+the correction that this body has Wi-Fi. Several rounds were spent re-deriving
+them. Read the existing documents first.
