@@ -211,3 +211,30 @@ path they run today, and both were checked to import only symbols that
 recorded the `0xFF` alias, the index-based string tables, the NWCOM addresses and
 the correction that this body has Wi-Fi. Several rounds were spent re-deriving
 them. Read the existing documents first.
+
+## Confidence: what to trust in this document, and how it was established
+
+The claims here are not all of the same kind, and three of them were wrong at some
+point in this work. This table records the basis for each so a later reader can
+re-check rather than trust.
+
+| claim | basis | confidence |
+|---|---|---|
+| ROM1 is code, ROM0 is not | counted `push {..,lr}` prologues: 33,381 vs 0 | measured |
+| ROM1 is also mapped at `0xFF000000` | disassembled `0xFF3131F4` and got a valid prologue; 4,670 literals point into `0xF9000000`+ | measured |
+| The dispatch table at `0xF83149DC` maps 8 id groups to handlers | read as 16-byte records and cross-checked against the handlers' prologues | read from image |
+| `PROP_LV_AF_RESULT` → `0xFF3131A0` | table entry, and the handler's shape (copy 7 bytes, mask two payload bytes, call `0x5FB8`) | read from image |
+| The AF map is **partial** | `PROP_LV_LENS_DRIVE_REMOTE` (`0x80050013`) is used by ML's `lens_focus()` yet absent from the map | proven by contradiction |
+| The descriptor's third field is not a payload size | `PROP_AFPOINT` has 1 there, ML records `len=70`; handlers copy 3 and 11 bytes for properties whose field is 9 | proven by contradiction |
+| Phase-difference AF with center/side lines, L2R/R2L, duty, LoTemp | ROM strings `PhaseDiffCarrierWave*`, `dl_SetDutyAFor*` | string evidence |
+| AEWB evaluates per frame and decides with `RequestEmdDriveWithoutBadFrame` | ROM strings `AEWB_CTRL_*` | string evidence |
+| The AF code block sits at RAM `0x03C000`-`0x043000` | 83 prologues plus the names `AfWrDmacCompleteCBR` and friends | read from image |
+| `NWCOM Init` needs a context in `r0` | `ldr r3, [r4, #32]` in its first instructions | read from image |
+| `NWCOM Init` is a component event handler | the single literal reference lands in the table at `0xF8B69458` | read from image |
+| Wi-Fi hardware is present on this body | the firmware ships `WlanMgr`, `NWCommu`, `wpaTask`, `dhcpsTask`, the 88W8787 banner; Canon's spec for the 6D lists Wi-Fi and GPS | string + external |
+| ML can reach the network today without firmware calls | Develop writes `DCIM/<dir>/IMG_nnnn.JPG` and replaces the camera JPEG, so Canon's app lists it | read from code |
+| The metric formula | not established | unknown |
+
+Two rules this table enforces: a claim derived from a string is weaker than one
+read out of a table, and a claim contradicted by code elsewhere in this repository
+loses regardless of how often it was repeated.
