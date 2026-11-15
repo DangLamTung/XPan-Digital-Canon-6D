@@ -688,3 +688,37 @@ The safe route to a working call is therefore not "jump to Init with zeros" but
 "find the component object the manager creates at WiFi power-on and reuse it".
 That object is what the power-on path allocates, and it is the next thing to
 locate.
+
+## Round 14: where the component table points, and where the SDIO code sits
+
+Following the one literal reference to `NWCOM Init` (`0xFF261714`) gives the
+component table that owns it:
+
+```
+0xF8B69438  FF2616C8  event 0
+0xF8B69448  FF261714  event 1    <- NWCOM Init
+0xF8B69478  FF262968  event 1
+0xF8B69480  FF262968  event 2
+```
+
+So the entry point ML's rung 2 aims at is a **framework callback**, invoked with
+a component context that the manager owns. The function itself dereferences that
+context (`ldr r3, [r4, #32]`, `[r4, #28]`, `[r4, #40]` at `0xFF26175C`,
+`0xFF261768`, `0xFF261778`), which is why `r0 = 0` cannot be safe -- the first
+load reads address 0x20 and data-aborts.
+
+The SDIO side is inside the dumped 16 MB: scanning for the NWCOM log subsystem
+id (`mov r0, #0x45`) finds two sites at `0xFFD2585C` and `0xFFD258B4`, and the
+code around them is the SDIO async callback:
+
+```
+ffd25830  ldr  ip, [r4, #20]      @ completion callback slot
+ffd2584c  blx  ip
+ffd25854  mov  r2, #868           @ line number for the error log
+ffd2585c  add  r0, pc, #312       @ "SDIOAsyncCBR ..."
+```
+
+`0xFFD2xxxx` is the SDIO transport, and unlike the socket layer (which calls
+`0xF905xxxx`, past the end of the dump) every byte of it is in the image we have.
+That makes the SDIO path the one part of the WiFi stack that can be read to the
+end offline.
