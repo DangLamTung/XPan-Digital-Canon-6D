@@ -736,3 +736,25 @@ What remains true: the firmware's WLAN stack is not exported, so ML cannot call
 it by name, and every address has to be reached by disassembly. The practical
 consequence of the correction is that the goal is worth pursuing -- there is a
 radio to drive -- and that the on/off switch is the property to find first.
+
+## Round 16: the switch is still unnamed, and only the camera can name it
+
+Static search for `PROP_WIFI_SETTING`'s id turns up one weak lead and no proof:
+
+* the string `[NWCOM] WIFI_SETTING OFF` sits at `0xFF262D08`, and the only
+  property-id word anywhere near it is `0x80040055` at `0xFF262D00` -- one
+  occurrence in the whole image, immediately before that message. Treat it as a
+  **candidate, not a result**: the surrounding bytes are a string pool, and the
+  other WiFi messages in the same pool are preceded by text, not by an id.
+* the two ids the dispatcher at `0xFF284FA0` tests (`0x8003000E`, `0x8003000F`,
+  `0x80030016`, `0x80010000`) are *network state*, not the on/off switch.
+
+The reason a static answer is not available: `prop_get_value` is commented out in
+`src/property.h`, so a module cannot read a property's current value; the only
+read path ML has for modules is `PROP_INT`, which fires when a value changes.
+That is exactly what `mlwifi`'s **Watch Props 60s** uses, and it means the id can
+only be named by a run: toggle Wi-Fi in Canon's menu while the watcher is on, and
+the `change:` line names it.
+
+Candidates to look for in that log, in order of likelihood:
+`0x80040055`, then anything in `0x80030000`-`0x8003003F` and `0x80010000`.
