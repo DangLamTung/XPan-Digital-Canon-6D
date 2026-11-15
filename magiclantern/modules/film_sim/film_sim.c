@@ -8377,6 +8377,80 @@ static void fs_export_look_task(void *unused) {
   NotifyBox(3000, "exported %s", path);
 }
 
+/* Import recipes that arrived as ordinary files in DCIM.
+ *
+ * Why DCIM: the camera's PTP responder implements SendObjectInfo (0x100C) and
+ * SendObject (0x100D) -- both are in the operation table at 0xFF1C313C/44 with
+ * handlers at 0xFF281CA4/0xFF281854 -- so a PTP/IP host can push a file onto the
+ * card over the camera's own Wi-Fi. PTP writes into the camera's object space,
+ * which for this body is DCIM. This routine then moves those files into
+ * ML/FILMS, where the module reads recipes.
+ *
+ * Nothing here talks to the network: it copies files that are already on the
+ * card, so it also works with a card reader or a Wi-Fi SD card. */
+static void fs_import_recipes_task(void *unused) {
+  (void)unused;
+  const char *dir = get_dcim_dir();
+  if (!dir || !dir[0]) {
+    NotifyBox(3000, "import: no DCIM dir");
+    return;
+  }
+  struct fio_file *file = alloc_fio_file();
+  if (!file) return;
+  int imported = 0;
+  struct fio_dirent *de = FIO_FindFirstEx(dir, file);
+  if (!IS_ERROR(de)) {
+    do {
+      struct file_info fi = convert_fio_file_info(file);
+      if (!fi.name[0] || fi.name[0] == '.')
+        continue;
+      if (!fs_ends_with(fi.name, ".XML") && !fs_ends_with(fi.name, ".xml"))
+        continue;
+      char src[FS_PATH_LEN], dst[64];
+      snprintf(src, sizeof src, "%s/%s", dir, fi.name);
+      /* Only files that look like a recipe: a small XML that names a film. */
+      uint32_t sz = 0;
+      if (FIO_GetFileSize(src, &sz) != 0 || sz == 0 || sz > 4096)
+        continue;
+      char head[160];
+      FILE *fp = FIO_OpenFile(src, O_RDONLY);
+      if (!fp) continue;
+      int n = FIO_ReadFile(fp, head, sizeof head - 1);
+      FIO_CloseFile(fp);
+      if (n <= 0) continue;
+      head[n < (int)sizeof head - 1 ? n : (int)sizeof head - 1] = 0;
+      if (!strstr(head, "<film") || !strstr(head, "<name>"))
+        continue;
+      snprintf(dst, sizeof dst, "ML/FILMS/IMP_%s", fi.name);
+      uint32_t have = 0;
+      if (FIO_GetFileSize(dst, &have) == 0 && have > 0) {
+        fs_log("import: %s already present", dst);
+        continue;
+      }
+      if (FIO_RenameFile(src, dst) == 0) {
+        imported++;
+        fs_log("import: %s -> %s", src, dst);
+      }
+    } while (FIO_FindNextEx(de, file));
+  }
+  free(de);
+  free(file);
+  fs_log("import: %d recipe(s) from %s", imported, dir);
+  fs_log_flush();
+  if (imported) {
+    /* reload so the new stocks appear without a power cycle */
+    fs_reload_task(0);
+    NotifyBox(4000, "imported %d recipe(s)", imported);
+  } else {
+    NotifyBox(4000, "import: no .XML recipes in DCIM");
+  }
+}
+
+static MENU_SELECT_FUNC(fs_import_recipes_action) {
+  task_create("fs_import", 0x1e, 0x2000, fs_import_recipes_task, 0);
+  (void)priv; (void)delta;
+}
+
 static MENU_SELECT_FUNC(fs_export_look_action) {
   task_create("fs_export", 0x1e, 0x2000, fs_export_look_task, 0);
   (void)priv; (void)delta;
@@ -8699,6 +8773,16 @@ static struct menu_entry fs_menu_debug[] = {
                 "is the format the module itself reads and the format "
                 "tools/recipe_online.py packs for sharing. No network on the "
                 "camera: this writes the file, the host carries it.",
+    },
+    {
+        .name = "Import Recipes",
+        .select = fs_import_recipes_action,
+        .icon_type = IT_ACTION,
+        .help = "Move film recipes that arrived as .XML files in DCIM into "
+                "ML/FILMS and reload the stock list. This is the camera half of "
+                "a Wi-Fi push: the camera's PTP responder has SendObject "
+                "(opcode 0x100D), so a host can put a file on the card, and this "
+                "takes it from there.",
     },
     {
         .name = "Reload Films",
