@@ -722,3 +722,17 @@ ffd2585c  add  r0, pc, #312       @ "SDIOAsyncCBR ..."
 `0xF905xxxx`, past the end of the dump) every byte of it is in the image we have.
 That makes the SDIO path the one part of the WiFi stack that can be read to the
 end offline.
+
+## Correction (round 15): this body has Wi-Fi hardware
+
+An earlier note in this session claimed the EOS 6D has no Wi-Fi radio and that
+`docs/wifi-recipes-plan.md` was wrong. That claim was mine and it was wrong: the
+6D was the first EOS body with **built-in Wi-Fi and GPS**, and the evidence in
+this repository already said so -- `WlanMgr`, `NWCommu`, the LAN dialogs, DLNA,
+the WFT HTTP server, `PROP_WIFI_SETTING`, and the `WLAN Biltin Judge` all ship in
+this firmware, and `docs/wifi-recipes-plan.md` records the same correction.
+
+What remains true: the firmware's WLAN stack is not exported, so ML cannot call
+it by name, and every address has to be reached by disassembly. The practical
+consequence of the correction is that the goal is worth pursuing -- there is a
+radio to drive -- and that the on/off switch is the property to find first.
