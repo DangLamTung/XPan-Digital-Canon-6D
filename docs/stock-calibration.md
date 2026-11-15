@@ -98,3 +98,49 @@ The honest options, in order:
 3. keep it out of calibrated comparisons until (2) is done.
 
 The comparison image is `renders/dalat-calib/compare-superia-vs-classicneg.jpg`.
+
+## Classic Negative measured against Fuji's own examples
+
+There is no Dehancer corpus for Classic Negative, so the look was measured against
+Fuji's published examples instead: the three-photo collage on Fuji's IRODORI
+article about クラシックネガ (saved as `docs/img/cn-reference-fuji.jpg`).
+
+Signature, measured as shadow mean (darkest 20%), highlight mean (brightest 10%),
+saturation and the 1st-percentile black level:
+
+| sample | shadow RGB | highlight RGB | sat | black |
+|---|---|---|---|---|
+| Fuji panel 1 (snow, umbrella) | 79, 99, 117 | 234, 237, 243 | 0.16 | **49.8** |
+| Fuji panel 2 (pond reflection) | 17, 37, 38 | 147, 170, 186 | 0.48 | **26.6** |
+| Fuji panel 3 (cat, red cup) | 36, 44, 41 | 217, 217, 220 | 0.11 | **19.7** |
+| our `classicneg.fs`, frame 01 | 10, 36, 62 | **202, 179, 136** | **0.50** | 19.2 |
+| our `classicneg.fs`, frame 07 | 6, 23, 34 | **221, 182, 109** | **0.50** | **9.7** |
+| our `classicneg.fs`, frame 10 | 16, 34, 52 | 254, 251, 245 | 0.26 | **9.3** |
+
+Two differences are not scene-dependent:
+
+* **blacks**: Fuji's examples sit at 20-50, ours at 9-19. `CURVE 0,0` keeps an
+  absolute black that Classic Negative does not have;
+* **saturation**: Fuji's (0.11-0.48, panel 2 is a reflection so it runs high),
+  ours flat at 0.50.
+
+The third difference -- warm highlights (ours R >> B, Fuji's B >= R) -- is partly
+scene: a golden-hour pine grove cannot have neutral highlights. It is still the
+direction the split tone should take, and `SPLIT_HI 30,10,-22` points the other
+way from a cool highlight.
+
+`samples/classicneg-v4.fs` is a candidate with `CURVE 0,14 ...`, `SPLIT_HI -7,2,11`
+and `SAT 98`; on the same three frames it reads:
+
+| | shadow | highlight | sat | black |
+|---|---|---|---|---|
+| v4 frame 01 | 22, 46, 70 | 190, 177, 151 | 0.40 | 31.8 |
+| v4 frame 07 | 15, 35, 48 | 213, 180, 118 | 0.42 | 21.9 |
+| v4 frame 10 | 26, 45, 64 | 242, 246, 250 | 0.22 | 23.1 |
+
+Blacks and saturation move toward Fuji's numbers. It is still **not a verified
+stock**: this compares a signature, not pixels of the same scene. It becomes
+verified the day a Classic Negative reference of *our* frames exists (Dehancer
+export of the same corpus), which is what the 19 other stocks have.
+
+Visual: `renders/classicneg-vs-reference.jpg`.
