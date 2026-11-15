@@ -35,6 +35,14 @@
 /* Off by default: turning this to 1 is the only way the call below can run. */
 CONFIG_INT("mlwifi.allow_call", mlw_allow_call, 0);
 
+/* Rung 2.5: write the Wi-Fi on/off property once Watch Props has named it.
+ * Off by default, like the code-call rung: property_write is a normal ML
+ * export, but the *id* has to be the one the firmware really uses, and a wrong
+ * id means writing an unrelated setting. */
+CONFIG_INT("mlwifi.switch_id", mlw_switch_id, 0);
+CONFIG_INT("mlwifi.switch_value", mlw_switch_value, 1);
+CONFIG_INT("mlwifi.allow_write", mlw_allow_write, 0);
+
 /* printf() in ML goes to the console buffer and never reaches the card, so
  * every line here is also appended to ML/LOGS/MLWIFI.LOG. That file is the
  * only evidence that survives a power cycle, and without it a run leaves
@@ -662,6 +670,28 @@ static void mlw_tasks(void *priv, int delta)
     task_create("mlw_tasks", 0x1e, 0x1000, mlw_tasks_task, 0);
 }
 
+
+/* Write the configured property id with the configured value. This is the only
+ * way a module can turn the Wi-Fi switch: modules cannot read properties
+ * (prop_get_value is not exported), but prop_request_change is. */
+static void mlw_write_switch(void *priv, int delta)
+{
+    (void)priv; (void)delta;
+    if (!mlw_allow_write || !mlw_switch_id)
+    {
+        mlw_log("write: refused (allow_write=%d switch_id=0x%x)",
+                (int)mlw_allow_write, (int)mlw_switch_id);
+        NotifyBox(2000, "write refused: set allow_write and switch_id");
+        return;
+    }
+    uint32_t val = (uint32_t)mlw_switch_value;
+    prop_request_change((unsigned)mlw_switch_id, &val, sizeof(val));
+    mlw_log("write: prop 0x%x <- %d requested", (int)mlw_switch_id,
+            (int)mlw_switch_value);
+    NotifyBox(2000, "write 0x%x = %d", (int)mlw_switch_id,
+              (int)mlw_switch_value);
+}
+
 static struct menu_entry mlwifi_menu[] = {
     {
         .name = "Watch Props 3min",
@@ -711,6 +741,16 @@ static struct menu_entry mlwifi_menu[] = {
         .help = "Log every DryOS task name. The ROM has wpaTask and dhcpsTask, "
                 "so if the WiFi stack is running they appear here; if they do "
                 "not, the WLAN side was never started on this body. Read-only.",
+    },
+    {
+        .name = "Write Switch",
+        .select = mlw_write_switch,
+        .icon_type = IT_ACTION,
+        .help = "Rung 2.5: write mlwifi.switch_id with mlwifi.switch_value "
+                "through prop_request_change, the normal ML property API. It "
+                "only runs when mlwifi.allow_write is 1. Set switch_id to the "
+                "id that Watch Props named when Wi-Fi was toggled in Canon's "
+                "menu. Nothing here jumps into firmware code.",
     },
     MENU_EOL,
 };
