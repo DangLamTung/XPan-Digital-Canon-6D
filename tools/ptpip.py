@@ -105,35 +105,98 @@ class Client:
 
     # ---- operations -----------------------------------------------------
     def op(self, code, params=(), data=b"", dataphase=None):
+        """Send an operation; return (response_code, params, data_from_camera).
+
+        dataphase 0 = none, 1 = data from camera to host, 2 = data from host to
+        camera. When omitted it is chosen from whether `data` was given.
+        """
         self.txid += 1
         tid = self.txid
         if dataphase is None:
-            dataphase = 1 if data else 0
+            dataphase = 2 if data else 0
         body = struct.pack("<IHI", dataphase, code, tid)
         for p in params:
             body += struct.pack("<I", p)
         self.send(self.packet(OP_REQ, body))
+
         if data:
             self.send(self.packet(START_DATA, struct.pack("<IQ", tid, len(data))))
             self.send(self.packet(DATA, struct.pack("<I", tid) + data))
             self.send(self.packet(END_DATA, struct.pack("<I", tid)))
-        # collect until the operation response; ignore events
-        got = b""
+
+        rbuf = b""
         while True:
             ptype, body = self.recv()
             if ptype == EVENT:
                 continue
-            if ptype == OP_RESP:
-                rcode, rtid = struct.unpack("<HI", body[:6])
-                extra = body[6:]
-                return rcode, extra, got
-            if ptype in (DATA, END_DATA):
-                if ptype == DATA:
-                    got += body[4:]
-                continue
             if ptype == START_DATA:
+                rbuf = b""
                 continue
+            if ptype == DATA:
+                rbuf += body[4:]
+                continue
+            if ptype == END_DATA:
+                continue
+            if ptype == OP_RESP:
+                rcode = struct.unpack("<H", body[:2])[0]
+                rtid = struct.unpack("<I", body[2:6])[0]
+                extra = body[6:]
+                rparams = [struct.unpack_from("<I", extra, i)[0]
+                           for i in range(0, len(extra) - 3, 4)]
+                if rtid != tid:
+                    self.log("warning: response for txid %d, expected %d" % (rtid, tid))
+                return rcode, rparams, rbuf
             self.log("unexpected packet type %d during op 0x%04x" % (ptype, code))
+
+    def storage_ids(self):
+        rc, _, d = self.op(0x1004, dataphase=1)
+        if rc != 0x2001:
+            raise RuntimeError("GetStorageIDs -> %s" % RESP.get(rc, rc))
+        n = struct.unpack_from("<I", d, 0)[0]
+        return list(struct.unpack_from("<%dI" % n, d, 4))
+
+    def object_handles(self, storage, parent=0xFFFFFFFF, fmt=0):
+        rc, _, d = self.op(0x1007, [storage, fmt, parent], dataphase=1)
+        if rc not in (0x2001,):
+            raise RuntimeError("GetObjectHandles -> %s" % RESP.get(rc, rc))
+        n = struct.unpack_from("<I", d, 0)[0]
+        return list(struct.unpack_from("<%dI" % n, d, 4))
+
+    def object_info_of(self, handle):
+        rc, _, d = self.op(0x1008, [handle], dataphase=1)
+        if rc != 0x2001:
+            return None
+        o = 0
+        storage = struct.unpack_from("<I", d, 0)[0]; o = 4
+        fmt = struct.unpack_from("<H", d, o)[0]; o += 2
+        o += 2                                  # ProtectionStatus
+        size = struct.unpack_from("<I", d, o)[0]; o += 4
+        o += 2 + 4 + 4 + 4 + 4 + 4 + 4          # thumbs, dimensions, depth
+        o += 4 + 2 + 4 + 4                      # Parent, AssocType, AssocDesc, Seq
+        n = d[o]; name = d[o + 1:o + 1 + 2 * (n - 1)].decode("utf-16-le", "replace") if n else ""
+        o += 1 + 2 * n
+        n = d[o]; date = d[o + 1:o + 1 + 2 * (n - 1)].decode("utf-16-le", "replace") if n else ""
+        return {"handle": handle, "storage": storage, "format": fmt,
+                "size": size, "name": name, "date": date}
+
+    def thumb(self, handle):
+        rc, _, d = self.op(0x100A, [handle], dataphase=1)
+        return d if rc == 0x2001 else None
+
+    def object_bytes(self, handle):
+        rc, _, d = self.op(0x1009, [handle], dataphase=1)
+        if rc != 0x2001:
+            raise RuntimeError("GetObject -> %s" % RESP.get(rc, rc))
+        return d
+
+    def capture(self):
+        rc, _, _ = self.op(0x100E, [0, 0], dataphase=0)
+        return rc
+
+    def delete(self, handle):
+        rc, _, _ = self.op(0x100B, [handle], dataphase=0)
+        return rc
+
 
     def open_session(self, sid=1):
         rc, extra, _ = self.op(0x1002, [sid], dataphase=0)
