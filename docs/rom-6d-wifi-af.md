@@ -212,6 +212,23 @@ recorded the `0xFF` alias, the index-based string tables, the NWCOM addresses an
 the correction that this body has Wi-Fi. Several rounds were spent re-deriving
 them. Read the existing documents first.
 
+## Corrections that changed this document
+
+Five claims were made confidently and later reversed. They are listed here
+because a reader who only sees the final text cannot tell which parts were
+retracted.
+
+| withdrawn claim | corrected to | how it was caught |
+|---|---|---|
+| "the 6D has no Wi-Fi radio" | it does; 6D was the first EOS with Wi-Fi and GPS | `docs/wifi-recipes-plan.md` and the firmware's own WLAN stack |
+| descriptor field 3 is the payload size | it is not: `PROP_AFPOINT` has 1 there, ML records `len=70` | cross-check against `property.h` |
+| `0x80040055` is `PROP_WIFI_SETTING` | it is not a registered property at all | descriptor scan: ids run `...53` -> `...56` |
+| `0xFF2A0000` is the AEWB code | it is the SDIO driver; ASIF there is audio | read the strings inside the window |
+| `0xFF1302E8` is an AF command function, `0xFF13xxxx` is the AF unit | it is `prop_deliver`, and the window is the property system | grep of the 58 `ff` symbols in `6D_116.sym` |
+
+Each reversal came from a *different* source than the one that produced the
+claim, and the last one sat in the repository from the first round.
+
 ## Confidence: what to trust in this document, and how it was established
 
 The claims here are not all of the same kind, and three of them were wrong at some
