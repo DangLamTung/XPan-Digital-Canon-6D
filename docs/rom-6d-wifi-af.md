@@ -468,3 +468,41 @@ modules yet, so it is a place to look, not a conclusion.
 
 The lesson is the same one that cost round 40: a region label guessed from a
 nearby string is not evidence, and every measurement inherits that guess.
+
+## Round 43: the AE/AF modules, located by their own source paths
+
+Instead of guessing a window, search the image for the firmware's own source-path
+strings. Every AEWB/AF unit names itself:
+
+| path string | address | what it is |
+|---|---|---|
+| `./AEWB/AEWB.c` | `0xFF103504` | top of the subsystem |
+| `./AEWB/AEWBState.c` | `0xFF24B25C` | state machine |
+| `./AEWB/ColorController/ColorController.c` | `0xFF24E618` | colour |
+| `./AEWB/AECalc/AECalc.c` | `0xFF427354` | AE calculation |
+| `./AEWB/AECalc/AEProc/LiveViewAEProcSubFunc.c` | `0xFF42FBA4` | LiveView AE helpers |
+| `./AEWB/AECalc/AEProc/LiveViewAEProcGeroData.c` | `0xFF431758` | AE data |
+| **`./AEWB/AF/AFProc/LiveViewAFPUtility.c`** | **`0xFF4324C4`** | **LiveView AF processing** |
+| `./AEWB/AECalc/AEProc/LiveViewAEProcMetering.c` | `0xFF5CB0E0` | **metering** |
+| `./AEWB/WBCalc/WBCalc.c` | `0xFF429250` | WB |
+| `./AEWB/AEWBCommon/AEWBDataStocker.c` | `0xFFCFE7C0` | data stocker |
+| `./AEWB/AEWBCommon/AEWBPropControl.c` | `0xFFD03BE4` | property control |
+| `./AEWB/AEWBRegister/AEWBRegister.c` | `0xFFD1B7D0` | registration |
+
+So the evaluation code is in **`0xFF42xxxx`-`0xFF43xxxx`** and the **metering** in
+**`0xFF5Cxxxx`**, and these addresses are now tied to names by the image's own
+strings rather than by my guesses.
+
+Measured there (positive-control rules from round 41):
+
+| window | size | `ldrb` | `ldr` | `SMLAxy` | `mul` |
+|---|---|---|---|---|---|
+| `0xFF5C0000`-`0xFF5E0000` (metering) | 128 KB | 3,197 | **4,788** | 3 | 92 |
+| `0xFF420000`-`0xFF440000` (AECalc/AFProc) | 128 KB | 3,078 | 4,661 | 25 | 101 |
+
+The load density here (about 37 `ldr`/KB) is far above the codec's, and the work
+is word-oriented rather than byte-oriented: this is where metering and AF
+processing actually live. The region holds 241 functions; the heaviest
+(`0xFF5DB528`, 10,904 bytes, 332 `ldrb` + 425 `ldr`) is where the next pass starts.
+
+Everything in rounds 38-42 that used the `0xFF2A0000` window stays withdrawn.
