@@ -44,8 +44,9 @@ PAGE = """<!doctype html><meta charset=utf-8>
 <h1>Canon 6D — Wi-Fi control</h1>
 
 <fieldset><legend>1. Kết nối</legend>
- IP máy: <input type=text id=ip value="%(ip)s">
+ IP máy: <input type=text id=ip value="%(ip)s" placeholder="để trống = tự tìm">
  <button onclick="connect()">Connect</button>
+ <button class=ghost onclick="scan()">Tìm máy</button>
  <span id=state class=note>%(state)s</span>
 </fieldset>
 
@@ -68,11 +69,22 @@ PAGE = """<!doctype html><meta charset=utf-8>
 
 <script>
 const log = (s) => { const el=document.getElementById('log'); el.textContent = s + "\\n" + el.textContent; };
+async function scan(){
+  log('đang tìm máy (mDNS + quét mạng) ...');
+  const r = await fetch('/scan', {method:'POST'});
+  const j = await r.json();
+  if (j.found.length) { document.getElementById('ip').value = j.found[0]; }
+  log(j.found.length ? ('tìm thấy: ' + j.found.join(', ')) : 'không thấy máy nào');
+}
 async function connect(){
-  const ip = document.getElementById('ip').value.trim();
-  log('connect ' + ip + ' ...');
+  let ip = document.getElementById('ip').value.trim();
+  log('connect ' + (ip || '(tự tìm)') + ' ...');
   const r = await fetch('/connect', {method:'POST', body: ip});
   const t = await r.text(); log(t);
+  if (t.startsWith('kết nối ')) {
+    const m = t.match(/kết nối ([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+)/);
+    if (m) document.getElementById('ip').value = m[1];
+  }
 }
 async function shoot(){
   const r = await fetch('/shoot', {method:'POST'}); log(await r.text());
@@ -135,6 +147,10 @@ class H(http.server.BaseHTTPRequestHandler):
         try:
             if self.path == "/connect":
                 return self.connect(raw.decode().strip())
+            if self.path == "/scan":
+                found = [ip for ip, _ in ptpip.discover(timeout=2.0)]
+                return self.send_body(json.dumps({"found": found}),
+                                      "application/json")
             if self.path == "/shoot":
                 return self.shoot()
             if self.path == "/upload":
@@ -145,6 +161,12 @@ class H(http.server.BaseHTTPRequestHandler):
 
     # ---------------- actions ----------------
     def connect(self, ip):
+        if not ip:
+            found = [p for p, _ in ptpip.discover(timeout=2.0)]
+            if not found:
+                return self.send_body("không tìm thấy máy nào. Bật Wi-Fi trên máy "
+                                      "rồi thử lại, hoặc nhập IP thủ công.")
+            ip = found[0]
         with LOCK:
             if CAM["client"]:
                 try:

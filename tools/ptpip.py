@@ -221,6 +221,79 @@ class Client:
         return ops
 
 
+def local_subnet():
+    """Best-effort: return the /24 prefix this machine is on, e.g. '192.168.1.'."""
+    import subprocess, re
+    try:
+        out = subprocess.run(["ifconfig"], capture_output=True, text=True, timeout=4).stdout
+    except Exception:
+        return None
+    addrs = re.findall(r"inet (\d+\.\d+\.\d+)\.\d+ ", out)
+    for a in addrs:
+        if a.startswith("127."):
+            continue
+        return a + "."
+    return None
+
+
+def scan_subnet(prefix=None, port=15740, timeout=0.35, workers=64):
+    """Find hosts with the PTP/IP port open. Slow-ish, but needs no mDNS."""
+    import concurrent.futures, socket
+    prefix = prefix or local_subnet()
+    if not prefix:
+        return []
+    def probe_host(i):
+        ip = "%s%d" % (prefix, i)
+        s = socket.socket()
+        s.settimeout(timeout)
+        try:
+            s.connect((ip, port))
+            return ip
+        except Exception:
+            return None
+        finally:
+            s.close()
+    found = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as ex:
+        for r in ex.map(probe_host, range(1, 255)):
+            if r:
+                found.append(r)
+    return found
+
+
+def discover(timeout=3.0):
+    """Find PTP/IP cameras. mDNS first (the 6D advertises _ptp._tcp), then a scan."""
+    import subprocess
+    ips = []
+    if os.path.exists("/usr/bin/dns-sd"):
+        try:
+            p = subprocess.run(["dns-sd", "-B", "_ptp._tcp"],
+                               capture_output=True, text=True, timeout=timeout)
+            names = []
+            for line in (p.stdout or "").splitlines():
+                if "_ptp._tcp" in line:
+                    names.append(line.split()[-1])
+            for n in names:
+                r = subprocess.run(["dns-sd", "-L", n, "_ptp._tcp"],
+                                   capture_output=True, text=True, timeout=timeout)
+                import re
+                m = re.search(r"can be reached at ([\w.-]+)\.?:(\d+)", r.stdout or "")
+                if not m:
+                    continue
+                host, port = m.group(1), m.group(2)
+                g = subprocess.run(["dns-sd", "-G", "v4", host],
+                                   capture_output=True, text=True, timeout=timeout)
+                mm = re.search(r"(\d+\.\d+\.\d+\.\d+)", g.stdout or "")
+                if mm:
+                    ips.append((mm.group(1), int(port)))
+        except Exception:
+            pass
+    if not ips:
+        for ip in scan_subnet():
+            ips.append((ip, 15740))
+    return ips
+
+
 def probe(ip):
     c = Client(ip)
     c.connect()
