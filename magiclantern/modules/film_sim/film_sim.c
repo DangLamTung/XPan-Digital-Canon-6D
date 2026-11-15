@@ -8308,6 +8308,80 @@ static void fs_reload_task(void *unused)
   NotifyBox(2000, "Loaded %d films from %s", count, FILM_DIR);
 }
 
+/* Export the active stock as a recipe card the internet can carry.
+ *
+ * The camera cannot fetch from a network (its Wi-Fi is Canon's PTP/IP server and
+ * ML has no socket API), so sharing is a two-step thing: this writes the recipe,
+ * the host moves it. tools/recipe_online.py knows the same XML and can pack,
+ * share and reinstall these files.
+ *
+ * Written into ML/FILMS/ so "Reload Films" picks the export back up and it can
+ * be tested without a reboot. */
+static void fs_export_look_task(void *unused) {
+  (void)unused;
+  int count = film_active_count;
+  int idx = fs_clamp_i(film_sim_stock, 0, count - 1);
+  if (count <= 0 || idx < 0 || idx >= count) {
+    NotifyBox(3000, "export: no stock loaded");
+    return;
+  }
+  const film_xml_t *f = &film_active_table[idx];
+  char path[64];
+  uint32_t sz = 0;
+  int i;
+  for (i = 0; i < 100; i++) {
+    snprintf(path, sizeof path, "ML/FILMS/EXP_%s%02d.xml",
+             (f->code[0] ? f->code : "LOOK"), i);
+    if (FIO_GetFileSize(path, &sz) != 0 || sz == 0)
+      break;
+  }
+  if (i >= 100) {
+    NotifyBox(3000, "export: no free name");
+    return;
+  }
+  FILE *fp = FIO_CreateFile(path);
+  if (!fp) {
+    NotifyBox(3000, "export: cannot create %s", path);
+    return;
+  }
+  char buf[512];
+  int n = snprintf(buf, sizeof buf,
+      "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+      "<film>\n"
+      "    <name>%s</name>\n"
+      "    <code>%s</code>\n"
+      "    <brand>%s</brand>\n"
+      "    <type>%s</type>\n"
+      "    <base>0x%x</base>\n"
+      "    <iso>%d</iso>\n"
+      "    <raw_iso>0x%x</raw_iso>\n"
+      "    <contrast>%d</contrast>\n"
+      "    <sharpness>%d</sharpness>\n"
+      "    <saturation>%d</saturation>\n"
+      "    <tone>%d</tone>\n"
+      "    <kelvin>%d</kelvin>\n"
+      "    <wbs_ba>%d</wbs_ba>\n"
+      "    <wbs_gm>%d</wbs_gm>\n"
+      "    <mono>%d</mono>\n"
+      "    <lut>%s</lut>\n"
+      "    <description>%s</description>\n"
+      "</film>\n",
+      f->name, f->code, f->brand, f->type, f->base, f->iso, f->raw_iso,
+      f->contrast, f->sharpness, f->saturation, f->tone, f->kelvin,
+      f->wbs_ba, f->wbs_gm, f->mono, f->lut, f->description);
+  if (n > 0)
+    FIO_WriteFile(fp, buf, n < (int)sizeof buf ? n : (int)sizeof buf);
+  FIO_CloseFile(fp);
+  fs_log("export: %s <- %s (%d bytes)", path, f->name, n);
+  fs_log_flush();
+  NotifyBox(3000, "exported %s", path);
+}
+
+static MENU_SELECT_FUNC(fs_export_look_action) {
+  task_create("fs_export", 0x1e, 0x2000, fs_export_look_task, 0);
+  (void)priv; (void)delta;
+}
+
 static MENU_SELECT_FUNC(fs_reload_xml_action) {
   task_create("fs_reload", 0x1e, 0x2000, fs_reload_task, 0);
   (void)priv; (void)delta;
@@ -8616,6 +8690,15 @@ static struct menu_entry fs_menu_debug[] = {
         .select = fs_debug_log_select,
         .icon_type = IT_ACTION,
         .help = "Write the diagnostic buffer to ML/LOGS/FILMSIM.LOG now.",
+    },
+    {
+        .name = "Export Look",
+        .select = fs_export_look_action,
+        .icon_type = IT_ACTION,
+        .help = "Write the active stock as an XML recipe into ML/FILMS/, which "
+                "is the format the module itself reads and the format "
+                "tools/recipe_online.py packs for sharing. No network on the "
+                "camera: this writes the file, the host carries it.",
     },
     {
         .name = "Reload Films",
