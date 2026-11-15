@@ -8769,20 +8769,13 @@ static struct menu_entry fs_menu_debug[] = {
         .name = "Export Look",
         .select = fs_export_look_action,
         .icon_type = IT_ACTION,
-        .help = "Write the active stock as an XML recipe into ML/FILMS/, which "
-                "is the format the module itself reads and the format "
-                "tools/recipe_online.py packs for sharing. No network on the "
-                "camera: this writes the file, the host carries it.",
+        .help = "Write the active stock as an XML recipe to ML/FILMS/.",
     },
     {
         .name = "Import Recipes",
         .select = fs_import_recipes_action,
         .icon_type = IT_ACTION,
-        .help = "Move film recipes that arrived as .XML files in DCIM into "
-                "ML/FILMS and reload the stock list. This is the camera half of "
-                "a Wi-Fi push: the camera's PTP responder has SendObject "
-                "(opcode 0x100D), so a host can put a file on the card, and this "
-                "takes it from there.",
+        .help = "Move .XML recipes from DCIM into ML/FILMS and reload.",
     },
     {
         .name = "Reload Films",
