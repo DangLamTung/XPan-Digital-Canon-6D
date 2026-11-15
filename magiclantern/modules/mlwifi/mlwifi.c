@@ -284,7 +284,74 @@ static volatile uint32_t *const mlw_ptrs[MLW_NIDS] =
     &mlw_v45,
     &mlw_v46,
     &mlw_v47,
-    &mlw_v48
+    &mlw_v48,
+    &mlw_v49,
+    &mlw_v50,
+    &mlw_v51,
+    &mlw_v52,
+    &mlw_v53,
+    &mlw_v54,
+    &mlw_v55,
+    &mlw_v56,
+    &mlw_v57,
+    &mlw_v58,
+    &mlw_v59,
+    &mlw_v60,
+    &mlw_v61,
+    &mlw_v62,
+    &mlw_v63,
+    &mlw_v64,
+    &mlw_v65,
+    &mlw_v66,
+    &mlw_v67,
+    &mlw_v68,
+    &mlw_v69,
+    &mlw_v70,
+    &mlw_v71,
+    &mlw_v72,
+    &mlw_v73,
+    &mlw_v74,
+    &mlw_v75,
+    &mlw_v76,
+    &mlw_v77,
+    &mlw_v78,
+    &mlw_v79,
+    &mlw_v80,
+    &mlw_v81,
+    &mlw_v82,
+    &mlw_v83,
+    &mlw_v84,
+    &mlw_v85,
+    &mlw_v86,
+    &mlw_v87,
+    &mlw_v88,
+    &mlw_v89,
+    &mlw_v90,
+    &mlw_v91,
+    &mlw_v92,
+    &mlw_v93,
+    &mlw_v94,
+    &mlw_v95,
+    &mlw_v96,
+    &mlw_v97,
+    &mlw_v98,
+    &mlw_v99,
+    &mlw_v100,
+    &mlw_v101,
+    &mlw_v102,
+    &mlw_v103,
+    &mlw_v104,
+    &mlw_v105,
+    &mlw_v106,
+    &mlw_v107,
+    &mlw_v108,
+    &mlw_v109,
+    &mlw_v110,
+    &mlw_v111,
+    &mlw_v112,
+    &mlw_v113,
+    &mlw_v114,
+    &mlw_v115,
 };
 
 static const unsigned mlw_ids[MLW_NIDS] =
@@ -529,7 +596,7 @@ static void mlw_watch_task(void *unused)
     int i, changes = 0;
 
     for (k = 0; k < MLW_NIDS; k++)
-        shadow[k] = *mlw_ptrs[k];
+        shadow[k] = mlw_ptrs[k] ? *mlw_ptrs[k] : 0;
 
     mlw_log("watch: begin, %d ids, %d already non-zero",
             MLW_NIDS, 0);
@@ -545,11 +612,11 @@ static void mlw_watch_task(void *unused)
         msleep(2000);
         for (k = 0; k < MLW_NIDS; k++)
         {
-            if (*mlw_ptrs[k] != shadow[k])
+            if (mlw_ptrs[k] && *mlw_ptrs[k] != shadow[k])
             {
                 mlw_log("change: 0x%x %d -> %d",
                         (int)mlw_ids[k], (int)shadow[k], (int)*mlw_ptrs[k]);
-                shadow[k] = *mlw_ptrs[k];
+                shadow[k] = mlw_ptrs[k] ? *mlw_ptrs[k] : 0;
                 changes++;
             }
         }
