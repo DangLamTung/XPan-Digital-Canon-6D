@@ -30,7 +30,14 @@ STOCKS = [
     ("portra",        "Portra 400"),
     ("velvia",        "Velvia 50"),
     ("400H",          "Pro 400H"),
-    ("classicneg",    "Classic Neg"),
+]
+
+# Recipes with no verified score in docs/stock-calibration.md. They are shown only
+# with --include-unverified, because the sheet otherwise claims to be a comparison
+# of calibrated stocks and Classic Neg has never been measured against a reference:
+# there is no Dehancer corpus for it in xpan_comparisons/stocks or gt2048.
+UNVERIFIED = [
+    ("classicneg",    "Classic Neg (uncalibrated)"),
 ]
 TILE_W = 380
 LABEL_H = 22
@@ -141,11 +148,15 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="renders/dalat-calib")
     ap.add_argument("--stocks", default="", help="comma list of recipe names")
+    ap.add_argument("--include-unverified", action="store_true",
+                    help="also render stocks with no measured score (Classic Neg)")
     a = ap.parse_args()
     out = os.path.join(BASE, a.out) if not os.path.isabs(a.out) else a.out
     os.makedirs(out, exist_ok=True)
 
-    stocks = STOCKS
+    stocks = list(STOCKS)
+    if a.include_unverified:
+        stocks += UNVERIFIED
     if a.stocks:
         want = [s.strip() for s in a.stocks.split(",") if s.strip()]
         stocks = [(s, s) for s in want]
