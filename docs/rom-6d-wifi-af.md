@@ -751,3 +751,35 @@ Where that leaves the question: the candidates are now (a) the data stocker
 `0xFFCFE7C0`-`0xFFD10000`, whose heaviest arithmetic loop is a percentage
 interpolation at `0xFFD04DF4` (`(100 - r7) * value / 100`), and (b) outside the
 firmware. Both need more work than a sweep; neither can be ruled out yet.
+
+## Round 51: the stocker sweep, and the metric is not logged in text
+
+Sweeping `0xFFCF0000`-`0xFFD10000` (639 functions, the AE/AF data stocker and its
+neighbours) for functions with both memory traffic and arithmetic gives 25
+candidates. The top one, `0xFFCF9D68` (1,594 instructions, 381 loads, 151
+`sub`/`cmp`), turns out to be a validator: it compares a magic value, logs at
+subsystem `0xAF` on mismatch, and switches on a code 0..4.
+
+A string search for the terminology a contrast AF would use -- focus value,
+contrast, peak, high-pass, sharpness -- returns nothing about autofocus: every
+`Contrast` hit belongs to `SetImageOptimizeCustom ContrastRange`, which is Picture
+Style contrast, a different feature.
+
+Taken with rounds 50 and 44, the picture is now consistent:
+
+* metering has the arithmetic (`0xFF42EF18`, weighted sum, 1/1024 scale);
+* the AF utility window is state and plumbing (round 50);
+* the stocker is bookkeeping and validation (this round);
+* no firmware string carries a focus evaluation value.
+
+That last point matters: if the metric were computed anywhere in firmware and
+surfaced anywhere, a debug log would most likely name it. The one place it can
+appear without a string is the binary `.AFL` trace the firmware can write itself
+(round 35), which is gated by `PROP_SPECIAL_OPTION`.
+
+Remaining routes, in order of cost:
+
+1. `aftrace` on the camera (30 s) -- names the task that publishes
+   `PROP_LV_AF_RESULT`, which is a code anchor no sweep can replace;
+2. the `.AFL` trace, if the special option can be switched on;
+3. a DIGIC 5 register map, for the block the metering code queries.
