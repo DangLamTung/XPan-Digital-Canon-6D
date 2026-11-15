@@ -550,3 +550,33 @@ compare against two limits, `strh` the result, write a flag at `+0x0E`).
 Next: the same shape should exist for AF over the AF frame -- a weighted or
 difference-based sum -- and that is what the next pass looks for in
 `0xFF4324C4` (`LiveViewAFPUtility.c`) and its neighbours.
+
+## Round 45: the AF utility window, mapped but no metric in it
+
+`LiveViewAFPUtility.c` is the only AF source path in the image, at `0xFF4324C4`,
+and its window `0xFF430000`-`0xFF43FFFF` holds **183 functions**. Ranked by memory
+traffic, the heaviest are
+
+```
+0xFF43DD04  1708 bytes  47 ldrb  84 ldr
+0xFF433FD4  1376        33       39
+0xFF43D6AC  1624        22       71
+```
+
+and none of them reads a frame: the biggest (`0xFF43DD04`) is AF setup and
+logging (calls `0xFF437EB0`, `0xFF437EC8`, `0xFF437EE0`, then formats a message);
+`0xFF436E6C` allocates 264 bytes and copies a record; `0xFF436864` switches on an
+AF mode (compares 2, 6, 7) and calls that record builder.
+
+The difference-heavy loop in the window (`0xFF436864`-`0xFF436AB4`, 23 `sub`/`cmp`
+in 149 instructions) is a mode dispatch, not a gradient sum.
+
+So the picture is consistent with round 44 from the other side: **metering has
+the arithmetic** (`0xFF42EF18`, weighted sum with a 1/1024 scale) and the AF
+utility does not have a pixel metric of its own. The hypothesis this suggests --
+that LiveView AF consumes the metering zone values rather than computing its own
+-- is testable and not tested: it needs the identity of the zone-array global,
+which the metering loop reaches through `r4` and which I have not resolved.
+
+Stating the round honestly: one window mapped, one hypothesis formed, no new
+metric found.
