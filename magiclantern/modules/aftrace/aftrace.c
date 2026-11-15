@@ -58,6 +58,10 @@ static volatile uint32_t afr_head, afr_tail;
 
 /* PROP_LV_AF_RESULT: 0 focus ok, 1 failed; delivered at the end of AF */
 AFTRACE_PROP(0x80050029u, afres)
+/* PROP_LV_FOCUS_CMD carries the lens drive command, PROP_LV_FOCUS_DONE its
+ * completion: the pair that shows one AF step being issued and finished */
+AFTRACE_PROP(0x80050027u, focuscmd)
+AFTRACE_PROP(0x80050002u, focusdone)
 /* brightness values the same component publishes, for the frame cadence */
 AFTRACE_PROP(0x80050008u, lvbv)
 AFTRACE_PROP(0x80050010u, bv)
@@ -131,6 +135,8 @@ static unsigned int aftrace_deinit(void)
 
 MODULE_PROPHANDLERS_START()
     MODULE_PROPHANDLER(0x80050029u)
+    MODULE_PROPHANDLER(0x80050027u)
+    MODULE_PROPHANDLER(0x80050002u)
     MODULE_PROPHANDLER(0x80050008u)
     MODULE_PROPHANDLER(0x80050010u)
     MODULE_PROPHANDLER(0x8000000Au)

@@ -43,7 +43,7 @@ The property dispatch table is at `0xF83149DC`, entries of the form
 
 | property ids | handler |
 |---|---|
-| `0x80050000 0x80050002 0x80050005 0x8005000A` (`0x0A` = `PROP_AFPOINT`) | `0xFF3131F4` |
+| `0x80050000 0x80050002 0x80050005 0x8005000A` (`PROP_LV_LENS`, `PROP_LV_FOCUS_DONE`, `PROP_LV_LENS_STABILIZE`, `PROP_HALF_SHUTTER`) | `0xFF3131F4` |
 | `0x8005000B 0x8005000C 0x8005000D` | `0xFF313128` |
 | `0x80050008` | `0xFF313164` |
 | `0x80050010 0x8005001B 0x8005001E 0x80050027` | `0xFF3120A0` |
@@ -51,6 +51,10 @@ The property dispatch table is at `0xF83149DC`, entries of the form
 | `0x80050028` | `0xFF3131DC` |
 | `0x8005002B` | `0xFF3132FC` |
 | `0x80050033` | `0xFF313340` |
+
+A generated, always-current version of this table is `docs/af-property-map.txt`
+(`tools/rom/afmap.py`, which reads the dispatch table, the descriptors and ML's
+`property.h` in one pass).
 
 The AF property family has **30 descriptors** in the table at `0xF8B6EB64`
 (16-byte entries: id, flags, size, index), and all of them are **9-byte**
