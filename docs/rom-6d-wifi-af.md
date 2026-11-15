@@ -622,3 +622,48 @@ two modules are coupled in both directions.
 
 Statement of the round: call directions measured; the AF-consumes-metering
 hypothesis is now supported but not proven.
+
+## Round 47: 0xFF1302E8 is prop_deliver, and the 0xFF13 region is the property system
+
+ML's own symbol table names 58 firmware addresses. One of them collides with a
+claim made in round 4:
+
+```
+platform/6D.116/build/6D_116.sym:1404   ff1302e8 prop_deliver
+```
+
+So `0xFF1302E8` is **`prop_deliver`**, the property system's delivery routine --
+not "the AF command function that takes a 24-byte command block". And the window
+`0xFF130000`-`0xFF140000`, which rounds 4-8 called "the AF unit" and measured, is
+the property system: its strings are `prop_savepropertydual`,
+`prop_savepropertypartly`, `prop_savepropertymultipartly`, `pRegisterMaster`,
+`pDeliverProperty`, `prop_testFactory`.
+
+What the handler actually does, re-read with the right name:
+
+```
+ff3131dc  ldr  r0, [pc, #-3100]   @ global at 0xFF3125C8 -> RAM 0x0007B408
+ff3131e4  ldr  r0, [r0, #24]      @ the property record
+ff3131e8  mov  r2, #24            @ length
+ff3131ec  ldr  r0, [r0, #72]      @ another property id
+ff3131f0  b    0xFF1302E8         @ prop_deliver(id, buf, 24)
+```
+
+That is a **property mirror**: one property's change is delivered to a second
+property id with a 24-byte payload. It is not a lens command, and there is no
+"EmdDriveResult" in this path.
+
+Withdrawn as a consequence:
+
+* "the AF command chain: property -> handler -> 0xFF1302E8 (24-byte block) ->
+  EmdDriveResult" (rounds 4-9) -- the middle step is property delivery;
+* the measurements taken on `0xFF130000`-`0xFF140000` as if it were AF code.
+
+Still standing: the dispatch table at `0xF83149DC` maps ids to handlers at
+`0xFF31xxxx` (that is read out of the table, not inferred), and the actual AF
+source path is `LiveViewAFPUtility.c` at `0xFF4324C4` (round 43).
+
+The lesson repeats a third time in a different form: a function's *role* was
+assumed from the handler that called it, when a symbol table in the repository
+already had the answer. The earlier rounds never grepped the 58 `ff` addresses in
+`6D_116.sym`; that grep takes a second and would have caught this in round 4.
