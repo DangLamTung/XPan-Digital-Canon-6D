@@ -633,6 +633,35 @@ static void mlw_state_dump(void *priv, int delta)
     task_create("mlw_dump", 0x1e, 0x1000, mlw_dump_task, 0);
 }
 
+
+/* Enumerate DryOS tasks and log their names. Read-only: get_task_name_from_id
+ * is a core ML export (6D_116.sym line 101), and it only reads the task table.
+ * The point is to see whether the WLAN side is alive on this body: the ROM
+ * carries wpaTask and dhcpsTask, so their presence means the WiFi stack has
+ * been started, and their absence means it has not. */
+static void mlw_tasks_task(void *unused)
+{
+    (void)unused;
+    mlw_log("tasks: begin");
+    int found = 0;
+    for (int id = 0; id < 64; id++)
+    {
+        const char *n = get_task_name_from_id(id);
+        if (n && n[0])
+        {
+            mlw_log("task %2d: %s", id, n);
+            found++;
+        }
+    }
+    mlw_log("tasks: done, %d named tasks", found);
+}
+
+static void mlw_tasks(void *priv, int delta)
+{
+    (void)priv; (void)delta;
+    task_create("mlw_tasks", 0x1e, 0x1000, mlw_tasks_task, 0);
+}
+
 static struct menu_entry mlwifi_menu[] = {
     {
         .name = "Watch Props 3min",
@@ -674,6 +703,14 @@ static struct menu_entry mlwifi_menu[] = {
                 "the call is wrong the camera may hang until the battery is "
                 "pulled. It only runs when allow_call is 1 under ML's module "
                 "config (Modules > mlwifi). Nothing is written to the card.",
+    },
+    {
+        .name = "List Tasks",
+        .select = mlw_tasks,
+        .icon_type = IT_ACTION,
+        .help = "Log every DryOS task name. The ROM has wpaTask and dhcpsTask, "
+                "so if the WiFi stack is running they appear here; if they do "
+                "not, the WLAN side was never started on this body. Read-only.",
     },
     MENU_EOL,
 };
