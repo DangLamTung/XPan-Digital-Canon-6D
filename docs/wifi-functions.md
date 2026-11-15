@@ -644,3 +644,47 @@ and their arguments reconstructed.
 
 So the WiFi reversal only removes the card from the recipe step. It does not add
 a capability that is entirely missing; it removes a walk to a computer.
+
+## NWCOM Init takes a context pointer -- calling it with r0 = 0 will fault
+
+Round-13 check of `mlwifi`'s rung 2 (`Call NWCOM Init` -> `0xFF261714` with
+r0-r3 = 0). Disassembly of the function itself:
+
+```
+ff261714  push {r2, r3, r4, r5, r6, lr}
+ff261718  mov  r4, r0                     @ the argument is kept
+ff26171c  add  r2, pc, #340               @ log format
+ff261728  bl   0x67c8                     @ "[NWCOM] NWCOM Init"
+ff26175c  ldr  r3, [r4, #32]              @ <-- dereferences r0 + 0x20
+ff261768  ldr  r3, [r4, #28]              @ <-- and r0 + 0x1C
+ff261778  ldr  r3, [r4, #40]              @ <-- and r0 + 0x28
+```
+
+`r0` is a **context object**, not a filler argument. With `r0 = 0` the first
+`ldr [r4, #32]` reads address 0x20 and the call data-aborts; in a module task
+that takes the camera down until the battery is pulled. So rung 2 must stay
+gated, and enabling `mlwifi.allow_call` on this body is not a safe experiment.
+
+Two more things follow from the same dump:
+
+* `0xFF261714` has exactly **one** literal reference in the whole image, at
+  `0xF8B69458`, and it sits in a **component event table**:
+
+  ```
+  f8b69438  ff2616c8  event 0
+  f8b69458  ff261714  event 1   <-- NWCOM Init
+  f8b69478  ff262968  event 1
+  f8b69480  ff262968  event 2
+  ```
+
+  So NWCOM Init is a **framework callback for event 1**, invoked by Canon's
+  component manager with its own context -- nobody calls it directly.
+
+* The callers of the neighbouring `ChangeLogicalConnect` (`0xFF2634B8`, 5 call
+  sites) show the same shape: `r0` is a component object and `r1` points at a
+  stack value (`moveq r1, sp; bleq 0xFF2634B8`).
+
+The safe route to a working call is therefore not "jump to Init with zeros" but
+"find the component object the manager creates at WiFi power-on and reuse it".
+That object is what the power-on path allocates, and it is the next thing to
+locate.
