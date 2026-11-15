@@ -265,3 +265,47 @@ code does touch peripherals (`0xC0080000`, `0xC0080500`, `0xC0080700`,
 `0xC0E00000`, `0xC0E2008C`), which is consistent with a hardware evaluation block
 reading the LiveView stream and the firmware reading results, but I have not
 identified those blocks and cannot claim it.
+
+## Round 35: the firmware can log the AF internals itself
+
+The strings around `0xF824DDB8` describe an **AF logging facility inside the
+firmware**:
+
+```
+B:/%02d%02d%02d%02d.AFL          <- the file it writes, dated MMDDHHMM
+[AFLOG] [%s] FOpen Success
+[AFLOG] [%s] FOpen Error
+[AFLOG]FWrite Size (%d)
+[AFLOG]FWrite Size Error (%d=>%d)
+SPECIAL_OPTION_AFAE DEBUG MODE ON
+SPECIAL_OPTION ULTRA DEBUG MODE ON
+```
+
+and a property that gates the diagnostic modes:
+
+```
+PROP_SPECIAL_OPTION = %d
+fcsChangeAckCBR : PROP_SPECIAL_OPTION (%d)
+SPECIAL_OPTION AF MOVIE GERO ON / OFF
+SPECIAL_OPTION_LVAE_GERO_MODE:0x%08X
+```
+
+If the AFAE debug mode can be switched on, Canon's own code writes the AF
+internals to `.AFL` on the card -- the metric values, the states, the drives --
+and the algorithm stops being a disassembly problem.
+
+What is *not* known, and what I did not guess:
+
+* the id of `PROP_SPECIAL_OPTION`. The only ids near its log strings are
+  `0x8003000c` (which ML knows as `PROP_CARD_RECORD_B`) and `0x80040001`;
+  proximity is not evidence, and this session has already rejected one candidate
+  for exactly that reason (`0x80040055`);
+* the bit or value that selects AFAE debug over the other special options;
+* whether the 6D has a `B:` device at all -- the log path is `B:/`, and this body
+  has one card slot, so the writer may fail even with the mode on.
+
+The safe next step is not to write the property blind: it is to watch it. If
+`mlwifi`'s watcher is extended to `0x80030000`-`0x8003003F` (it already covers
+that block) and a service-mode or PTP tool ever toggles the option, the id and
+value appear in the log. Without such a tool, the id has to come from
+disassembling the component that logs `fcsChangeAckCBR`.
