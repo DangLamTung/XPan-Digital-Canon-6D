@@ -403,3 +403,29 @@ So the correct statement of point 4 is narrower than round 38 made it:
 I am leaving the round-38 text in place rather than deleting it, because the
 correction matters more than the tidy document: two rounds in a row, a plausible
 reading of the same evidence changed direction.
+
+## Round 41: the absence of DSP maths in AF/AEWB is now a measured absence
+
+Counting `SMLAxy` -- the ARMv5TE halfword multiply-accumulate, the instruction a
+correlation or a DCT actually uses -- gives a **positive control** that the
+earlier counts lacked:
+
+| region | `SMLAxy` |
+|---|---|
+| `0xFFA40000`-`0xFFA5FFFF` (codec) | **305** |
+| `0xFF130000`-`0xFF13FFFF` (AF unit) | **6** |
+| `0xFF2A0000`-`0xFF2BFFFF` (AEWB) | **0** |
+| `0xFF3C0000`-`0xFF3CFFFF` | 0 |
+
+Across the whole 16 MB image there are 3,740 `SMLAxy`, and they concentrate in
+`0xFFA1xxxx`-`0xFFB4xxxx` (top windows: `0xFFB10000` 208, `0xFFB40000` 186,
+`0xFFAA0000` 180). The AF and AEWB regions are not in that list at all.
+
+Why this matters: in round 38 I reported "no 64-bit accumulation", which could
+have been a detector that simply does not fire on this code. The codec region
+proves the detector fires -- 305 hits where heavy DSP work exists. So the near-zero
+in AF/AEWB is a **measured absence**, not a measurement artifact.
+
+That strengthens exactly one claim, and only this one: **the focus metric is not
+computed by the AF or AEWB firmware**. It says nothing about where it *is*
+computed, and the round-40 correction about the `0xC0080000` block still stands.
