@@ -144,3 +144,33 @@ verified the day a Classic Negative reference of *our* frames exists (Dehancer
 export of the same corpus), which is what the 19 other stocks have.
 
 Visual: `renders/classicneg-vs-reference.jpg`.
+
+### Round two: hue and lightness against the same reference
+
+Measured in L*a*b*, hue angle of the shadow (darkest 20%) and highlight
+(brightest 10%) zones, their chroma, and the black level:
+
+| sample | shadow hue | shadow chroma | highlight hue | black L* |
+|---|---|---|---|---|
+| Fuji panel 1 (snow) | -108.5 | 12.2 | -88.9 | 32.7 |
+| Fuji panel 2 (pond) | -158.8 | 8.4 | -35.8 | 27.7 |
+| Fuji panel 3 (cat) | -159.8 | 0.4 | -66.0 | 0.0 |
+| current `classicneg.fs`, f10 | -91.6 | 13.6 | **+92.3** | **9.3** |
+| v4, f10 | -92.2 | 14.4 | -109.1 | 23.1 |
+| **v5, f10** | **-127.4** | **8.9** | -109.3 | **28.9** |
+| **v5, f01** | **-115.5** | **11.9** | +89.4 | 36.6 |
+| **v5, f07** | **-160.9** | 8.7 | +81.0 | 27.3 |
+
+`samples/classicneg-v5.fs` (v4 plus `SPLIT_SH -18,16,26`) is the first version
+whose measured signature lands inside Fuji's own range on the parts that are not
+scene-dependent:
+
+* shadow hue -115 to -161, against Fuji's -108 to -160 -- cyan-green, not blue;
+  the current recipe sits at -92, i.e. pure blue;
+* black L* 27-37, against Fuji's 28-33;
+* highlight hue and chroma follow the scene (a golden pine grove stays warm, as
+  Fuji's cat-with-red-cup panel stays warm).
+
+That is still a **signature match on a different scene**, not a calibrated stock.
+v5 is a candidate, kept in `samples/` for exactly that reason. Visual:
+`renders/classicneg-v5-vs-reference.jpg`.
