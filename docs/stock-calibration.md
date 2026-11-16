@@ -174,3 +174,41 @@ scene-dependent:
 That is still a **signature match on a different scene**, not a calibrated stock.
 v5 is a candidate, kept in `samples/` for exactly that reason. Visual:
 `renders/classicneg-v5-vs-reference.jpg`.
+
+## The field-house frame: which stock, and what we can take from it
+
+`samples/reference/field-house.jpg` (2048x1366, no EXIF) is a daylight frame --
+green field, brick house, cumulus sky -- with the lifted blacks and cyan sky of a
+consumer colour negative.
+
+Measured in L*a*b*: shadow (darkest 20%) hue **140.6°**, chroma 23.4, L* 28.1;
+highlight hue 57.7°, chroma 7.0, L* 86.3; saturation 0.404; **black L* 34.0**;
+white L* 227.6. Patches: clouds (168,181,192) -- blue, not warm; sky
+(133,184,213); brick (130,89,58); grass (86,124,73).
+
+**Which film.** The combination of *cool* highlights (clouds blue), green-cyan
+shadows, punchy greens and lifted blacks is Fuji's consumer negative family --
+**Superia 200/400**. It is the same film Classic Negative is modelled on, and this
+repository already carries it: `films/SUP200.fs`, measured at median dE00 3.33
+over 102 frames against Dehancer's Superia 200. Kodak's Gold/Portra go the other
+way (warm highlights, magenta skies), so they are the wrong family here.
+
+**What we took from it.** One trait the reference has and `SUP200.fs` does not:
+the blacks sit at L* 34, ours at 9-11. `samples/superia-lifted.fs` is SUP200 with
+`CURVE 0,18 ...`, a cooler highlight split (`SPLIT_HI 0,6,10`) and a greener
+shadow (`SPLIT_SH -4,10,8`). Measured on the Da Lat frames:
+
+| | black L* | saturation |
+|---|---|---|
+| reference | 34.0 | 0.404 |
+| `SUP200.fs` f07 | 9.4 | 0.417 |
+| `superia-lifted.fs` f07 | **32.4** | 0.287 |
+| `superia-lifted.fs` f10 | **33.4** | 0.13 |
+
+The black lift lands. Saturation is *not* matched and should not be chased
+numerically: the reference's 0.404 comes from a frame that is 60% green, and
+raising `SAT` to reproduce that scalar on our flower frame turned the yellow
+flowers orange. One scalar from one scene is not a calibration.
+
+So: `superia-lifted.fs` stays in `samples/` as a candidate for the "scan-lifted
+Superia" look, not as a shipped stock. Visual: `renders/fieldhouse-reference-vs-ours.jpg`.
