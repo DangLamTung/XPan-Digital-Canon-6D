@@ -84,6 +84,38 @@ def split_device_info(d):
     return (model or manufacturer), firmware, ops
 
 
+def parse_prop_desc(d):
+    """Return (datatype, getset, current_value) from a GetDevicePropDesc payload."""
+    code, dtype, getset = struct.unpack_from("<HHB", d, 0)
+    o = 5
+    fixed = {1: "i8", 2: "u8", 3: "i16", 4: "u16", 5: "i32", 6: "u32", 7: "i64", 8: "u64"}
+    size = {1: 1, 2: 1, 3: 2, 4: 2, 5: 4, 6: 4, 7: 8, 8: 8}.get(dtype)
+    val = None
+    if size:
+        fmt = {"i8": "b", "u8": "B", "i16": "h", "u16": "H",
+               "i32": "i", "u32": "I", "i64": "q", "u64": "Q"}[fixed[dtype]]
+        val = struct.unpack_from("<" + fmt, d, o)[0]
+    return dtype, getset, val
+
+
+def scan_props(ip, lo, hi, port=15740):
+    c = ptpip.Client(ip, port, timeout=6, verbose=False)
+    c.connect(); c.init(); c.open_session()
+    found = 0
+    for code in range(lo, hi + 1):
+        try:
+            rc, extra, data = c.op(0x1014, [code], dataphase=1)
+        except Exception:
+            continue
+        if rc != 0x2001 or not data:
+            continue
+        dtype, getset, val = parse_prop_desc(data)
+        found += 1
+        print("  0x%04x  type=%d getset=0x%02x value=%s"
+              % (code, dtype, getset, val if val is not None else "(blob)"))
+    print("properties in 0x%04x..0x%04x: %d" % (lo, hi, found))
+
+
 def probe_ip(ip, port=15740):
     c = ptpip.Client(ip, port, timeout=10, verbose=True)
     c.connect()
@@ -154,6 +186,7 @@ def main():
     ap.add_argument("--port", type=int, default=15740)
     ap.add_argument("--scan", action="store_true")
     ap.add_argument("--usb", action="store_true")
+    ap.add_argument("--props", help="read-only property scan, e.g. D100-D1A0 or 5000-5030")
     a = ap.parse_args()
     if a.usb:
         sys.exit(probe_usb())
@@ -168,6 +201,10 @@ def main():
                 probe_ip(ip, a.port)
             except Exception as e:
                 print("   failed:", e)
+        return
+    if a.props:
+        lo, _, hi = a.props.partition("-")
+        scan_props(a.ip or "127.0.0.1", int(lo, 16), int(hi or lo, 16), a.port)
         return
     if a.ip:
         probe_ip(a.ip, a.port)
