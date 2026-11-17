@@ -13,7 +13,7 @@ comment that calls this a "baseless assumption". That refusal is why DIGIC X loo
 impossible in MLinstall -- not because the op was seen to fail on an R8.
 
     ./tools/r8_bootflag.py --ip 192.168.1.19            # check only, sends nothing
-    ./tools/r8_bootflag.py --ip 192.168.1.19 --evproc FA_GetBuildVersion
+    ./tools/r8_bootflag.py --ip 192.168.1.19 --evproc "FA_GetProperty 0x2000005 0"
     ./tools/r8_bootflag.py --ip 192.168.1.19 --enable --yes
 
 --check never sends anything. --enable and --evproc need --yes.
@@ -54,6 +54,16 @@ def pack_evproc(text, args=(), long_strings=()):
     return bytes(out)
 
 
+def parse_request(text):
+    """'FA_GetProperty 0x2000005 0' -> ('FA_GetProperty', [0x2000005, 0])."""
+    parts = text.split()
+    if not parts:
+        raise SystemExit("empty event procedure")
+    name = parts[0]
+    args = [int(t, 0) for t in parts[1:]]
+    return name, args
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--ip")
@@ -92,9 +102,12 @@ def main():
         if r["ResponseCode"] == 0x2001:
             break
 
-    name = "EnableBootDisk" if a.enable else a.evproc
-    data = pack_evproc(name)
-    print("  ExecuteEventProc %r (%d bytes)" % (name, len(data)))
+    if a.enable:
+        name, args = "EnableBootDisk", []
+    else:
+        name, args = parse_request(a.evproc)
+    data = pack_evproc(name, args)
+    print("  ExecuteEventProc %r args=%s (%d bytes)" % (name, args, len(data)))
     r = obj.transaction(EXEC_EVPROC, [0, 0], True, senddata=data)
     print("  -> 0x%04x" % r["ResponseCode"])
     if r["ResponseCode"] == 0x2001 and EVPROC_RET in ops:
