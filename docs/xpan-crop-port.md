@@ -229,3 +229,45 @@ Two ways past that, neither of which needs a camera dump:
    (`ROM1_SIZE 0x01000000`).
 
 Nothing has been patched, and none of this has run on the camera.
+
+## Round two: the channels, and what the height registers really cover
+
+The JPG descriptor points at three more structures through `+0x10`, `+0x14` and
+`+0x18`. They are not pixel planes -- each is a short list of **register blocks**:
+
+```
+ch1 0x7DAB8:  0xc0f03050  0xc0f03040  0xc0f13000
+ch2 0x7DB70:  0xc0f11040  0xc0f11400  0xc0f11404  0xc0f11580  0xc0f11584  0xc0f111c0
+ch3 0x7DBF8:  0xc0f03090  0xc0f03010  0xc0f03014  0xc0f0301c  0xc0f03024  0xc0f03028
+```
+
+Two of the nine height registers live in blocks that ch2 also names:
+`0xc0f1140c` and `0xc0f1158c` sit in the same `0x114xx` / `0x115xx` blocks as
+ch2's `0xc0f11400`/`0xc0f11580`. So **ch2 is the luma path**, and a crop changes
+its height in the same three places the chroma paths use -- which is why XPan has
+to rewrite four registers for a monochrome-looking change.
+
+`0xc0f13010 = 0x00000e40` (3648) sits in ch1's block: that is where the *source*
+height is named, and it is the one value a crop leaves alone.
+
+## What could not be decoded, and what was ruled out
+
+The consumer `0xF9039874` is at file offset `0x1039874`, one megabyte past the
+16 MB image. Every image on disk was checked for those bytes:
+
+```
+qemu/6D/ROM1.BIN        16 MB   stops at 0xF8FFFFFF
+film_eval/rom/ROM1.BIN  16 MB   identical
+qemu/6D/SFDATA.BIN       8 MB   0xFF everywhere -- erased flash, not the region
+film_eval/rom/RAM4.BIN 256 MB   RAM, not code
+```
+
+So the field semantics `+0x3c` = output height in rows and `+0x5c` = byte offset
+of the first output row (`top * pitch`) rest on the EOS M source, where the same
+code family does exactly that, and on the 6D values being consistent with it:
+pitch 10944, top 814, `814 * 10944 = 0x87EE80`, and nine 8-row-unit registers
+that all read 3648 today and would all read 2032 after the crop.
+
+The decode is complete up to the data boundary. Verifying it needs either a
+17 MB image (`0xF8000000..0xF9100000`) or a single run on the camera with the
+patch applied -- neither of which is a RAM dump.
