@@ -313,3 +313,43 @@ point the copy's `+8` at the modified profile. If reading (2) is right the
 descriptor fields are harmless extra, if (1) is right they are required.
 
 Still nothing patched, still nothing run on the camera.
+
+## Round four: the profile is static, so the crop must be per-job
+
+The RAM profile at `0x07D348` was compared byte for byte against the ROM table it
+came from:
+
+```
+ROM source   0xF8D4EE30, 237 pairs
+RAM copy     0x07D348,   237 pairs
+pairs differing: 0
+```
+
+Not one value is touched at runtime. The camera does **not** edit this profile per
+shot, which settles the question round three left open:
+
+* if the window were controlled by the profile, Canon would have to rewrite it for
+  every JPEG size -- it does not;
+* therefore the per-job control is the **descriptor** (`+0x3c` height, `+0x5c`
+  offset), and reading (1) from round three is the one that matches the evidence.
+
+That is also why XPan's patch has to exist at all: there is no property, no table
+entry and no register value a user-side change could nudge. The only way in is to
+hand Canon's own encoder a private descriptor, which is exactly what
+`xpan-native-jpeg.c` does:
+
+```c
+copy->words[0x3c/4] = height;
+copy->words[0x5c/4] = offset;
+regs[0] = (uint32_t)copy->words;      /* Canon reads our copy from here on */
+```
+
+And it explains the nine height registers: they are the *source* geometry the
+encoder reads from, so they keep saying 3648 rows while the descriptor says how
+many of those rows become the JPEG.
+
+### The remaining unknown, stated precisely
+
+Whether `0xF9039874` reads `+0x3c`/`+0x5c` cannot be shown from this image. What
+*can* be shown, and now has been, is that nothing else in the image writes them,
+so any crop on this body either goes through those two fields or does not work.
