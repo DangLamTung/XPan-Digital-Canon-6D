@@ -168,3 +168,52 @@ works without touching the system Python.
 Caveat: writing EEPROM flags blind on a DIGIC X body is how bodies get bricked.
 Capture first, decode second, write never until the exact op and parameter set is
 reproduced on a body you can afford to lose.
+
+## MLinstall: the exact bootflag recipe, and why it stops at DIGIC X
+
+<https://github.com/petabyt/mlinstall> (petabyt), master as of October 2026.
+
+The install path is not a FIR update at all -- it is two PTP event procedures:
+
+```
+0x9050  EOS_EnableEventProc        sent up to three times
+0x9052  EOS_ExecuteEventProc       data = packed procedure call
+0x9053  EOS_GetEventProcReturnData
+```
+
+and the procedure it calls for the bootflag is, literally (src/mlinstall.h):
+
+```c
+#define ENABLE_BOOT_DISK  "EnableBootDisk"
+#define DISABLE_BOOT_DISK "DisableBootDisk"
+```
+
+The payload is `canon_evproc_pack()`: the procedure name as a NUL-terminated
+string, a u32 argument count, one 20-byte `{type, number, p3, p4, size}` record
+per argument, then a footer. For `EnableBootDisk` with no arguments that is 23
+bytes, `"EnableBootDisk\0" + u32 0 + u32 0`.
+
+And the DIGIC X stop is this, in `ptp_eos_activate_command()`:
+
+```c
+// I will make baseless assumption that if IsNeoKabotanProcMod is available, then PTP is locked
+// In that case, 0x9050 has different behavior.
+if (ptp_check_opcode(r, PTP_OC_EOS_IsNeoKabotanProcMode)) {
+    return PTP_RUNTIME_ERR;
+}
+```
+
+which surfaces to the user as "The PTP unlock method (enable custom boot) is not
+available on this camera. Sorry!". The R6 advertises `0x9060`, so MLinstall stops
+there; no R8-specific work appears in the releases (latest 1.1.2, June 2025) or in
+the commits up to October 2026 (card tab, drive backend, merging `canon.c`).
+
+**So the R8 question is untested, not answered.** The tool never sends `0x9050`
+on a body that has `0x9060`, and its own author calls the rule an assumption. That
+leaves one cheap experiment nobody has published: on an R8, check whether
+`0x9050`/`0x9052` are advertised at all, and if they are, whether
+`ExecuteEventProc` still works.
+
+`tools/r8_bootflag.py` does exactly that: `--check` sends nothing, `--evproc
+FA_GetBuildVersion` runs a read-only procedure, `--enable` sends
+`EnableBootDisk` (both need `--yes`).
