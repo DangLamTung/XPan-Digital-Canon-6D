@@ -118,3 +118,53 @@ the ones that can be checked on the body:
 * if a UART console answers in the bootloader, the ROM could be read there;
 * otherwise the route is a vulnerability that is not documented in any of the
   sources read here, and it would postdate the November 2025 material.
+
+## Tornado EOS: the bootflag and ROM read already exist commercially
+
+<https://tornadosw.com/tornado-eos.php> -- "service software for Canon EOS
+cameras", "full support of all 54 actual models". The model list includes **EOS
+R8**, next to R7, R10, R50, R100, R3, R5, R6 and R6 Mark II.
+
+Its feature list answers both halves of the R8 question:
+
+```
+Basic      Read and Write whole MPU EEPROM
+           Read whole MPU Flash ROM
+Extra      Read whole ICU Flash ROM's
+           Read whole ICU Serial Flash
+           Read and Set Mode: Norm/Fact/Service
+           Update and Downgrade Firmware
+           Set Update and BootDisk Flags          <-- the bootflag
+```
+
+So on an R8 the bootflag is not a research problem for a service tool: it is a
+flag pair ("Update" and "BootDisk") in MPU EEPROM, written after the camera is put
+into **Fact/Service mode**. What is not public is the wire protocol that switches
+the mode and writes the flag.
+
+What is known about the protocol:
+
+* the tool talks to the body over USB, and the ML thread about it (topic 23241,
+  2018-2019) shows a 6D owner using it to "dump 1024 Kb MPU as a bin file",
+  unlock the language lock and toggle C-Log -- i.e. PTP-level service operations,
+  not a firmware update;
+* Greg's reply in the same thread notes the language lock is just property
+  `0x01000012`, which suggests at least part of what Tornado does is ordinary
+  Canon property access, and the rest needs the service mode;
+* no public document describes the service-mode operations.
+
+### How to get the protocol, concretely
+
+1. run Tornado in a Windows VM with **USBPcap** and capture the session;
+2. decode the capture with `tools/ptpcap.py` (written for this): it parses the
+   USBPcap pcap and prints every PTP container with op code, parameters and
+   transaction id;
+3. compare that list with what `tools/ptp_probe.py --usb` reads from the same body
+   in normal mode -- the difference is the service-mode surface.
+
+`tools/ptp_probe.py` now has pyusb vendored under `tools/pylibs`, so `--usb`
+works without touching the system Python.
+
+Caveat: writing EEPROM flags blind on a DIGIC X body is how bodies get bricked.
+Capture first, decode second, write never until the exact op and parameter set is
+reproduced on a body you can afford to lose.

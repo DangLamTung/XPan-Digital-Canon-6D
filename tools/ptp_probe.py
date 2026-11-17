@@ -18,7 +18,9 @@ import os
 import struct
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+sys.path.insert(0, os.path.join(HERE, "pylibs"))   # vendored pyusb
 import ptpip
 
 # Canon event-procedure call. Petabyte, June 2021, 1300D bootflag over PTP.
