@@ -271,3 +271,45 @@ that all read 3648 today and would all read 2032 after the crop.
 The decode is complete up to the data boundary. Verifying it needs either a
 17 MB image (`0xF8000000..0xF9100000`) or a single run on the camera with the
 patch applied -- neither of which is a RAM dump.
+
+## Round three: who writes the height and offset fields
+
+The descriptor has to get `+0x3c` and `+0x5c` from somewhere. Every reference to
+`0x9F9D8` in the ROM image was enumerated, and all three are **data**, not code:
+
+```
+0xF816B36C   a pointer table entry beside 0xFF16B060 / 0xFFA2C704
+0xF816CD4C   followed by the string "LCD_OBWB"
+0xF816E308   followed by "Size Over(JPG::%#lx)(Suite::%#lx)"
+```
+
+No `str` to `[descriptor + 0x3c]` or `[descriptor + 0x5c]` exists anywhere in the
+16 MB image. The nearest thing that looks like it -- the 22 `str ...,#0x5c` sites
+in the JPEG region -- all write to a *different* structure, e.g. at `0xF8168148`:
+
+```
+f8168140  ldr  r0, [r5, #0x60]
+f8168148  str  r0, [r5, #0x5c]      @ r5 is not the 0x9F9D8 descriptor
+```
+
+That function is worth knowing anyway: it passes the frame size as **two stack
+arguments**, `mov r0, #3648` and the width literal `0x1560` (5472) at
+`0xF8167B84`, into `0xF83481BC`. So full-frame dimensions are baked into the size
+calculation in code *inside* the image, while the crop fields live in a structure
+only the code *outside* the image touches.
+
+### What that means for the patch design
+
+Two readings, and the evidence so far cannot separate them:
+
+1. the fields are written per job by the missing consumer, so a hook that rewrites
+   them before the call would work exactly as XPan's does;
+2. the fields are bookkeeping, and the encoder window comes from the profile's
+   nine height registers alone -- in which case only the profile copy matters.
+
+The safe design covers both: copy the descriptor, set `+0x3c` = 2020 and
+`+0x5c` = `814 * 10944`; copy the profile, set the nine registers to `0x00FD0008`;
+point the copy's `+8` at the modified profile. If reading (2) is right the
+descriptor fields are harmless extra, if (1) is right they are required.
+
+Still nothing patched, still nothing run on the camera.
