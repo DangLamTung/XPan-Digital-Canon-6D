@@ -158,3 +158,74 @@ descriptor field, and the descriptor's profile pointer redirected to the copy.
    before and after a shot.
 
 None of this is patched yet, and nothing here has run on the camera.
+
+## Decoding the descriptor family without a camera dump
+
+No new dump was taken. The decode below uses three things already in the
+repository: the ROM image, the RAM image saved earlier, and the EOS M source.
+
+### Which pointer is which
+
+Each of the four addresses in the table at `0xF816B358` turned out to be either a
+descriptor or a data table, and the string that follows each reference names it:
+
+| address | what it is | evidence |
+|---|---|---|
+| `0x0009F930` | **RAW path** descriptor | referenced next to `Size Over(RAW::%#lx)(Suite::%#lx)` |
+| `0x0009F9D8` | **JPG path** descriptor -- the one a crop must touch | referenced next to `Size Over(JPG::%#lx)(Suite::%lx)`, and it is the one whose `+8` points at the 237-pair profile |
+| `0x0009FA80` | data table (bytes `03 02 02 03 03 03 02 02 ...`) | the values are a quantisation/zig-zag matrix, not pointers |
+| `0x0009FB00` | data table (bytes `01 05 01 00 01 01 01 01 ...`) | same |
+
+So of the four, only two are descriptors, and the two differ by path: **A is RAW,
+B is JPG**. The pattern is confirmed by the size-check messages: the RAW check is
+logged beside `0x9F930`, the JPG check beside `0x9F9D8`.
+
+### The layout, decoded by cross-body evidence
+
+The field offsets are not guesswork: `xpan-native-jpeg.c` documents the same
+Canon structure on the EOS M -- profile at `+8`, height at `+0x3c`, byte offset
+at `+0x5c` -- and the 6D descriptor matches that structure wherever we can
+observe it without a dump:
+
+```
+0x0009F9D8 + 0x08 = 0x0007D348   the 237-pair profile (the only pointer to it)
+0x0009F9D8 + 0x3c = 0            a field that is zero except while a job runs
+0x0009F9D8 + 0x5c = 0x00093834   a byte-offset-looking value in the snapshot
+0x0009F9D8 + 0x50 = 0x60000000   a flag word, same as XPan's descriptor uses
+```
+
+### The profile, decoded from its own values
+
+Inside `0x7D348`, nine registers carry the 8-row-unit frame height
+`0x01c70008` (`0x1c7 = 455`, i.e. `456 x 8 = 3648`), and one carries the same
+height in pixels:
+
+```
+0xc0f13010 = 0x00000e40        (3648 rows, plain pixels)
+```
+
+That last one is the *source* frame height: a crop changes the nine 8-row-unit
+registers and the descriptor, not this one, because the encoder still reads the
+full sensor frame.
+
+### What the image does not contain
+
+The routine both paths call -- `0xF9039874` with mode 3 from the main job,
+`0xF903978C` with mode 2 from the size check -- is at **file offset `0x1039874`**,
+about **1 MB past the end of the 16 MB ROM dump**. It is the same boundary that
+stops the socket analysis. So the exact field semantics inside the consumer
+cannot be read out of this image, and the decode above stops one layer above it:
+we know what the descriptor *is* and which fields a crop needs, not how the
+consumer uses them.
+
+Two ways past that, neither of which needs a camera dump:
+
+1. **Cross-body**: the EOS M's `0x4288b0` path performs the same job with the same
+   descriptor shape, and `xpan-native-jpeg.c` documents what it does with `+0x3c`
+   and `+0x5c`; assuming the 6D's consumer behaves the same is an assumption, but
+   a documented one;
+2. **A 17 MB image** of `0xF8000000..0xF9100000` -- not a RAM dump, just a ROM
+   read one megabyte longer than what `platform/6D.116/consts.h` asks for
+   (`ROM1_SIZE 0x01000000`).
+
+Nothing has been patched, and none of this has run on the camera.
