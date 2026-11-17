@@ -80,3 +80,81 @@ XPan's own readme: "Disable all other Magic Lantern modules ... XPan changes
 Canon's colour tables, JPEG encoder, sensor crop, key routing and several
 properties." For the 6D this would be the same class of change: patching the
 descriptor of Canon's encoder on every capture.
+
+## Found on the 6D: the descriptor, the profile, and who consumes it
+
+Searching the RAM dump (`film_eval/rom/RAM4.BIN`) for the row count `0x01c70008`
+is what broke it open. That value appears inside a **237-pair register table in
+RAM at `0x07D348`**, which is the runtime copy of the ROM table at `0xF8D4EE30`
+(same 237 pairs). Exactly one word in RAM points at it:
+
+```
+0x0009F9D8 + 8  ->  0x0007D348        /* descriptor[2] = profile pointer */
+```
+
+so the descriptor is at **`0x0009F9D8`**, and it has the same shape XPan patches:
+
+```
++0x00  0x0007D250      +0x08  0x0007D348   <- profile
++0x10  0x0007DAB8      +0x14  0x0007DB70
++0x18  0x0007DBF8      +0x38  0x0000FFFF
++0x3c  0x00000000      <- height, written per job
++0x50  0x60000000      +0x5c  0x00093834   <- byte offset, written per job
+```
+
+Three sibling descriptors sit next to it at `0x9F930`, `0x9FA80` and `0x9FB00`
+(160-168 bytes apart), listed by the pointer table at `0xF816B348`.
+
+### Who runs it
+
+The descriptor is referenced from three ROM sites, all in the JPEG path where the
+`sasEncodeJpeg` strings live:
+
+```
+0xF816B36C   0xF816CD4C   0xF816E308
+```
+
+Two functions take the descriptor in `r0` and hand it, with its profile, to a
+common consumer:
+
+```
+f816b3f8  ldr  r0, [r4, #8]      @ profile
+f816b3fc  mov  r3, r4            @ descriptor
+f816b400  mov  r2, #3            @ mode
+f816b408  bl   0xF9039874        @ configure the pipeline from (profile, desc)
+
+f816b448  ldr  r0, [r4, #8]
+f816b450  mov  r2, #5
+f816b458  bl   0xF9039874
+```
+
+`0xF9039874` is the routine that walks the register/value pairs. That is the
+equivalent of what XPan lets Canon do after it has redirected the descriptor.
+
+### The registers to change for a crop
+
+Inside the RAM profile, **nine** registers carry the full-frame row count
+`0x01c70008` (0x1c7 = 455, i.e. 456 x 8 = 3648 rows):
+
+```
+0xc0f08590  0xc0f0d010  0xc0f2e114  0xc0f1134c  0xc0f1138c
+0xc0f1158c  0xc0f1140c  0xc0f04a0c  0xc0f2640c
+```
+
+For 65:24 (2020 rows, padded to 2032, `(2032/8)-1 = 253 = 0xFD`) each becomes
+`0x00FD0008`, and the descriptor's `+0x5c` offset becomes `814 * 10944 =
+0x87EE80`. That is the whole edit: a 237-pair copy, nine values changed, one
+descriptor field, and the descriptor's profile pointer redirected to the copy.
+
+### What is still needed before writing code
+
+1. **which capture path** the three descriptors belong to (main JPEG, thumbnail,
+   LiveView?) -- patching the wrong one gives a cropped thumbnail or nothing;
+2. confirmation that `0xF9039874` reads `[desc+0x3c]`/`[desc+0x5c]` (XPan's
+   values assume it; on the 6D those fields were zero and `0x93834` in the
+   snapshot, so they are written by whoever queues the job);
+3. a live run to see the descriptor *during* a capture, which is exactly what
+   `mlwifi`-style logging does for properties: dump 176 bytes at `0x9F9D8`
+   before and after a shot.
+
+None of this is patched yet, and nothing here has run on the camera.
