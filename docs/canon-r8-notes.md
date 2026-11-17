@@ -62,3 +62,59 @@ DIGIC X firmware in those scripts lives at **`0xE0xxxxxx`** (ROM0 base
 Canon Basic is an interpreter, so a wrong script usually ends in ERR70 or a
 freeze and a battery pull, not a brick -- but the authors say the risk is never
 zero, and the scripts here are other people's code.
+
+## How ROM was read and bootflag enabled, generation by generation
+
+From Laurent Clévy's slides (BeeRump 2022 / Hack.lu 2025, `camera_jailbreak_v2.pdf`)
+and the Hack.lu 2025 abstract <https://pretalx.com/hack-lu-2025/talk/3UEDY8/>.
+
+The slides carry one table, "CODE EXEC PATH PER DIGIC GENERATIONS", with rows
+Cbasic / FIR / autoexec / ptp / uart:
+
+| body | Cbasic | FIR | uart |
+|---|---|---|---|
+| 40D (d3), 5Dm2 (d4), 1300D (d4+), 5D3 (d5), 80D (d6), 5Dm4 (d6+), 6D2 (d7) | no | v4, forgeable | ok / yes |
+| M50 (d8), EOS R (d8) | **ok** | v5, not forgeable | ok |
+| R6 (dx) | **ok** | v6, not forgeable | ok |
+| R10 (dx, 2022) | **locked** | v6 | **locked** |
+
+So the historical routes in were:
+
+1. **CBasic** -- `extend.m` on the card, `SaveAllRomImageToFile()` for the ROM and
+   `extend_bootdisk.m` to set the bootflag. Works on DIGIC 8 and early DIGIC X
+   (R, RP, R5, R6), locked on R10. The Hack.lu abstract states the same: "dumping
+   the firmware ... is possible on EOS R, RP (digic 8) and EOS R5/R6 (digic 10)".
+2. **UART** -- kitor enabled the bootflag on the EOS R over UART on 14/02/2019 and
+   loaded a custom autoexec.bin payload to dump; the slides call this "not suited
+   to allow everyone to dump and port ML".
+3. **PTP event procedures** -- a custom PTP command, `0x9052`, can call an event
+   procedure by name; Petabyte enabled the bootflag over PTP on the 1300D. Locked
+   on M50 and later.
+
+## Why the R8 is the hard case, in the words of the sources
+
+* ML forum thread 27330 (June 2025): Bilal got "Hello, World!" on an R8, and kitor
+  answered: "we don't know any good method to enable Magic Lantern (autoexec.bin /
+  enable bootflag) to run on this model ... our old methods are now blocked (Basic
+  script doesn't work anymore)".
+* Since 2018 (EOS R) the FIR signature is **asymmetric**; the Hack.lu talk
+  identifies it as ECDSA over secp256r1 for DIGIC 8 and DIGIC 10. The talk's own
+  conclusion: "it will be not possible to forge valid signatures for recent FIR
+  updates without the private key".
+* `d8_oracle.py` decrypts DIGIC 8 updates by emulating the camera's own crypto from
+  a dump, and `d810_verify.py` verifies signatures -- neither forges one.
+
+So for an R8 there is, in the public record, **no** documented path: CBasic is
+reported blocked, PTP event procedures are locked on DIGIC X, UART is listed as
+locked from the R10 on, and the FIR route needs a private key.
+
+## What that means if ML is running on an R8
+
+The public record does not contain the answer, so the only honest statements are
+the ones that can be checked on the body:
+
+* if `extend.m` still executes, the R8's firmware build predates the lock, and the
+  ROM came from `SaveAllRomImageToFile()` and the bootflag from `extend_bootdisk.m`;
+* if a UART console answers in the bootloader, the ROM could be read there;
+* otherwise the route is a vulnerability that is not documented in any of the
+  sources read here, and it would postdate the November 2025 material.
