@@ -19,6 +19,9 @@ NAME = "MOCK 6D"
 PROTO = 0x00010000
 
 INIT_CMD_REQ, INIT_CMD_ACK, INIT_EVT_REQ, INIT_EVT_ACK, INIT_FAIL = 1, 2, 3, 4, 5
+# PTP/IP 1.1 event probe: miniPtp (lclevy) sends 13 after the event channel and
+# waits for 14; a real camera answers it, so the mock should too.
+EVENT_PROBE_REQ, EVENT_PROBE_ACK = 13, 14
 OP_REQ, OP_RESP, EVENT, START_DATA, DATA, CANCEL, END_DATA = 6, 7, 8, 9, 10, 11, 12
 
 OPS = [0x1001, 0x1002, 0x1003, 0x1004, 0x1005, 0x1006, 0x1007, 0x1008, 0x1009,
@@ -105,6 +108,8 @@ class Handler(socketserver.BaseRequestHandler):
                           + struct.pack("<I", PROTO))
             elif ptype == INIT_EVT_REQ:
                 self.send(INIT_EVT_ACK)
+            elif ptype == EVENT_PROBE_REQ:
+                self.send(EVENT_PROBE_ACK)
             elif ptype == OP_REQ:
                 self.op(body)
             elif ptype in (START_DATA, DATA, END_DATA):
