@@ -217,3 +217,44 @@ leaves one cheap experiment nobody has published: on an R8, check whether
 `tools/r8_bootflag.py` does exactly that: `--check` sends nothing, `--evproc
 FA_GetBuildVersion` runs a read-only procedure, `--enable` sends
 `EnableBootDisk` (both need `--yes`).
+
+## Tornado, priced (checked 2026-11-17)
+
+From <https://tornadosw.com/tornado-eos.php>:
+
+```
+Tornado EOS   $40 / 5 days      $8/day   1 license, 1 PC, fully functional
+Tornado EOS   $150 / 30 days    $5/day
+Tornado SCF   free              shutter/mirror/error counters, serial,
+                                sensor serial, mode Norm/Fact/Service,
+                                language lock, C-Log, Update Firmware
+```
+
+Windows only, but "Emulators are supported (VirtualBox, VMWare, Parallels)";
+online activation, telemetry, no refunds, one computer per licence. Payment via
+Paddle (cards/PayPal/Apple Pay).
+
+The paid tool is the only documented way to do the two things this project needs
+on an R8:
+
+```
+Read whole MPU Flash ROM      -> the ROM dump the FIR key derivation needs
+Set Update and BootDisk Flags -> the bootflag
+Read and Write whole MPU EEPROM
+Read and Set Mode: Norm/Fact/Service
+```
+
+So the practical answer to "how do they read the ROM and enable the bootflag on
+an R8" is: a service centre spends $40 for a five-day licence and clicks two
+buttons. The research problem is not that the operation is impossible, it is that
+the protocol behind it is closed.
+
+### What that is worth doing
+
+1. **$40 / 5 days** gets a ROM dump and a bootflag on your own body, which is
+   exactly the pair Magic Lantern needs to run on an R8 at all.
+2. The same five days are the only clean opportunity to capture the protocol:
+   run Tornado inside the Windows VM with USBPcap, and decode the capture with
+   `tools/ptpcap.py`. That turns the $40 into a description we could reimplement.
+3. The free SCF tool does "Update Firmware" -- worth checking whether it accepts
+   an older, genuinely signed FIR, which would make a downgrade free.
