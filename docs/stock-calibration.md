@@ -212,3 +212,29 @@ flowers orange. One scalar from one scene is not a calibration.
 
 So: `superia-lifted.fs` stays in `samples/` as a candidate for the "scan-lifted
 Superia" look, not as a shipped stock. Visual: `renders/fieldhouse-reference-vs-ours.jpg`.
+
+## The rain-street frame: a look we did not have
+
+`samples/reference/rain-street.jpg` (1536x2048, shot through a wet window in the
+rain) is a warm, desaturated, high-contrast look:
+
+| | value |
+|---|---|
+| saturation | 0.271 |
+| mid RGB | 99, 96, 73 -- warm olive, R-B **+26** |
+| highlight RGB | 230, 217, 203 -- cream, R-B **+27**, hue 76 deg |
+| shadow RGB | 16, 14, 8 -- warm and deep, L* 4.9 |
+| black L* | 1.0 (crushed) |
+
+Nothing shipped matches that cast. The closest existing stocks are
+`classicchrome` (muted documentary) and `eterna` (flat cinema), but both run
+cool/neutral at the highlights, not cream.
+
+`samples/rain-street.fs` is a first cut built on `classicchrome`: `SPLIT_HI
+12,5,-14`, a warmer blue curve, `SAT 80`. Measured on frame 08 it gives highlight
+R-B **+30** against the reference's +27, but mid R-B only **+16** against +26, so
+the mids still need warming. Visual: `renders/rain-street-vs-reference.jpg`.
+
+Note that the reference is a rainy overcast street and our frames are sunny, so
+the comparison is a look signature, not a pixel match -- the same caveat as the
+Classic Negative work.
