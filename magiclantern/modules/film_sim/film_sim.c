@@ -9191,6 +9191,14 @@ static struct menu_entry fs_menu_settings[] = {
         .children = fs_menu_quality,
     },
     {
+        .name = "Aspect",
+        .priv = &film_sim_aspect,
+        .max = FS_ASPECT_COUNT - 1,
+        .choices = fs_aspect_names,
+        .update = fs_aspect_update,
+        .help = "Frame for LV bars and Develop; XPan is 65:24.",
+    },
+    {
         .name = "Look",
         .select = menu_open_submenu,
         .icon_type = IT_ACTION,
