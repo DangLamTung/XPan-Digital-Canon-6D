@@ -9380,7 +9380,27 @@ static struct menu_entry fs_menu_custom[] = {
     MENU_EOL,
 };
 
+static MENU_UPDATE_FUNC(fs_master_update)
+{
+  int on = fs_clamp_i(film_sim_enable, 0, 1);
+  MENU_SET_VALUE("%s", on ? "On" : "Off");
+  MENU_SET_ICON(on ? MNI_ON : MNI_OFF, 0);
+}
+
+static MENU_SELECT_FUNC(fs_master_select)
+{
+  film_sim_enable = film_sim_enable ? 0 : 1;
+  fs_sync();
+}
+
 static struct menu_entry film_sim_menu[] = {
+    {
+        .name = "Film Sim",
+        .priv = &film_sim_enable,
+        .select = fs_master_select,
+        .update = fs_master_update,
+        .help = "Master switch: Off leaves Canon's JPEG alone.",
+    },
     {
         .name = "Film Shelf",
         .select = fs_gui_open,
