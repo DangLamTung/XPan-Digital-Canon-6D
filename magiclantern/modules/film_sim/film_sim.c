@@ -152,7 +152,7 @@ static CONFIG_INT("film.sim.direct", film_sim_direct, 0);
  * this round of testing; set 0 once the palette question is answered. */
 static CONFIG_INT("film.sim.calib", film_sim_calib, 0);
 static CONFIG_INT("film.sim.dbglog", film_sim_dbglog,
-                  1); /* periodic LiveView logging */
+                  0); /* off by default: FILMSIM.LOG stays quiet unless asked */
 /* Framing for the preview and the written file:
  * 0 full 3:2, 1 1:1, 2 4:5, 3 9:16, 4 16:9, 5 XPan 65:24,
  * 6 Cinemascope 2.39:1. */
@@ -2478,8 +2478,11 @@ static void fs_slot_backup_task(void *unused) {
  * whose +8 word points at a 237-pair register profile. That profile carries the
  * frame row count in nine registers (0x01c70008 on a 6D: 455 -> 456*8 = 3648).
  * The function that consumes the descriptor lives past the end of the ROM image
- * this project has, but two of its callers do not, so this hooks those callers
- * and swaps in a private descriptor instead of touching Canon's own:
+ * this project has. Two functions *inside* the image call it, and they are the
+ * only candidates a hook can reach -- but nothing in the image proves that they
+ * are the still-JPEG path, that r0 is the descriptor, or that +0x3c/+0x5c mean
+ * height and offset (those two come from the EOS M source). This is therefore a
+ * probe with a private-descriptor swap behind it, not a verified crop:
  *
  *   +0x3c  output height in rows          2020 for 65:24 at 5472 wide
  *   +0x5c  byte offset of the first row   814 * 10944
@@ -2568,7 +2571,16 @@ static void fs_enc_install(void)
 
 static MENU_SELECT_FUNC(fs_enc_select)
 {
-  fs_enc_mode = fs_clamp_i(film_sim_enccrop, 0, 2);
+  int want = fs_clamp_i(film_sim_enccrop, 0, 2);
+  /* 65:24 is a blind write into Canon's encoder. Refuse it until Watch mode has
+   * actually seen a descriptor, i.e. until the hook has proved its guess. */
+  if (want == 2 && fs_enc_seen == 0) {
+    film_sim_enccrop = 1;
+    fs_log("enccrop: 65:24 refused until Watch has seen a descriptor");
+    fs_log_flush();
+    want = 1;
+  }
+  fs_enc_mode = want;
   /* Never build from a remembered address: the descriptor is only built from a
    * descriptor the hook actually saw, so a stale heap layout cannot make the
    * encoder read a private copy of garbage. */
@@ -8854,7 +8866,16 @@ static struct menu_entry fs_menu_capture[] = {
     MENU_EOL,
 };
 
+static const char *fs_on_off_names[] = { "Off", "On" };
+
 static struct menu_entry fs_menu_debug[] = {
+    {
+        .name = "Debug Log",
+        .priv = &film_sim_dbglog,
+        .max = 1,
+        .choices = fs_on_off_names,
+        .help = "Write per-shot and periodic lines to FILMSIM.LOG.",
+    },
     {
         .name = "Flush Log",
         .select = fs_debug_log_select,
@@ -9479,7 +9500,7 @@ static void fs_lv_monitor_task(void *unused) {
        * path since then has been unable to tell those two apart -- and a
        * missing line was read as "no photo was taken" when it means neither.
        */
-      if (g != last_graded || nc != last_calls) {
+      if (film_sim_dbglog && (g != last_graded || nc != last_calls)) {
         fs_log("header: burned on %d shot(s)", fs_yuvhook_header_burned());
         last_graded = g;
         last_calls = nc;
