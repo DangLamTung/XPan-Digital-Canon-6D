@@ -2599,9 +2599,16 @@ static int fs_enc_scan(void)
 
 static void fs_enc_scan_task(void *unused)
 {
+  int i;
   (void)unused;
-  msleep(300);
-  fs_enc_scan();
+  /* Scan repeatedly for a minute instead of once. The descriptor may only be
+   * populated while a shot is being queued, and a single scan 300 ms after the
+   * menu closes would miss that window -- which would look exactly like "the
+   * feature does not work" again. */
+  for (i = 0; i < 20 && fs_enc_mode; i++) {
+    msleep(i ? 3000 : 300);
+    if (fs_enc_scan()) break;
+  }
   NotifyBox(3000, "enccrop: %d descriptor(s)", fs_enc_seen);
 }
 
