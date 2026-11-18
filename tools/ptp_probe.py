@@ -195,10 +195,15 @@ def main():
         if not ips:
             print("no PTP/IP camera found")
             sys.exit(1)
-        for ip in ips:
-            print("== %s" % ip)
+        for found in ips:
+            # discover() returns (host, port) pairs; scan_subnet() returns bare
+            # hosts. Treating a pair as a string is what made --scan raise
+            # "not all arguments converted" the first time a real camera
+            # answered mDNS.
+            ip, port = found if isinstance(found, (tuple, list)) else (found, a.port)
+            print("== %s:%d" % (ip, port))
             try:
-                probe_ip(ip, a.port)
+                probe_ip(ip, port)
             except Exception as e:
                 print("   failed:", e)
         return

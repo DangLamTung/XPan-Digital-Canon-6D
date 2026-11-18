@@ -47,7 +47,8 @@ def main():
             print("no camera found. Turn Wi-Fi on (Connect to computer) and retry,")
             print("or pass --ip with the address the camera shows.")
             sys.exit(1)
-        a.ip = ips[0]
+        found = ips[0]
+        a.ip, a.port = found if isinstance(found, (tuple, list)) else (found, a.port)
         print("using", a.ip)
 
     ok = 0
