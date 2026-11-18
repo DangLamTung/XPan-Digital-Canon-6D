@@ -2603,22 +2603,26 @@ static MENU_UPDATE_FUNC(fs_enc_update)
  * that is not there. */
 extern void console_hide(void);
 extern const char *get_task_name_from_id(int id);
-extern int task_max;
+extern unsigned int task_max;
 
 static void fs_wifi_probe_task(void *unused)
 {
   int i, wpa = 0, dhcp = 0, wlan = 0, net = 0;
   (void)unused;
   msleep(500);
-  for (i = 0; i < task_max; i++) {
-    const char *n = get_task_name_from_id(i);
+  /* ML enumerates task ids from 1 to task_max inclusive (tasks.c), so the loop
+   * must too: starting at 0 asks for an id that does not exist and ending before
+   * task_max drops the newest task, which is exactly where a just-started Wi-Fi
+   * task would be. */
+  for (i = 0; i <= (int)task_max; i++) {
+    const char *n = i ? get_task_name_from_id(i) : NULL;
     if (!n || !n[0]) continue;
     if (strstr(n, "wpa")) wpa++;
     if (strstr(n, "dhcp")) dhcp++;
     if (strstr(n, "Wlan") || strstr(n, "wlan")) wlan++;
     if (strstr(n, "net") || strstr(n, "Net")) net++;
   }
-  fs_log("wifi: %d tasks, wpa=%d dhcp=%d wlan=%d net=%d", task_max, wpa, dhcp,
+  fs_log("wifi: ids 1..%u, wpa=%d dhcp=%d wlan=%d net=%d", task_max, wpa, dhcp,
          wlan, net);
   fs_log("wifi: %s", (wpa || dhcp) ? "Wi-Fi stack is running"
                                    : "Wi-Fi stack is NOT running");
