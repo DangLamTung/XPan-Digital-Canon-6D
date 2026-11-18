@@ -23,6 +23,7 @@
 #include <dryos.h>
 #include <fio-ml.h>
 #include <imgconv.h>
+#include <patch.h>
 #include <lens.h>
 #include <lvinfo.h>
 #include <mem.h>
@@ -2469,6 +2470,117 @@ static void fs_slot_backup_task(void *unused) {
   }
 }
 
+
+/*
+ * Encoder crop: an experiment, off by default.
+ *
+ * Canon's still encoder decides the JPEG height from a private job descriptor
+ * whose +8 word points at a 237-pair register profile. That profile carries the
+ * frame row count in nine registers (0x01c70008 on a 6D: 455 -> 456*8 = 3648).
+ * The function that consumes the descriptor lives past the end of the ROM image
+ * this project has, but two of its callers do not, so this hooks those callers
+ * and swaps in a private descriptor instead of touching Canon's own:
+ *
+ *   +0x3c  output height in rows          2020 for 65:24 at 5472 wide
+ *   +0x5c  byte offset of the first row   814 * 10944
+ *   +0x08  replaced with a private copy of the profile, nine registers set to
+ *          0x00fd0008 (2032 rows, the padded height)
+ *
+ * Guarded by content, not by address: the hook only acts when the descriptor's
+ * profile word points at a table that starts with 0xc0f2e108, so a boot with a
+ * different heap layout leaves Canon alone. Watch mode logs what it sees and
+ * modifies nothing, which is how the addresses get learned in the first place.
+ */
+#define FS_ENC_DESC_REG  0x9F9D8u       /* seen in the RAM image, may move    */
+#define FS_ENC_PROF_MAGIC 0xc0f2e108u   /* first register word of the profile */
+#define FS_ENC_PROF_PAIRS 237
+#define FS_ENC_HOOK_A    0xF816B374u
+#define FS_ENC_HOOK_B    0xF816B410u
+
+static CONFIG_INT("film.sim.enccrop", film_sim_enccrop, 0);
+static uint32_t fs_enc_desc[44];
+static uint32_t fs_enc_prof[FS_ENC_PROF_PAIRS * 2];
+static volatile int fs_enc_ready, fs_enc_mode, fs_enc_fired, fs_enc_seen;
+static uint32_t fs_enc_last;
+static const char *fs_enc_names[] = { "Off", "Watch", "65:24" };
+
+static int fs_enc_profile_ok(uint32_t p)
+{
+  if (p < 0x10000u || p > 0x0fffffffu || (p & 3)) return 0;
+  return ((const volatile uint32_t *)p)[0] == FS_ENC_PROF_MAGIC;
+}
+
+static void fs_enc_build(uint32_t desc, uint32_t prof)
+{
+  volatile uint32_t *d = (volatile uint32_t *)desc;
+  volatile uint32_t *p = (volatile uint32_t *)prof;
+  int i, changed = 0;
+  for (i = 0; i < 44; i++) fs_enc_desc[i] = d[i];
+  for (i = 0; i < FS_ENC_PROF_PAIRS * 2; i++) fs_enc_prof[i] = p[i];
+  for (i = 0; i + 1 < FS_ENC_PROF_PAIRS * 2; i += 2) {
+    if (fs_enc_prof[i + 1] == 0x01c70008u) {      /* 3648 rows, 8-row units */
+      fs_enc_prof[i + 1] = 0x00fd0008u;           /* 2032 rows              */
+      changed++;
+    }
+  }
+  fs_enc_desc[2] = (uint32_t)fs_enc_prof;
+  fs_enc_desc[0x3c / 4] = 2020u;                  /* 65:24 at 5472 wide     */
+  fs_enc_desc[0x5c / 4] = 814u * 10944u;          /* first row, bytes       */
+  fs_enc_ready = 1;
+  fs_log("enccrop: descriptor 0x%x -> private, profile 0x%x, %d height "
+         "registers changed", (unsigned)desc, (unsigned)prof, changed);
+  fs_log_flush();
+}
+
+static void fs_enc_hook(uint32_t *regs, uint32_t *stack, uint32_t pc)
+{
+  uint32_t desc = regs[0];
+  uint32_t prof;
+  (void)stack; (void)pc;
+  if (!fs_enc_mode) return;
+  if (desc < 0x10000u || desc > 0x0fffffffu || (desc & 3)) return;
+  prof = ((const volatile uint32_t *)desc)[2];
+  if (!fs_enc_profile_ok(prof)) return;
+  fs_enc_last = desc;
+  if (fs_enc_seen < 8) {
+    fs_enc_seen++;
+    fs_log("enccrop: saw descriptor 0x%x profile 0x%x, height %d offset 0x%x",
+           (unsigned)desc, (unsigned)prof,
+           (int)((const volatile uint32_t *)desc)[0x3c / 4],
+           (unsigned)((const volatile uint32_t *)desc)[0x5c / 4]);
+    fs_log_flush();
+  }
+  if (fs_enc_mode != 2) return;     /* watch only */
+  if (!fs_enc_ready) fs_enc_build(desc, prof);
+  regs[0] = (uint32_t)fs_enc_desc;
+  fs_enc_fired++;
+}
+
+static void fs_enc_install(void)
+{
+  int a = patch_hook_function(FS_ENC_HOOK_A, *(uint32_t *)FS_ENC_HOOK_A,
+                              &fs_enc_hook, "film_sim: encoder crop A");
+  int b = patch_hook_function(FS_ENC_HOOK_B, *(uint32_t *)FS_ENC_HOOK_B,
+                              &fs_enc_hook, "film_sim: encoder crop B");
+  fs_log("enccrop: hooks A=%d B=%d (mode %d)", a, b, fs_enc_mode);
+  fs_log_flush();
+}
+
+static MENU_SELECT_FUNC(fs_enc_select)
+{
+  fs_enc_mode = fs_clamp_i(film_sim_enccrop, 0, 2);
+  /* Never build from a remembered address: the descriptor is only built from a
+   * descriptor the hook actually saw, so a stale heap layout cannot make the
+   * encoder read a private copy of garbage. */
+  if (fs_enc_mode) fs_enc_install();
+}
+
+static MENU_UPDATE_FUNC(fs_enc_update)
+{
+  int m = fs_clamp_i(film_sim_enccrop, 0, 2);
+  MENU_SET_VALUE("%s", fs_enc_names[m]);
+  MENU_SET_ICON(m ? MNI_ON : MNI_OFF, 0);
+}
 
 static MENU_SELECT_FUNC(fs_debug_log_select) { fs_force_dump_log = 1; }
 
@@ -8760,6 +8872,15 @@ static struct menu_entry fs_menu_debug[] = {
         .select = fs_import_recipes_action,
         .icon_type = IT_ACTION,
         .help = "Move .XML recipes from DCIM into ML/FILMS and reload.",
+    },
+    {
+        .name = "Encoder Crop",
+        .priv = &film_sim_enccrop,
+        .max = 2,
+        .choices = fs_enc_names,
+        .update = fs_enc_update,
+        .select = fs_enc_select,
+        .help = "Experimental: crop inside Canon's encoder.",
     },
     {
         .name = "Reload Films",
