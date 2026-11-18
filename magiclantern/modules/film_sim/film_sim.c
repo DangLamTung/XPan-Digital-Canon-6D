@@ -2571,7 +2571,12 @@ static void fs_enc_install(void)
 
 static MENU_SELECT_FUNC(fs_enc_select)
 {
-  int want = fs_clamp_i(film_sim_enccrop, 0, 2);
+  /* A .select handler REPLACES the cycling ML would do for a choices entry, so
+   * the value has to be stepped here. Without this line SET did nothing and the
+   * entry looked broken. */
+  int want;
+  menu_numeric_toggle(&film_sim_enccrop, delta, 0, 2);
+  want = fs_clamp_i(film_sim_enccrop, 0, 2);
   /* 65:24 is a blind write into Canon's encoder. Refuse it until Watch mode has
    * actually seen a descriptor, i.e. until the hook has proved its guess. */
   if (want == 2 && fs_enc_seen == 0) {
