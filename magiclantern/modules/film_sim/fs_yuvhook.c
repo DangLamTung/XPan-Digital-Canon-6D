@@ -331,6 +331,9 @@ static uint32_t fs_yuv_grade_cached(void *buf, int width, int rows, int stride,
                 fs_hbar = 1;
             }
         }
+        /* These are the only rows the shot grade touches. The per-shot
+         * "yuvgrade: ... span a..b" line in FILMSIM.LOG prints them, so a
+         * report of an ungraded half can be settled from the card. */
         {
             unsigned char *g = gp + (size_t)gy0 * stride;
             int gh = gy1 - gy0;
