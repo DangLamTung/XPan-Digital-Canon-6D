@@ -9404,7 +9404,7 @@ static struct menu_entry fs_menu_settings[] = {
         .children = fs_menu_capture,
     },
     {
-        .name = "Debug",
+        .name = "Film Debug",
         .select = menu_open_submenu,
         .icon_type = IT_ACTION,
         .help = "Log and film-list maintenance.",
