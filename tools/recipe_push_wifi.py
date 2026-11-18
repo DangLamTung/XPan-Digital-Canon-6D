@@ -24,10 +24,32 @@ import ptpip
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--ip", required=True)
+    ap.add_argument("--ip", help="camera address; omit to discover it")
     ap.add_argument("--port", type=int, default=15740)
     ap.add_argument("files", nargs="+")
     a = ap.parse_args()
+
+    if not a.ip:
+        print("looking for a PTP/IP camera...")
+        ips = ptpip.discover()
+        if not ips:
+            print("no camera answered mDNS; scanning the subnet")
+            ips = ptpip.scan_subnet()
+        if not ips:
+            # a loopback camera is what the mock serves for tests
+            try:
+                import socket
+                socket.create_connection(("127.0.0.1", a.port), 0.4).close()
+                ips = ["127.0.0.1"]
+            except Exception:
+                pass
+        if not ips:
+            print("no camera found. Turn Wi-Fi on (Connect to computer) and retry,")
+            print("or pass --ip with the address the camera shows.")
+            sys.exit(1)
+        a.ip = ips[0]
+        print("using", a.ip)
+
     ok = 0
     for path in a.files:
         name = os.path.basename(path)
