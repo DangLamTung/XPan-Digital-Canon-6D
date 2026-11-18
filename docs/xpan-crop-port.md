@@ -353,3 +353,30 @@ many of those rows become the JPEG.
 Whether `0xF9039874` reads `+0x3c`/`+0x5c` cannot be shown from this image. What
 *can* be shown, and now has been, is that nothing else in the image writes them,
 so any crop on this body either goes through those two fields or does not work.
+
+## Correction: the caller hook is a probe, not a workaround
+
+An earlier claim in this session -- "hooking the callers means the missing
+megabyte does not matter" -- was wrong, and the module now says so.
+
+What the 16 MB image proves:
+
+* `0xF816B374` and `0xF816B410` are functions, they load `[r4,#8]` and call
+  `0xF9039874` with `r1 = descriptor` and `r2 = 3` or `5`;
+* the descriptor at `0x9F9D8` has `+8 -> 0x7D348`, a 237-pair table byte-identical
+  to the ROM table, whose nine registers read `0x01c70008`.
+
+What it does **not** prove, and what the missing megabyte would answer:
+
+1. that those two functions are the still-JPEG path rather than a display or
+   thumbnail path;
+2. that `r0` on entry is the descriptor (the code reads `[r4,#8]`, so the
+   descriptor is in `r4`, and what is in `r0` is unknown);
+3. that `+0x3c` and `+0x5c` are height and byte offset -- those two field
+   meanings are inherited from the EOS M source, not read out of this body.
+
+So `Debug > Encoder Crop` is an **instrument**, not a feature. Watch mode installs
+the hooks and logs which descriptors actually pass through them, changing
+nothing. `65:24` is refused until Watch has seen a descriptor, because writing a
+private descriptor into a path that has not been identified is a blind write into
+Canon's encoder.
