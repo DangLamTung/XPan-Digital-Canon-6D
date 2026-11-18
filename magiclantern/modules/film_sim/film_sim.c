@@ -2495,7 +2495,7 @@ static void fs_slot_backup_task(void *unused) {
  * modifies nothing, which is how the addresses get learned in the first place.
  */
 #define FS_ENC_DESC_REG  0x9F9D8u       /* seen in the RAM image, may move    */
-#define FS_ENC_PROF_MAGIC 0xc0f2e108u   /* first register word of the profile */
+#define FS_ENC_PROF_MAGIC 0xc0f37218u   /* first register word of the profile */
 #define FS_ENC_PROF_PAIRS 237
 #define FS_ENC_HOOK_A    0xF816B374u
 #define FS_ENC_HOOK_B    0xF816B410u
@@ -2510,7 +2510,12 @@ static const char *fs_enc_names[] = { "Off", "Watch", "65:24" };
 static int fs_enc_profile_ok(uint32_t p)
 {
   if (p < 0x10000u || p > 0x0fffffffu || (p & 3)) return 0;
-  return ((const volatile uint32_t *)p)[0] == FS_ENC_PROF_MAGIC;
+  /* Two words, because one is not a signature: the RAM and ROM copies of this
+   * table both start 0xc0f37218 0x80000000, and the earlier single-word guess
+   * (0xc0f2e108, taken from a pair 440 bytes into the table) never matched, so
+   * the hook could not have fired at all. */
+  return ((const volatile uint32_t *)p)[0] == FS_ENC_PROF_MAGIC &&
+         ((const volatile uint32_t *)p)[1] == 0x80000000u;
 }
 
 static void fs_enc_build(uint32_t desc, uint32_t prof)
