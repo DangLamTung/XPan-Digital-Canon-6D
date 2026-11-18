@@ -58,6 +58,9 @@ def main():
         except Exception as e:
             print("  %-24s FAILED: %s" % (name, e))
             continue
+        if r != 0x2001:
+            print("  %-24s REFUSED (0x%04x) -- nothing was written" % (name, r))
+            continue
         print("  %-24s sent" % name)
         ok += 1
     print("%d/%d sent to %s" % (ok, len(a.files), a.ip))
