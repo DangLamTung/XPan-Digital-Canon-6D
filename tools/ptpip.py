@@ -319,10 +319,25 @@ def probe(ip):
     return ops
 
 
-def object_info(name, size):
+# Canon's own object format codes. A raw frame is not "undefined" to the camera:
+# sending 0x3000 for a .CR2 is what makes the body (and EOS Utility) refuse it.
+FORMAT_BY_EXT = {
+    ".cr2": 0xB103,   # Canon RAW 2
+    ".cr3": 0xB105,   # Canon RAW 3 (DIGIC 8 and later)
+    ".jpg": 0x3801,   # EXIF/JPEG
+    ".jpeg": 0x3801,
+}
+
+
+def format_for(name):
+    ext = os.path.splitext(name)[1].lower()
+    return FORMAT_BY_EXT.get(ext, 0x3000)
+
+
+def object_info(name, size, fmt=None):
     """PTP ObjectInfo dataset (PIMA 15740), in the order the standard fixes."""
     d  = struct.pack("<I", 0xFFFFFFFF)   # StorageID: default
-    d += struct.pack("<H", 0x3000)       # ObjectFormat: undefined
+    d += struct.pack("<H", format_for(name) if fmt is None else fmt)
     d += struct.pack("<H", 0)            # ProtectionStatus
     d += struct.pack("<I", size)         # ObjectCompressedSize
     d += struct.pack("<H", 0)            # ThumbFormat
@@ -351,6 +366,7 @@ def upload(ip, path, name=None):
     c.init()
     c.open_session()
     rc, extra, _ = c.op(0x100C, [], data=object_info(name, size))
+    print("   object format 0x%04x for %s" % (format_for(name), name))
     print("SendObjectInfo -> %s (0x%04x)" % (RESP.get(rc, "?"), rc))
     if rc != 0x2001:
         print("   the body refused the object info; nothing was transferred")
