@@ -2572,11 +2572,11 @@ static int fs_enc_scan(void)
 {
   uint32_t a;
   int found = 0;
+  /* Step 4, not 64: the descriptor seen in the RAM image sits at 0x9F9D8, which
+   * is 8-aligned but not 64-aligned, so a 64-byte stride skipped it entirely. */
   for (a = 0x1000; a < 0x0fffff00u; a += 4) {
-    uint32_t desc = a;
     uint32_t prof;
-    if (a & 0x3f) continue;
-    (void)desc;
+    if (a & 7) continue;
     prof = *(volatile uint32_t *)(a + 8);
     if (!fs_enc_profile_ok(prof)) continue;
     /* A descriptor also holds a small flag word at +4 and a nonzero +0. */
