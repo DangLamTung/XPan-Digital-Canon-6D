@@ -238,3 +238,36 @@ the mids still need warming. Visual: `renders/rain-street-vs-reference.jpg`.
 Note that the reference is a rainy overcast street and our frames are sunny, so
 the comparison is a look signature, not a pixel match -- the same caveat as the
 Classic Negative work.
+
+### Ektar 100 and Portra 160 look alike, and the reference says the same
+
+Question raised from the shelf: the two stocks read as nearly the same picture.
+Measured, on five Da Lat frames, median CIEDE2000 between the two renders:
+
+```
+01 pine grove 4.16   03 lookout 4.34   07 flowers 4.77
+08 road 4.94         10 lake    4.23   median 4.34
+```
+
+The same measurement on Dehancer's own renders of the same two stocks, over the
+corpus frames they share:
+
+```
+frame                 ours EK/P160   Dehancer EK/P160
+001_IMG_6883             3.76            3.36
+002_IMG_6888             5.12            3.49
+003_IMG_7136-2           3.11            4.05
+005_IMG_7438             6.06            4.31
+008_IMG_7680             6.11            4.57
+median                   5.19            3.74
+```
+
+Dehancer separates them by **3.74**; we separate them by **5.19**. So the
+similarity is in the films, not in the recipes: Ektar 100 and Portra 160 differ
+mostly in saturation and skin, not in cast, and on foliage-heavy frames the two
+curves land close together. For contrast, the same statistic between Classic
+Negative and Superia 200 was 9.4.
+
+Visual, with the difference amplified six times: `renders/ek100-vs-p160.jpg`.
+Pushing them further apart would mean moving both away from their references,
+which currently sit at 4.40 and 4.46.
