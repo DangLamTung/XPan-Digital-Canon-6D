@@ -2594,6 +2594,45 @@ static MENU_UPDATE_FUNC(fs_enc_update)
   MENU_SET_ICON(m ? MNI_ON : MNI_OFF, 0);
 }
 
+/* Console and Wi-Fi, on demand.
+ *
+ * Both are things the camera's own state decides and this module cannot:
+ * whether ML keeps the console up is `module.console` in ML's config, and
+ * whether the Wi-Fi stack is running is a property of what Canon started. These
+ * two entries report the state and hide the console; neither invents a switch
+ * that is not there. */
+extern void console_hide(void);
+extern const char *get_task_name_from_id(int id);
+extern int task_max;
+
+static void fs_wifi_probe_task(void *unused)
+{
+  int i, wpa = 0, dhcp = 0, wlan = 0, net = 0;
+  (void)unused;
+  msleep(500);
+  for (i = 0; i < task_max; i++) {
+    const char *n = get_task_name_from_id(i);
+    if (!n || !n[0]) continue;
+    if (strstr(n, "wpa")) wpa++;
+    if (strstr(n, "dhcp")) dhcp++;
+    if (strstr(n, "Wlan") || strstr(n, "wlan")) wlan++;
+    if (strstr(n, "net") || strstr(n, "Net")) net++;
+  }
+  fs_log("wifi: %d tasks, wpa=%d dhcp=%d wlan=%d net=%d", task_max, wpa, dhcp,
+         wlan, net);
+  fs_log("wifi: %s", (wpa || dhcp) ? "Wi-Fi stack is running"
+                                   : "Wi-Fi stack is NOT running");
+  fs_log_flush();
+  NotifyBox(4000, "wifi: %s", (wpa || dhcp) ? "stack running" : "stack not running");
+}
+
+static MENU_SELECT_FUNC(fs_wifi_probe_action)
+{
+  task_create("fs_wifiprobe", 0x1e, 0x1000, fs_wifi_probe_task, 0);
+}
+
+static MENU_SELECT_FUNC(fs_console_hide_action) { console_hide(); }
+
 static MENU_SELECT_FUNC(fs_debug_log_select) { fs_force_dump_log = 1; }
 
 
@@ -8881,6 +8920,18 @@ static struct menu_entry fs_menu_capture[] = {
 static const char *fs_on_off_names[] = { "Off", "On" };
 
 static struct menu_entry fs_menu_debug[] = {
+    {
+        .name = "WiFi Probe",
+        .select = fs_wifi_probe_action,
+        .icon_type = IT_ACTION,
+        .help = "Log whether the Wi-Fi stack and its tasks exist.",
+    },
+    {
+        .name = "Hide Console",
+        .select = fs_console_hide_action,
+        .icon_type = IT_ACTION,
+        .help = "Close ML's console, which module.console keeps open.",
+    },
     {
         .name = "Debug Log",
         .priv = &film_sim_dbglog,
