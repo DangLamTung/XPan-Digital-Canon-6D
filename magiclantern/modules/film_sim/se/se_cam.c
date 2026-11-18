@@ -1466,6 +1466,13 @@ done:
            "grain %d ms, rows %d",
            (int)se_lk_t_grade, (int)se_lk_t_mask, (int)se_lk_t_glow,
            (int)se_lk_t_grain, (int)se_lk_n_rows);
+    /* What the look actually carried after strength and the memory fit: a
+     * "no halation" report is answered by these three numbers, and grain 0
+     * here means the stock asked for none. */
+    se_log("develop: look state: grain %d cell %d, halation amount %d thresh %d "
+           "radius %d",
+           (int)lk.grain, (int)lk.grain_cell, (int)lk.hal_amount,
+           (int)lk.hal_thresh, (int)lk.hal_radius);
     se_log("develop: dec blocks %d (flat %d) coefs %d | enc blocks %d (flat %d) "
            "coefs %d",
            (int)se_jd_n_blocks, (int)se_jd_n_flat, (int)se_jd_n_coef,

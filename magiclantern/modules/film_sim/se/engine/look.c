@@ -1303,8 +1303,14 @@ static void grain_row(const se_look *lk, uint8_t *row, int w, int y) {
    * as emulsion and started reading as sensor noise, which is the one
    * thing grain must not look like. */
   int amp = (lk->grain * SE_GRAIN_AMP) / 100;
-  /* Keep grain whisper-fine so emulsions never read as digital luminance noise. */
-  amp = amp * 2 / 7;
+  /* Keep grain fine so emulsions never read as digital luminance noise, but
+   * not so fine that it vanishes: 2/7 put Ektar (GRAIN 6) and Portra (5) at
+   * amp 0, which returned before drawing anything, and the honest report was
+   * "there is no grain". 4/7 doubles the amplitude and the floor guarantees
+   * one level for any stock that asked for grain at all. */
+  amp = amp * 4 / 7;
+  if (lk->grain > 0 && amp < 2)
+    amp = 2;
   if (amp <= 0)
     return;
   /*
