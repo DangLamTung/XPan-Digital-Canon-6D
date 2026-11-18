@@ -2592,26 +2592,6 @@ static int fs_enc_scan(void)
       fs_log_flush();
     }
   }
-  if (found && fs_enc_mode == 2) {
-    /* Mode 2 writes in place: no code patching is possible from a module, but
-     * these are ordinary RAM words of the job descriptor. The profile is
-     * replaced by a private copy because changing the one Canon owns would
-     * change every later job too. */
-    uint32_t d = fs_enc_last;
-    uint32_t prof = *(volatile uint32_t *)(d + 8);
-    int changed = 0, i;
-    for (i = 0; i < FS_ENC_PROF_PAIRS * 2; i++)
-      fs_enc_prof[i] = ((volatile uint32_t *)prof)[i];
-    for (i = 1; i < FS_ENC_PROF_PAIRS * 2; i += 2)
-      if (fs_enc_prof[i] == 0x01c70008u) { fs_enc_prof[i] = 0x00fd0008u; changed++; }
-    *(volatile uint32_t *)(d + 8) = (uint32_t)fs_enc_prof;
-    *(volatile uint32_t *)(d + 0x3c) = 2020u;
-    *(volatile uint32_t *)(d + 0x5c) = 814u * 10944u;
-    fs_enc_fired++;
-    fs_log("enccrop: wrote descriptor 0x%x: height 2020, offset 0x%x, "
-           "%d profile registers", (unsigned)d, 814u * 10944u, changed);
-    fs_log_flush();
-  }
   fs_log("enccrop: scan found %d descriptor(s) in RAM", found);
   fs_log_flush();
   return found;
@@ -2648,8 +2628,11 @@ static MENU_SELECT_FUNC(fs_enc_select)
    * the value has to be stepped here. Without this line SET did nothing and the
    * entry looked broken. */
   int want;
-  menu_numeric_toggle(&film_sim_enccrop, delta, 0, 2);
-  want = fs_clamp_i(film_sim_enccrop, 0, 2);
+  /* Mode 2 is disabled: writing the live descriptor crashed the camera. Until
+   * the descriptor layout is proven on this body, this entry is a read-only
+   * probe and the write stays out of the build. */
+  menu_numeric_toggle(&film_sim_enccrop, delta, 0, 1);
+  want = fs_clamp_i(film_sim_enccrop, 0, 1);
   /* 65:24 is a blind write into Canon's encoder. Refuse it until Watch mode has
    * actually seen a descriptor, i.e. until the hook has proved its guess. */
   if (want == 2 && fs_enc_seen == 0) {
