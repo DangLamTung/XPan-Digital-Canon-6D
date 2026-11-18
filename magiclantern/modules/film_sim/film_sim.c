@@ -2564,6 +2564,47 @@ static void fs_enc_hook(uint32_t *regs, uint32_t *stack, uint32_t pc)
   fs_enc_fired++;
 }
 
+/* The hook route is dead: patch_hook_function() needs a branch inside +-32 MB
+ * and a module lives ~2.8 GB from ROM, which is why the log said hooks A=1 B=1.
+ * The descriptor, however, is ordinary RAM -- so look for it by its profile
+ * signature instead of patching code. */
+static int fs_enc_scan(void)
+{
+  uint32_t a;
+  int found = 0;
+  for (a = 0x1000; a < 0x0fffff00u; a += 4) {
+    uint32_t desc = a;
+    uint32_t prof;
+    if (a & 0x3f) continue;
+    (void)desc;
+    prof = *(volatile uint32_t *)(a + 8);
+    if (!fs_enc_profile_ok(prof)) continue;
+    /* A descriptor also holds a small flag word at +4 and a nonzero +0. */
+    if (!*(volatile uint32_t *)a) continue;
+    fs_enc_last = a;
+    found++;
+    if (fs_enc_seen < 8) {
+      fs_enc_seen++;
+      fs_log("enccrop: descriptor 0x%x profile 0x%x height %d offset 0x%x",
+             (unsigned)a, (unsigned)prof,
+             (int)(*(volatile uint32_t *)(a + 0x3c)),
+             (unsigned)(*(volatile uint32_t *)(a + 0x5c)));
+      fs_log_flush();
+    }
+  }
+  fs_log("enccrop: scan found %d descriptor(s) in RAM", found);
+  fs_log_flush();
+  return found;
+}
+
+static void fs_enc_scan_task(void *unused)
+{
+  (void)unused;
+  msleep(300);
+  fs_enc_scan();
+  NotifyBox(3000, "enccrop: %d descriptor(s)", fs_enc_seen);
+}
+
 static void fs_enc_install(void)
 {
   int a = patch_hook_function(FS_ENC_HOOK_A, *(uint32_t *)FS_ENC_HOOK_A,
@@ -2594,7 +2635,10 @@ static MENU_SELECT_FUNC(fs_enc_select)
   /* Never build from a remembered address: the descriptor is only built from a
    * descriptor the hook actually saw, so a stale heap layout cannot make the
    * encoder read a private copy of garbage. */
-  if (fs_enc_mode) fs_enc_install();
+  if (fs_enc_mode) {
+    fs_enc_seen = 0;
+    task_create("fs_encscan", 0x1e, 0x1000, fs_enc_scan_task, 0);
+  }
 }
 
 static MENU_UPDATE_FUNC(fs_enc_update)
