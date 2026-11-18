@@ -8895,18 +8895,6 @@ static struct menu_entry fs_menu_debug[] = {
         .help = "Write the diagnostic buffer to ML/LOGS/FILMSIM.LOG now.",
     },
     {
-        .name = "Export Look",
-        .select = fs_export_look_action,
-        .icon_type = IT_ACTION,
-        .help = "Write the active stock as an XML recipe to ML/FILMS/.",
-    },
-    {
-        .name = "Import Recipes",
-        .select = fs_import_recipes_action,
-        .icon_type = IT_ACTION,
-        .help = "Adopt .XML packs and .fs stocks from DCIM.",
-    },
-    {
         .name = "Encoder Crop",
         .priv = &film_sim_enccrop,
         .max = 2,
@@ -8914,12 +8902,6 @@ static struct menu_entry fs_menu_debug[] = {
         .update = fs_enc_update,
         .select = fs_enc_select,
         .help = "Experimental: crop inside Canon's encoder.",
-    },
-    {
-        .name = "Reload Films",
-        .select = fs_reload_xml_action,
-        .icon_type = IT_ACTION,
-        .help = "Re-read the film list from ML/FILMS/*.xml.",
     },
     MENU_EOL,
 };
@@ -9405,6 +9387,28 @@ static MENU_SELECT_FUNC(fs_master_select)
   fs_sync();
 }
 
+static struct menu_entry fs_menu_recipes[] = {
+    {
+        .name = "Import Recipes",
+        .select = fs_import_recipes_action,
+        .icon_type = IT_ACTION,
+        .help = "Adopt .XML packs and .fs stocks from DCIM.",
+    },
+    {
+        .name = "Export Look",
+        .select = fs_export_look_action,
+        .icon_type = IT_ACTION,
+        .help = "Write the active stock as an XML recipe to ML/FILMS/.",
+    },
+    {
+        .name = "Reload Films",
+        .select = fs_reload_xml_action,
+        .icon_type = IT_ACTION,
+        .help = "Re-read the film list from ML/FILMS/*.xml.",
+    },
+    MENU_EOL,
+};
+
 static struct menu_entry film_sim_menu[] = {
     {
         .name = "Film Sim",
@@ -9463,7 +9467,14 @@ static struct menu_entry film_sim_menu[] = {
         .children = fs_menu_custom,
     },
     {
-        .name = "Recipe",
+        .name = "Recipes",
+        .select = menu_open_submenu,
+        .icon_type = IT_ACTION,
+        .help = "Import, export and reload .fs recipes.",
+        .children = fs_menu_recipes,
+    },
+    {
+        .name = "Wheel",
         .select = menu_open_submenu,
         .icon_type = IT_ACTION,
         .help = "Fuji recipe bundle plus the WB grid.",
