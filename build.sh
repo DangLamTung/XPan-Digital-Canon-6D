@@ -52,6 +52,12 @@ fi
 # shellcheck disable=SC2086
 make -C "$SRC/modules" $MAKEARGS > /dev/null
 
+# mlwifi is deliberately not shipped. The platform make copies every .mo out of
+# modules/build, so deleting it here is what actually keeps it out of the zip --
+# removing it from the card alone only lasted until the next install.
+rm -f "$SRC/modules/build/mlwifi.mo" \
+      "$SRC/platform/$CAM/build/zip/ML/modules/mlwifi.mo"
+
 cd "$SRC/platform/$CAM"
 
 # Ship the film recipes in the zip.
@@ -100,12 +106,11 @@ if [ -f "$SYM" ]; then
     # Only the modules this project ships. Bundled third-party modules import
     # symbols the 6D build does not export (mlv_play, mlv_snd, pic_view, yolo);
     # they are not ours to fix and must not block the build.
-    # mlwifi is a probe that ships outside the zip, so a missing import would
-    # not break an install -- it would break the only diagnostic that exists
-    # for the WiFi reversing: the module loads with "module load error" and
-    # writes nothing to the log at all. Gate it like the shipped two.
-    for mo in "$SRC"/modules/build/film_sim.mo "$SRC"/modules/build/film_lv.mo \
-              "$SRC"/modules/build/mlwifi.mo; do
+    # mlwifi is no longer shipped: it was a probe for the WiFi reversing and
+    # its menu only ever measured that the stack is not running. Building it is
+    # fine, copying it into the zip is not -- every install used to put it back
+    # after it had been removed from the card by hand.
+    for mo in "$SRC"/modules/build/film_sim.mo "$SRC"/modules/build/film_lv.mo; do
         [ -f "$mo" ] || continue
         "$NM" -u "$mo" | awk '{print $2}' | sort -u > /tmp/ml_undef.$$
         MISSING=$(comm -23 /tmp/ml_undef.$$ /tmp/ml_sym.$$)

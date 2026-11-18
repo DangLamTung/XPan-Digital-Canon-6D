@@ -40,7 +40,6 @@ ML_MODULES = \
     pic_view \
     film_lv \
     film_sim \
-    mlwifi \
     aftrace \
     ettr \
     dual_iso \
