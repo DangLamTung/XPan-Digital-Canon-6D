@@ -8523,7 +8523,14 @@ static void fs_import_recipes_task(void *unused) {
       struct file_info fi = convert_fio_file_info(file);
       if (!fi.name[0] || fi.name[0] == '.')
         continue;
-      if (!fs_ends_with(fi.name, ".XML") && !fs_ends_with(fi.name, ".xml"))
+      /* Both directions of the recipe round trip land here: an XML pack from
+       * the card tools, and a bare .fs written by any transport that can drop
+       * a file into DCIM (a phone with an SD slot, Canon's own utility). The
+       * .fs case is what makes "send a recipe over WiFi" work without this
+       * module ever touching a socket. */
+      int is_xml = fs_ends_with(fi.name, ".XML") || fs_ends_with(fi.name, ".xml");
+      int is_fs = fs_ends_with(fi.name, ".FS") || fs_ends_with(fi.name, ".fs");
+      if (!is_xml && !is_fs)
         continue;
       char src[FS_PATH_LEN], dst[64];
       snprintf(src, sizeof src, "%s/%s", dir, fi.name);
@@ -8538,9 +8545,14 @@ static void fs_import_recipes_task(void *unused) {
       FIO_CloseFile(fp);
       if (n <= 0) continue;
       head[n < (int)sizeof head - 1 ? n : (int)sizeof head - 1] = 0;
-      if (!strstr(head, "<film") || !strstr(head, "<name>"))
+      if (is_xml && (!strstr(head, "<film") || !strstr(head, "<name>")))
         continue;
-      snprintf(dst, sizeof dst, "ML/FILMS/IMP_%s", fi.name);
+      if (is_fs && (!strstr(head, "NAME") || !strstr(head, "CURVE")))
+        continue;                     /* not a recipe, leave it alone */
+      if (is_fs)
+        snprintf(dst, sizeof dst, "ML/FILM/%s", fi.name);
+      else
+        snprintf(dst, sizeof dst, "ML/FILMS/IMP_%s", fi.name);
       uint32_t have = 0;
       if (FIO_GetFileSize(dst, &have) == 0 && have > 0) {
         fs_log("import: %s already present", dst);
@@ -8561,7 +8573,7 @@ static void fs_import_recipes_task(void *unused) {
     fs_reload_task(0);
     NotifyBox(4000, "imported %d recipe(s)", imported);
   } else {
-    NotifyBox(4000, "import: no .XML recipes in DCIM");
+    NotifyBox(4000, "import: no .XML or .fs in DCIM");
   }
 }
 
@@ -8892,7 +8904,7 @@ static struct menu_entry fs_menu_debug[] = {
         .name = "Import Recipes",
         .select = fs_import_recipes_action,
         .icon_type = IT_ACTION,
-        .help = "Move .XML recipes from DCIM into ML/FILMS and reload.",
+        .help = "Adopt .XML packs and .fs stocks from DCIM.",
     },
     {
         .name = "Encoder Crop",
