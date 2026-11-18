@@ -2502,8 +2502,7 @@ static struct menu_entry film_sim_liveview_children[] = {
         .name = "In-Camera Style",
         .select = fs_canon_style_toggle,
         .update = fs_canon_style_update,
-        .help = "Switch active Canon Picture Style (User 1/2/3 for preloaded "
-                ".pf2/.pf3).",
+        .help = "Canon Picture Style in use for the shot.",
         .help2 = "Bakes directly into in-camera JPEGs and H.264 video!",
         .icon_type = IT_DICE,
     },
@@ -5883,9 +5882,7 @@ static struct menu_entry fs_menu_name[] = {
     {
         .name = "Name",
         .update = fs_name_show_update,
-        .help = "What the look is called: ML/FILM/<NAME>.fs. Eight characters "
-                "at most, because that is the 8.3 limit every stock on the "
-                "card already uses.",
+        .help = "Name for this look, 8 chars, ML/FILM/<NAME>.fs.",
     },
     {
         .name = "Length",
@@ -5906,15 +5903,13 @@ static struct menu_entry fs_menu_name[] = {
         .name = "Reset Look",
         .select = fs_creator_reset_look_action,
         .icon_type = IT_ACTION,
-        .help = "Start the Color Creator from flat again. Leaving the screen "
-                "keeps your work; this is the only thing that discards it.",
+        .help = "Wipe the wheel back to flat. Saves nothing.",
     },
     {
         .name = "Use Slot Name",
         .select = fs_name_reset,
         .icon_type = IT_ACTION,
-        .help = "Reset the name to WHEEL / WHEEL2..4, the slot the creator "
-                "saves into.",
+        .help = "Take the slot's default name back.",
     },
     MENU_EOL,
 };
@@ -8671,25 +8666,20 @@ static struct menu_entry fs_menu_develop[] = {
         .select = fs_develop_trigger,
         .update = fs_current_update,
         .icon_type = IT_ACTION,
-        .help = "Develop the photo chosen by the Photo entry, with the "
-                "current stock.",
+        .help = "Develop the photo picked in Darkroom.",
     },
     {
         .name = "External LUT",
         .priv = &film_sim_lut,
         .max = 1,
-        .help = "Apply ML/FILMSIM/LOOK.BIN while developing. Make that file "
-                "from a .cube with tools/cube2bin.py. Set Strength to 0 to "
-                "develop with the cube alone.",
+        .help = "Apply ML/FILMSIM/LOOK.BIN while developing.",
     },
     {
         .name = "Replace Camera JPEG",
         .priv = &film_sim_replace,
         .max = 1,
         .update = fs_replace_update,
-        .help = "On: the developed frame is written over the camera's JPEG for "
-                "that frame, so the film version sits at the number playback "
-                "already knows. The raw is never touched. Off: a free number.",
+        .help = "Overwrite the camera's JPEG for that frame.",
     },
     {
         .name = "Auto Develop",
@@ -8710,17 +8700,14 @@ static struct menu_entry fs_menu_develop[] = {
         .max = 1,
         .select = fs_queue_toggle,
         .update = fs_queue_update,
-        .help = "On: a develop never takes the screen, so the shutter keeps "
-                "working and queued frames are developed behind you. Off: the "
-                "develop owns the panel until it finishes.",
+        .help = "Develop behind the shutter, no screen taken.",
     },
     {
         .name = "Comparison x4",
         .select = fs_compare_trigger,
         .update = fs_current_update,
         .icon_type = IT_ACTION,
-        .help = "Develop the newest photo with 4 distinct stocks into "
-                "FLC1..FLC4.JPG. Takes about 3 minutes.",
+        .help = "Four stocks into FLC1..FLC4.JPG, about 3 min.",
     },
     {
         /* This sat after MENU_EOL, and menu iteration stops at that entry, so
@@ -8728,8 +8715,7 @@ static struct menu_entry fs_menu_develop[] = {
         .name = "View Last Develop",
         .select = fs_view_last,
         .icon_type = IT_ACTION,
-        .help = "Show the last developed frame on the camera's own screen. "
-                "MENU or PLAY closes it.",
+        .help = "Show the last develop on the camera screen.",
     },
     MENU_EOL,
 };
@@ -8739,9 +8725,7 @@ static struct menu_entry fs_menu_capture[] = {
         .name = "Neutral Capture",
         .priv = &film_sim_capture,
         .max = 1,
-        .help = "Level 2/3 only: write a neutral picture style so Develop "
-                "grades once instead of stacking a look on a look. Ignored at "
-                "level 1, where the style is the look.",
+        .help = "Write a neutral style so looks are not stacked.",
     },
     {
         .name = "WB Shift Look",
@@ -8832,17 +8816,14 @@ static struct menu_entry fs_menu_fuji[] = {
         .priv = &fs_fuji.base_sim,
         .min = 0, .max = 7,
         .choices = fs_fuji_base_names,
-        .help = "The film simulation this recipe is built on. Its colour "
-                "tables (per-channel curves, hue, split tone) are copied into "
-                "the saved .fs; the rows below adjust on top of them.",
+        .help = "Fuji simulation the recipe is built on.",
     },
     {
         .name = "TONE CURVE Hi",
         .update = fs_fuji_init_update,
         .priv = &fs_fuji.highlight,
         .min = -2, .max = 4,
-        .help = "Highlight -2..+4. Positive compresses the top end, as Fuji's "
-                "does. Written into the recipe's CURVE.",
+        .help = "Highlight -2..+4, positive compresses the top.",
     },
     {
         .name = "TONE CURVE Sh",
@@ -8861,8 +8842,7 @@ static struct menu_entry fs_menu_fuji[] = {
         .priv = &fs_fuji.chrome,
         .min = 0, .max = 2,
         .choices = fs_level_names,
-        .help = "Fuji's COLOR CHROME EFFECT. Deepens colours that are already "
-                "saturated and leaves dull ones alone.",
+        .help = "Deepens already-saturated colours, like Fuji.",
     },
     {
         .name = "Chrome FX Blue",
@@ -8883,15 +8863,14 @@ static struct menu_entry fs_menu_fuji[] = {
         .priv = &fs_fuji.grain_size,
         .min = 0, .max = 1,
         .choices = fs_grain_size_names,
-        .help = "Small: fine, 35 mm-like. Large: coarser, for a pushed look.",
+        .help = "-1 keeps the stock's grain; 0..100 overrides.",
     },
     {
         .name = "WB Shift R/B",
         .update = fs_fuji_wb_update,
         .select = fs_wb_trigger,
         .icon_type = IT_ACTION,
-        .help = "Fuji's Red and Blue WB shift, as numbers. MENU opens the "
-                "grid; the two rows are the same offset.",
+        .help = "Fuji R/B shift as numbers; MENU opens the grid.",
     },
     {
         .name = "Dynamic Range",
@@ -8924,16 +8903,13 @@ static struct menu_entry fs_menu_fuji[] = {
         .name = "WB Grid",
         .select = fs_wb_trigger,
         .icon_type = IT_ACTION,
-        .help = "The 2-D Blue/Amber vs Green/Magenta grid, written into the "
-                "camera's own white balance the way a Fuji recipe does. The "
-                "R/B row above is the same offset as numbers.",
+        .help = "2-D Blue/Amber vs Green/Magenta WB grid.",
     },
     {
         .name = "Save Recipe",
         .select = fs_fuji_save_trigger,
         .icon_type = IT_ACTION,
-        .help = "Write ML/FILM/<NAME>.fs and reload the shelf. The recipe then "
-                "shoots and develops like any other stock.",
+        .help = "Write ML/FILM/<NAME>.fs and reload the shelf.",
     },
     MENU_EOL,
 };
@@ -8946,11 +8922,7 @@ static struct menu_entry fs_menu_live[] = {
         .priv = &film_sim_lvmode,
         .min = 0, .max = 2,
         .choices = fs_lvmode_names,
-        .help = "How LiveView is graded. Off: the sensor picture, ungraded. "
-                "Fast - 3D lattice: 12x17x17 interpolated, ~1 dE off the "
-                "develop, fits the frame budget. Exact - full engine: the "
-                "develop's grade, colour only, several times slower and only "
-                "usable at a low frame rate.",
+        .help = "How LiveView is graded: off, fast or exact.",
     },
     {
         .name = "LiveView Frame",
@@ -8963,16 +8935,14 @@ static struct menu_entry fs_menu_live[] = {
         .name = "Canister Art",
         .priv = &film_sim_art,
         .max = 1,
-        .help = "Photographs of the film from ML/FILMSIM/CANS.DAT. Off draws "
-                "the cassette instead, which needs no file at all.",
+        .help = "Real canisters from CANS.DAT instead of drawings.",
     },
     {
         .name = "Clear Canon Overlays",
         .select = fs_lv_clear_overlays,
         .update = fs_lv_clear_update,
         .icon_type = IT_ACTION,
-        .help = "The grade cannot run while Canon's own LV overlays have the "
-                "panel. SET sends INFO once, then reports the switch.",
+        .help = "SET sends INFO so Canon's LV overlays let go.",
     },
     MENU_EOL,
 };
@@ -9092,27 +9062,20 @@ static struct menu_entry fs_menu_userlook[] = {
         .name = "Share Active Look",
         .select = fs_share_look_trigger,
         .icon_type = IT_ACTION,
-        .help = "Copy the active stock's recipe and a readable summary into "
-                "ML/SHARE, where any transport can pick them up (card reader, "
-                "phone with an SD slot, or Canon's desktop utility). Inbound "
-                "already works: drop a .fs into ML/FILM and it is adopted "
-                "within seconds. WiFi push straight from this menu is not "
-                "implemented -- see docs/wifi-functions.md.",
+        .help = "Copy the active recipe into ML/SHARE.",
     },
     {
         .name = "Look Name",
         .select = menu_open_submenu,
         .icon_type = IT_ACTION,
-        .help = "Spell the name the Color Creator saves as, up to eight "
-                "characters. Defaults to the slot name.",
+        .help = "Name the creator saves under, 8 chars.",
         .children = fs_menu_name,
     },
     {
         .name = "Save Into",
         .select = fs_slot_cycle,
         .update = fs_slot_update,
-        .help = "Which slot the Color Creator writes, and loads that slot's "
-                "name. Type a different name in Look Name above.",
+        .help = "Slot the creator writes, and its name.",
     },
     MENU_EOL,
 };
@@ -9130,16 +9093,13 @@ static struct menu_entry fs_menu_header[] = {
         .name = "Film Frame",
         .priv = &film_sim_frame,
         .max = 1,
-        .help = "Draw the header around developed files: a margin above, and a "
-                "band below with the stock's mark, the Canon wordmark and the "
-                "exposure. Off by default; developed files only.",
+        .help = "Draw the header around developed files.",
     },
     {
         .name = "Art",
         .priv = &film_sim_art,
         .max = 1,
-        .help = "Use the stock canisters from ML/FILMSIM/CANS.DAT in the header "
-                "and on the shelf. Off falls back to the brand mark.",
+        .help = "Use canisters in the header and on the shelf.",
     },
     MENU_EOL,
 };
@@ -9151,21 +9111,13 @@ static struct menu_entry fs_menu_quality[] = {
         .priv = &film_sim_shotmode,
         .min = 0, .max = 2,
         .choices = fs_shotmode_names,
-        .help = "How the in-shutter JPEG is graded. Off: Canon's frame, no "
-                "film look. Fast - 3D lattice: a (y,u,v) table baked from the "
-                ".fs and interpolated, about 1 dE off the develop, ~1 s a "
-                "shot. Exact - full engine: the develop's own grade, exact, "
-                "around 80 s a shot -- use it for a frame you really care "
-                "about, not for a burst.",
+        .help = "How the shot JPEG is graded: off, fast, exact.",
     },
     {
         .name = "Style Check",
         .priv = &film_sim_stylecheck,
         .max = 1,
-        .help = "Refuse to grade unless the camera is on Picture Style Neutral, "
-                "so Canon's look is not stacked under ours. Off grades whatever "
-                "style is selected -- the way out if the body will not stay on "
-                "Neutral.",
+        .help = "Refuse to grade unless the style is Neutral.",
     },
     {
         .name = "Grade Quality",
@@ -9173,9 +9125,7 @@ static struct menu_entry fs_menu_quality[] = {
         .max = 2,
         .select = fs_gradeq_select,
         .update = fs_gradeq_update,
-        .help = "How much of the look is graded into the shot, and therefore "
-                "how long the next frame waits. High is the full look. Normal "
-                "drops the per-hue work. Fast applies the tone curve only.",
+        .help = "How much of the look the shot gets: H/N/F.",
     },
     MENU_EOL
 };
@@ -9188,8 +9138,7 @@ static struct menu_entry fs_menu_look[] = {
         .min = 20,
         .max = 200,
         .update = fs_satboost_update,
-        .help = "Saturation on top of every stock's own SAT line: 100 leaves "
-                "the recipe as written, 160 is about half again as saturated.",
+        .help = "Saturation on top of the stock: 100 is as written.",
     },
     {
         .name = "Grain",
@@ -9201,16 +9150,14 @@ static struct menu_entry fs_menu_look[] = {
         .name = "Grain Size",
         .priv = &film_sim_grainsize,
         .min = -1, .max = 100,
-        .help = "-1 keeps each stock's own GRAIN_SIZE. 0..100 overrides it for "
-                "every stock, as a 1..9 pixel cell that shrinks with the frame.",
+        .help = "-1 keeps the stock grain; 0..100 overrides.",
     },
     {
         .name = "Pad to 3:2",
         .priv = &film_sim_pad,
         .max = 1,
         .update = fs_pad_update,
-        .help = "Framings wider than 3:2 are written into a 3:2 frame with black "
-                "bars, so the body shows the whole frame.",
+        .help = "Wide framings get black bars in a 3:2 frame.",
     },
     MENU_EOL
 };
@@ -9240,8 +9187,7 @@ static struct menu_entry fs_menu_settings[] = {
         .name = "Quality",
         .select = menu_open_submenu,
         .icon_type = IT_ACTION,
-        .help = "Which engine grades the JPEG, the style check, and how much "
-                "of the look is worth the shutter wait.",
+        .help = "Which engine grades the JPEG and how long it takes.",
         .children = fs_menu_quality,
     },
     {
@@ -9273,16 +9219,13 @@ static struct menu_entry fs_menu_custom[] = {
         .name = "Slot",
         .select = fs_slot_cycle,
         .update = fs_slot_update,
-        .help = "Which of the ten recipe slots the creator opens and saves. "
-                "Each is a separate .fs in ML/FILM: WHEEL.fs, WHEEL2.fs ... "
-                "WHEEL10.fs.",
+        .help = "Which of the ten creator slots to open.",
     },
     {
         .name = "Open Creator",
         .select = fs_creator_trigger,
         .icon_type = IT_ACTION,
-        .help = "Open the wheel on the slot above. UP/DOWN changes slot, SET "
-                "loads it, PLAY saves the wheel into it.",
+        .help = "UP/DOWN slot, SET loads, PLAY saves the wheel.",
     },
     MENU_EOL,
 };
@@ -9292,24 +9235,20 @@ static struct menu_entry film_sim_menu[] = {
         .name = "Film Shelf",
         .select = fs_gui_open,
         .icon_type = IT_ACTION,
-        .help = "Open the shelf, choose a film, SET applies it. The choice "
-                "stays as the active stock after you leave. Film Settings has "
-                "everything else.",
+        .help = "Pick a film; SET applies it and it stays.",
     },
     {
         .name = "Film Settings",
         .select = menu_open_submenu,
         .icon_type = IT_ACTION,
-        .help = "Stock, level, strength, saturation, grain, aspect, looks, "
-                "LiveView, capture and debug.",
+        .help = "Stock, level, grain, aspect, looks, capture, debug.",
         .children = fs_menu_settings,
     },
     {
         .name = "Header",
         .select = menu_open_submenu,
         .icon_type = IT_ACTION,
-        .help = "The border written around developed files: on or off, and "
-                "whether the stock shows its canister or its brand mark.",
+        .help = "Border around developed files, on or off.",
         .children = fs_menu_header,
     },
     {
@@ -9318,16 +9257,13 @@ static struct menu_entry film_sim_menu[] = {
         .max = FS_ASPECT_COUNT - 1,
         .choices = fs_aspect_names,
         .update = fs_aspect_update,
-        .help = "One setting for both halves of what-you-see-is-what-you-get: "
-                "the bars on LiveView and the window a developed file is cut "
-                "to are this same mode.",
+        .help = "One mode for the LV bars and the develop window.",
     },
     {
         .name = "LiveView",
         .select = menu_open_submenu,
         .icon_type = IT_ACTION,
-        .help = "Everything about the preview: which engine grades it, the "
-                "framing guide, canister art and Canon's own overlays.",
+        .help = "Preview engine, framing guide, art, overlays.",
         .children = fs_menu_live,
     },
     {
@@ -9341,24 +9277,21 @@ static struct menu_entry film_sim_menu[] = {
         .name = "Custom Look",
         .select = menu_open_submenu,
         .icon_type = IT_ACTION,
-        .help = "The 12-wedge colour creator. Ten recipe slots, each its own "
-                ".fs on the card: pick the slot, open it, PLAY saves back.",
+        .help = "The colour creator: ten slots, PLAY saves.",
         .children = fs_menu_custom,
     },
     {
         .name = "Recipe",
         .select = menu_open_submenu,
         .icon_type = IT_ACTION,
-        .help = "A Fuji recipe -- the IMAGE QUALITY SETTING bundle, saved as a "
-                ".fs -- plus the Blue/Amber vs Green/Magenta WB grid.",
+        .help = "Fuji recipe bundle plus the WB grid.",
         .children = fs_menu_fuji,
     },
     {
         .name = "Develop",
         .select = menu_open_submenu,
         .icon_type = IT_ACTION,
-        .help = "Develop now: the darkroom, this photo, a 4-way comparison, or "
-                "watch for new frames.",
+        .help = "Darkroom, this photo, x4 compare, watch files.",
         .children = fs_menu_develop,
     },
     {

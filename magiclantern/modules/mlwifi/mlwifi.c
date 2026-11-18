@@ -639,32 +639,6 @@ static void mlw_watch(void *priv, int delta)
     task_create("mlw_watch", 0x1e, 0x1000, mlw_watch_task, 0);
 }
 
-/* Runs once at load. Reads nothing, writes only a log line and the current
- * property values, so a boot always leaves evidence on the card even if nobody
- * opens the menu. The delay lets the card filesystem come up: FIO calls made
- * during module init fail silently, which is how an earlier attempt produced
- * an empty log. */
-static void mlw_boot_task(void *unused)
-{
-    (void)unused;
-    unsigned k;
-    int nz = 0;
-
-    msleep(2000);
-    mlw_log("=== boot: mlwifi build 2026-11-15a, %d ids watched (0x8003 block + 0x8004 family + 0x80010000) ===",
-            MLW_NIDS);
-
-    for (k = 0; k < MLW_NIDS; k++)
-    {
-        if (*mlw_ptrs[k])
-        {
-            mlw_log("boot: 0x%x = %d", (int)mlw_ids[k], (int)*mlw_ptrs[k]);
-            nz++;
-        }
-    }
-    mlw_log("boot: %d of %d ids non-zero", nz, MLW_NIDS);
-}
-
 /* Look a property id up in the watched tables. Returns 0 when the id is not
  * watched, which is distinguishable because index 0 is 0x80030000 and no
  * caller asks for it. */
@@ -824,7 +798,6 @@ static struct menu_entry mlwifi_menu[] = {
 
 static unsigned int mlwifi_init(void)
 {
-    task_create("mlw_boot", 0x1e, 0x1000, mlw_boot_task, 0);
     menu_add("WiFi", mlwifi_menu, COUNT(mlwifi_menu) - 1);
     return 0;
 }
