@@ -497,15 +497,24 @@ static void fs_core_process_rows(const fs_lut_t *lut, const void *src, void *dst
  * If this is revisited, measure it on the body before believing the theory.
  */
 /*
- * Lattice lookup tables: (node offset << 9) | fraction, one entry per input
+ * Lattice lookup tables: (node offset << 16) | fraction, one entry per input
  * byte. Three of them turn the per-pixel grid arithmetic -- three multiplies,
  * six shifts, three edge tests and three stride multiplies -- into three
  * reads and an add. They depend only on the lattice geometry, so they are
  * built once.
  */
+#if defined(__GNUC__)
+#define FS_NOINLINE      __attribute__((noinline))
+#define FS_ALWAYS_INLINE __attribute__((always_inline)) inline
+#else
+#define FS_NOINLINE
+#define FS_ALWAYS_INLINE inline
+#endif
+
 static uint32_t fs_lat_tab[3][256];
 static int      fs_lat_ready;
 
+FS_NOINLINE
 static void fs_lat_build(void)
 {
     int i;
@@ -534,7 +543,10 @@ static void fs_lat_build(void)
             }
         }
         if (i >= yy_node[FS_UV3_NY - 1]) { ix = FS_UV3_NY - 2; fx = 256; }
-        fs_lat_tab[0][i] = ((uint32_t)ix << 9) | (uint32_t)fx;
+        /* Pack node offset in upper 16 bits, fraction (0..256) in lower 16 bits.
+         * Since fy + fu + fv <= 768 < 65536, (my + mu + mv) >> 16 sums all three
+         * offsets without carry. Pre-bias chroma index by ^ 0x80 at build time. */
+        fs_lat_tab[0][i] = ((uint32_t)ix << 16) | (uint32_t)fx;
 
         /* chroma nodes step by 16 (see se_look_bake_yuv3); the last node
          * covers 240..255 */
@@ -545,8 +557,8 @@ static void fs_lat_build(void)
             ix = i >> 4;
             fx = (i & 15) << 4;
         }
-        fs_lat_tab[1][i] = ((uint32_t)(ix * FS_UV3_NY) << 9) | (uint32_t)fx;
-        fs_lat_tab[2][i] = ((uint32_t)(ix * (FS_UV3_NY * FS_UV3_NC)) << 9) | (uint32_t)fx;
+        fs_lat_tab[1][i ^ 0x80] = ((uint32_t)(ix * FS_UV3_NY) << 16) | (uint32_t)fx;
+        fs_lat_tab[2][i ^ 0x80] = ((uint32_t)(ix * (FS_UV3_NY * FS_UV3_NC)) << 16) | (uint32_t)fx;
     }
     fs_lat_ready = 1;
 }
@@ -580,6 +592,51 @@ static void fs_lat_build(void)
 #else
 #define FS_HOT
 #endif
+
+/*
+ * Index the lattice by the INPUT luma, not the graded one: the nodes were
+ * baked at input luma y, so passing the tone-curved value looks up a
+ * different row and the chroma comes out of the wrong cell.
+ */
+static FS_ALWAYS_INLINE void
+fs_lat_eval_pair(unsigned int px, const uint32_t *uv, int *out_dy, uint32_t *out_uvo)
+{
+    const int ky = 1, ku = FS_UV3_NY, kv = FS_UV3_NY * FS_UV3_NC;
+    const int ko = ky + ku + kv;
+    uint32_t my = fs_lat_tab[0][(((px >> 8) & 0xFF) + (px >> 24)) >> 1];
+    uint32_t mu = fs_lat_tab[1][px & 0xFF];
+    uint32_t mv = fs_lat_tab[2][(px >> 16) & 0xFF];
+    const uint32_t *base = uv + ((my + mu + mv) >> 16);
+    int fy = (int)(my & 0xFFFF), fu = (int)(mu & 0xFFFF), fv = (int)(mv & 0xFFFF);
+    const uint32_t *ca, *cb2;
+    int w0, wa, wb, wc, dy;
+    uint32_t mask = 0x00FF00FFu, acc, v;
+
+    if (fy >= fv) {
+        if (fv >= fu)      { ca = base + ky; cb2 = base + (ky + kv); w0 = 256 - fy; wa = fy - fv; wb = fv - fu; wc = fu; }
+        else if (fy >= fu) { ca = base + ky; cb2 = base + (ky + ku); w0 = 256 - fy; wa = fy - fu; wb = fu - fv; wc = fv; }
+        else               { ca = base + ku; cb2 = base + (ku + ky); w0 = 256 - fu; wa = fu - fy; wb = fy - fv; wc = fv; }
+    } else {
+        if (fu >= fv)      { ca = base + ku; cb2 = base + (ku + kv); w0 = 256 - fu; wa = fu - fv; wb = fv - fy; wc = fy; }
+        else if (fu >= fy) { ca = base + kv; cb2 = base + (kv + ku); w0 = 256 - fv; wa = fv - fu; wb = fu - fy; wc = fy; }
+        else               { ca = base + kv; cb2 = base + (kv + ky); w0 = 256 - fv; wa = fv - fy; wb = fy - fu; wc = fu; }
+    }
+
+    v = base[0];
+    dy = ((int)v >> 24) * w0 + 128;
+    acc = 0x00800080u + (v & mask) * (uint32_t)w0;
+    v = base[ko];
+    dy += ((int)v >> 24) * wc;
+    acc += (v & mask) * (uint32_t)wc;
+    v = *ca;
+    dy += ((int)v >> 24) * wa;
+    acc += (v & mask) * (uint32_t)wa;
+    v = *cb2;
+    *out_dy  = (dy + ((int)v >> 24) * wb) >> 8;
+    acc     += (v & mask) * (uint32_t)wb;
+    *out_uvo = ((acc >> 8) & mask) ^ 0x00800080u;
+}
+
 FS_HOT
 static void fs_core_process_rows3(const unsigned char *curve, const uint32_t *uv,
                                   const void *src, void *dst,
@@ -592,88 +649,65 @@ static void fs_core_process_rows3(const unsigned char *curve, const uint32_t *uv
     const unsigned int * sp = (const unsigned int *)src + (unsigned int)row0 * words;
     unsigned int * dp = (unsigned int *)dst + (unsigned int)row0 * words;
 
-    const int ky = 1, ku = FS_UV3_NY, kv = FS_UV3_NY * FS_UV3_NC;
-    const int ko = ky + ku + kv;
-
     if (!fs_lat_ready) fs_lat_build();
 
-    for (int y = row0; y < row1; y++)
+    if (row1 <= row0 || words <= 0) return;
+
+    if (src == dst && !grain)
     {
-        unsigned int prev_px = 0, prev_out = 0;
-        for (int i = 0; i < words; i++)
+        unsigned int *p = (unsigned int *)dst + (size_t)row0 * (size_t)words;
+        unsigned int *p_end = p + (size_t)(row1 - row0) * (size_t)words;
+        unsigned int prev_px = p[0] ^ 1u, prev_out = 0;
+
+        for (; p < p_end; p++)
         {
-            unsigned int px = sp[i];
-            int ya = (px >>  8) & 0xFF;
-            int yb = (px >> 24) & 0xFF;
+            unsigned int px = *p;
             int oa, ob, dy;
             uint32_t uvo;
             unsigned int out;
 
-            if (!grain && i && px == prev_px) { dp[i] = prev_out; continue; }
+            if (px == prev_px) { *p = prev_out; continue; }
 
-            /*
-             * Index the lattice by the INPUT luma, not the graded one: the
-             * nodes were baked at input luma y, so passing the tone-curved
-             * value looks up a different row and the chroma comes out of the
-             * wrong cell. Measured on a real frame, that mistake cost more
-             * (11.1 levels) than the whole separable form it was meant to
-             * beat (7.0).
-             */
-            {
-                uint32_t my = fs_lat_tab[0][(ya + yb) >> 1];
-                /* the byte is signed: 247 means u = -9, so the table index is
-                 * the value biased to 0..255, i.e. byte ^ 0x80 */
-                uint32_t mu = fs_lat_tab[1][(px & 0xFF) ^ 0x80];
-                uint32_t mv = fs_lat_tab[2][((px >> 16) & 0xFF) ^ 0x80];
-                /* offsets and fractions are added separately: three fractions
-                 * can sum past 512 and would carry into the offset */
-                const uint32_t *base = uv + (int)((my >> 9) + (mu >> 9) + (mv >> 9));
-                int fy = (int)(my & 0x1FF), fu = (int)(mu & 0x1FF), fv = (int)(mv & 0x1FF);
-                const uint32_t *ca, *cb2;
-                int w0, wa, wb, wc;
+            fs_lat_eval_pair(px, uv, &dy, &uvo);
+#ifdef __ARM__
+            asm volatile("" : "+r"(px));
+#endif
+            oa = (int)curve[(px >> 8) & 0xFF] + dy;
+            ob = (int)curve[px >> 24] + dy;
+            if (oa < 0) oa = 0; else if (oa > 255) oa = 255;
+            if (ob < 0) ob = 0; else if (ob > 255) ob = 255;
 
-                /*
-                 * Tetrahedral, not trilinear: the cube splits into six
-                 * tetrahedra, the ordering of the fractions picks one, and the
-                 * sample needs four corners instead of eight.
-                 */
-                if (fy >= fv) {
-                    if (fv >= fu)      { ca = base + ky; cb2 = ca + kv; wa = fy - fv; wb = fv - fu; wc = fu; }
-                    else if (fy >= fu) { ca = base + ky; cb2 = ca + ku; wa = fy - fu; wb = fu - fv; wc = fv; }
-                    else               { ca = base + ku; cb2 = ca + ky; wa = fu - fy; wb = fy - fv; wc = fv; }
-                } else {
-                    if (fu >= fv)      { ca = base + ku; cb2 = ca + kv; wa = fu - fv; wb = fv - fy; wc = fy; }
-                    else if (fu >= fy) { ca = base + kv; cb2 = ca + ku; wa = fv - fu; wb = fu - fy; wc = fy; }
-                    else               { ca = base + kv; cb2 = ca + ky; wa = fv - fy; wb = fy - fu; wc = fu; }
-                }
-                w0 = 256 - wa - wb - wc;
+            out = uvo | ((unsigned int)oa << 8) | ((unsigned int)ob << 24);
+            *p = out;
+            prev_px = px; prev_out = out;
+        }
+        return;
+    }
 
-                /* byte 3 holds dy: one arithmetic shift sign-extends it */
-                dy = (((int)base[0] >> 24) * w0
-                      + ((int)ca[0] >> 24) * wa
-                      + ((int)cb2[0] >> 24) * wb
-                      + ((int)base[ko] >> 24) * wc + 128) >> 8;
+    for (int y = row0; y < row1; y++)
+    {
+        const unsigned int *sp_end = sp + words;
+        unsigned int prev_px = sp[0] ^ 1u, prev_out = 0;
+        for (; sp < sp_end; sp++, dp++)
+        {
+            unsigned int px = *sp;
+            int oa, ob, dy;
+            uint32_t uvo;
+            unsigned int out;
 
-                {
-                    /* bytes 0 and 2 are Cb+128 and Cr+128: already in the
-                     * 0x00VV00UU order the packed multiply wants */
-                    uint32_t n0 = base[0] & 0x00FF00FFu;
-                    uint32_t na = ca[0] & 0x00FF00FFu;
-                    uint32_t nb = cb2[0] & 0x00FF00FFu;
-                    uint32_t n1 = base[ko] & 0x00FF00FFu;
-                    /* +128 per lane rounds to nearest; a lane peaks at
-                     * 255*256 = 65280, so it still cannot carry into the
-                     * other lane */
-                    uint32_t acc = 0x00800080u + n0 * (uint32_t)w0 + na * (uint32_t)wa
-                                 + nb * (uint32_t)wb + n1 * (uint32_t)wc;
-                    uvo = ((acc >> 8) & 0x00FF00FFu) ^ 0x00800080u;
-                }
-            }
+            if (!grain && px == prev_px) { *dp = prev_out; continue; }
+
+            fs_lat_eval_pair(px, uv, &dy, &uvo);
 
             /* the tone curve carries luma, the node carries what the colour
              * does to it -- per pixel, so the pair's two lumas stay distinct */
-            oa = curve[ya] + dy;
-            ob = curve[yb] + dy;
+#ifdef __ARM__
+            /* Keep px in one register across the tetrahedral block instead of
+             * hoisting (px>>8)&0xFF and px>>24 into two extra registers. */
+            asm volatile("" : "+r"(px));
+#endif
+            oa = (int)curve[(px >> 8) & 0xFF] + dy;
+            ob = (int)curve[px >> 24] + dy;
             if (oa < 0) oa = 0; else if (oa > 255) oa = 255;
             if (ob < 0) ob = 0; else if (ob > 255) ob = 255;
 
@@ -689,12 +723,9 @@ static void fs_core_process_rows3(const unsigned char *curve, const uint32_t *uv
             }
 
             out = uvo | ((unsigned int)oa << 8) | ((unsigned int)ob << 24);
-            dp[i] = out;
+            *dp = out;
             prev_px = px; prev_out = out;
         }
-
-        sp += words;
-        dp += words;
     }
 
     *rnd_state = rnd;

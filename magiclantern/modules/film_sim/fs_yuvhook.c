@@ -217,24 +217,8 @@ static void fs_hdr_burn(unsigned char *gp, int width, int rows, int stride,
 
     if (band_h <= bar_h) {
         /* in the bar, on paper */
-        for (y = 0; y < top; y++) {
-            unsigned char *row = gp + (size_t)y * stride;
-            for (int x = 0; x + 1 < width; x += 2) {
-                row[x * 2 + 0] = 0;
-                row[x * 2 + 1] = 255;
-                row[x * 2 + 2] = 0;
-                row[x * 2 + 3] = 255;
-            }
-        }
-        for (y = top + box_h + band_h; y < rows; y++) {
-            unsigned char *row = gp + (size_t)y * stride;
-            for (int x = 0; x + 1 < width; x += 2) {
-                row[x * 2 + 0] = 0;
-                row[x * 2 + 1] = 255;
-                row[x * 2 + 2] = 0;
-                row[x * 2 + 3] = 255;
-            }
-        }
+        fs_fill_paper_rows(gp, stride, width, 0, top);
+        fs_fill_paper_rows(gp, stride, width, top + box_h + band_h, rows);
         y0 = top + box_h;
     } else {
         /* no room: draw over the picture, and paint the bars here, because
@@ -388,13 +372,6 @@ static uint32_t fs_yuv_grade_cached(void *buf, int width, int rows, int stride,
     } else {
         fs_hdr_ms = 0;
     }
-    /*
-     * Record the fingerprint here, after every stage has written: the bars and
-     * the band change the bytes, and a fingerprint taken before them made the
-     * camera's second hook call for the same shot look like a new frame.
-     */
-    fs_yuv_note_graded(buf, (uint32_t)stride, rows);
-
     fs_tr_band = get_ms_clock();
     if (gp != (unsigned char *)buf)
         /*
@@ -406,6 +383,14 @@ static uint32_t fs_yuv_grade_cached(void *buf, int width, int rows, int stride,
          */
         fs_dcache_clean(gp + (size_t)fs_clean_from * stride,
                         (uint32_t)(fs_clean_to - fs_clean_from) * stride);
+    /*
+     * Record the fingerprint here, after every stage has written AND after
+     * D-cache write-back has landed in DRAM: the bars and the band change the
+     * bytes, and a fingerprint taken before them (or before D-cache clean)
+     * made the camera's second hook call for the same shot look like a new
+     * frame.
+     */
+    fs_yuv_note_graded(buf, (uint32_t)stride, rows);
     fs_tr_clean = get_ms_clock();
     fs_tr_clean_us = get_us_clock();
     return ms;
@@ -652,7 +637,11 @@ static int fs_yuv_picture(const void *p, uint32_t bytes)
  */
 static int fs_yuv_reaches(const void *p, uint32_t stride, uint32_t row)
 {
-    const unsigned char *q = (const unsigned char *)p + (size_t)row * stride;
+    /* Sample at the horizontal centre of the row so vertical aspect bars
+     * (1:1, 4:3, 4:5) at the left/right edges are never mistaken for blank
+     * memory on the camera's second hook call. */
+    uint32_t x0 = (stride > 1024u) ? ((stride / 2u - 256u) & ~3u) : 0u;
+    const unsigned char *q = (const unsigned char *)p + (size_t)row * stride + x0;
     int zeros = 0, i, md = 0;
     for (i = 0; i < 128; i++) {
         int y0 = q[1], y1 = q[3];
@@ -672,7 +661,19 @@ static int fs_yuv_safe_rows(const void *p, uint32_t stride, uint32_t plane_bytes
                             int want)
 {
     int rows = (int)(plane_bytes / stride), i;
+    int num, den, width = (int)(stride / 2);
     if (want > 0 && want < rows) rows = want;
+    /* When horizontal aspect bars are active, rows below gy1 are painted zero
+     * on the first pass; check the last active picture row (gy1 - 1) as well so
+     * a repeat call does not halve `rows` to 1824. */
+    if (fs_bars_mode > 0 && fs_core_aspect_ratio(fs_bars_mode, &num, &den)) {
+        int box_h = (width * num) / den;
+        if (box_h > 0 && box_h < rows) {
+            int gy1 = (rows - box_h) / 2 + box_h;
+            if (fs_yuv_reaches(p, stride, (uint32_t)(gy1 - 1)))
+                return rows;
+        }
+    }
     for (i = 0; i < 6 && rows > 0; i++) {
         if (fs_yuv_reaches(p, stride, (uint32_t)(rows - 1)))
             return rows;
@@ -860,13 +861,19 @@ static uint32_t fs_yuv_finger(const void *p, uint32_t stride, int rows)
 {
     const unsigned char *b = (const unsigned char *)p;
     uint32_t h = 2166136261u;
+    /* Sample the central 50% of the frame horizontally and vertically so
+     * horizontal bars (65:24, 2.39:1, 16:9) and vertical bars (1:1, 4:3, 4:5)
+     * never zero out the fingerprint. */
+    uint32_t x0 = (stride > 64u) ? ((stride / 4u) & ~3u) : 0u;
+    int y0 = (rows >= 8) ? (rows / 4) : 0;
+    int span = (rows >= 8) ? (rows / 2) : rows;
     int i, x;
 
     if (!b || stride < 8u || rows < 2)
         return 0;
     for (i = 0; i < 32; i++) {
-        uint32_t r = (uint32_t)((long long)i * (rows - 1) / 31);
-        const unsigned char *q = b + (size_t)r * stride;
+        uint32_t r = (uint32_t)(y0 + (int)((long long)i * (span - 1) / 31));
+        const unsigned char *q = b + (size_t)r * stride + x0;
         for (x = 0; x < 16; x++)
             h = (h ^ q[x * 4 + 1]) * 16777619u;
     }
@@ -1030,8 +1037,26 @@ static void fs_yuv_hook_body(uint32_t *regs, uint32_t *stack, uint32_t pc)
              * then takes to put the file on the card. */
             fs_hook_ms = get_ms_clock();
             fs_hook_shots++;
-            if ((pb = fs_yuv_plane_bytes(st)) == 0 ||
-                (r = fs_yuv_safe_rows(buf, st, pb, fs_yuv_grade_rows)) <= 0) {
+            pb = fs_yuv_plane_bytes(st);
+            if (!pb) {
+                fs_yuv_diag_set(pc, 4);
+                goto bare_done;
+            }
+            r = fs_yuv_safe_rows(buf, st, pb, fs_yuv_grade_rows);
+            /*
+             * The camera calls this hook more than once per shot (first for the
+             * CR2 preview, then for the standalone JPEG at the same bare DRAM
+             * pointer 0x4c394000). Black bars painted on the first call make row
+             * 3647 read as zeros, which fs_yuv_reaches would take for unmapped
+             * memory and halve `r` to 1824 -- causing the second call to grade
+             * the top half (0..1824) a second time. Keep the span the first
+             * call established.
+             */
+            if ((uint32_t)buf == fs_yuv_done_addr && st == fs_yuv_done_stride &&
+                get_ms_clock() - fs_yuv_done_ms < 5000u &&
+                fs_yuv_done_rows > r)
+                r = fs_yuv_done_rows;
+            if (r <= 0) {
                 fs_yuv_diag_set(pc, 4);
                 goto bare_done;
             }
@@ -1063,7 +1088,6 @@ static void fs_yuv_hook_body(uint32_t *regs, uint32_t *stack, uint32_t pc)
                 fs_yuv_graded++;
                 if (pc == FS_YUV_ADDR_STILL) fs_yuv_g_still++;
                 else if (pc == FS_YUV_ADDR_SSRAW) fs_yuv_g_ssraw++;
-                fs_yuv_note_graded(buf, st, r);
                 fs_yuv_bare_pic = 1;
             }
 bare_done:
@@ -1116,7 +1140,6 @@ bare_done:
             fs_yuv_graded++;
             if (pc == FS_YUV_ADDR_STILL) fs_yuv_g_still++;
             else if (pc == FS_YUV_ADDR_SSRAW) fs_yuv_g_ssraw++;
-            fs_yuv_note_graded((void *)a, stride, r);
             fs_yuv_chunk_used = ci;
         }
 graded_done:

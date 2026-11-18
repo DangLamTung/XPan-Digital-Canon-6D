@@ -1228,15 +1228,10 @@ se_err se_cam_develop(const char *cr2_path, const char *stock_path,
     d.width = ow;
     d.height = oh;
     se_cam_aspect_window(ow, oh, &d.crop_x0, &d.crop_x1, &d.crop_y0, &d.crop_y1);
+    se_log("develop: frame %dx%d decoded, crop x %d..%d y %d..%d (aspect %d)",
+           ow, oh, d.crop_x0, d.crop_x1, d.crop_y0, d.crop_y1, se_aspect_mode);
     aspect_target(se_aspect_mode, &d.tgt_w, &d.tgt_h);
     if (d.tgt_w > RST_MAXW || d.tgt_h <= 0) { d.tgt_w = 0; d.tgt_h = 0; }
-    /* The resize-to-target path maps source rows onto output rows with
-     * oy = sy*tgt_h/src_h and flushes the accumulated row on change. That is
-     * the only place in the develop where a row can be written twice or not at
-     * all, and a "half the frame is ungraded" report points straight at it:
-     * with an aspect set, write the crop 1:1 from the decoded rows instead. */
-    d.tgt_w = 0;
-    d.tgt_h = 0;
     d.src_w = d.crop_x1 - d.crop_x0;
     d.src_h = d.crop_y1 - d.crop_y0;
     /* Thumbnail geometry: 160 px wide, the framing's own aspect. */

@@ -136,7 +136,7 @@ static struct menu_entry aftrace_menu[] =
 
 static unsigned int aftrace_init(void)
 {
-    menu_add("Debug", aftrace_menu, COUNT(aftrace_menu));
+    menu_add("Debug", aftrace_menu, COUNT(aftrace_menu) - 1);
     return 0;
 }
 
