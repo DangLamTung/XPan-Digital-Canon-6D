@@ -9839,6 +9839,33 @@ static void fs_yuv_poll_task(void *unused) {
   fs_log_flush();
 }
 
+static void fs_console_quiet_task(void *unused);
+/*
+ * Close ML's console shortly after boot.
+ *
+ * Whether the console stays up is ML's own persistent switch
+ * (CONFIG_INT("module.console", module_console_enabled, 0) in src/module.c),
+ * and that variable is static -- no module can clear it. What a module can do is
+ * call console_hide(), which src/module.c itself calls at the end of loading
+ * when the switch is off. Doing it a few times after boot wins the race against
+ * module loading and any late console_show(), so the camera comes up on the
+ * normal screen even when the card's config still says module.console=1.
+ */
+extern void console_hide(void);
+
+static void fs_console_quiet_task(void *unused)
+{
+  static const int when[] = { 1200, 2500, 5000, 9000, 15000 };
+  unsigned i;
+  uint32_t last = 0;
+  (void)unused;
+  for (i = 0; i < COUNT(when); i++) {
+    msleep(when[i] - last);
+    last = when[i];
+    console_hide();
+  }
+}
+
 static unsigned int film_sim_init() {
   fs_log("film_sim_init: module loaded (enable=%d preset=%d strength=%d "
          "grain=%d fps=%d user1=%d gradeq=%d)",
@@ -9848,6 +9875,7 @@ static unsigned int film_sim_init() {
    * quality the card asked for rather than the default until somebody opens
    * the menu. */
   fs_yuvlook_set_quality(film_sim_gradeq);
+  task_create("fs_console_quiet", 0x1e, 0x800, fs_console_quiet_task, 0);
   /* Write the boot line immediately.
    *
    * fs_log() only fills a RAM ring buffer; the first flush used to happen
