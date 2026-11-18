@@ -31,6 +31,7 @@
 #include <module.h>
 #include <picstyle.h>
 #include <powersave.h>
+#include <ptp.h>
 #include <shoot.h>          /* close_liveview(): stop the sensor, not just ignore it */
 #include <property.h>
 #include <vram.h>
@@ -6185,6 +6186,287 @@ static void fs_register_look(const char *file, const char *label,
 
 static int fs_watch_hits;
 
+/* ------------------------------------------- Wi-Fi / USB PTP/IP .fs push
+ *
+ * Canon 6D 1.1.6 runs a PTP/IP server on TCP port 15740 when Wi-Fi is enabled
+ * in EOS Utility (Computer) mode, and dispatches every incoming operation
+ * through the same PTPCommandManager linked list at *(uint32_t *)0x0007AC6C
+ * that `ptp_register_handler` (0xFF292A10, exported in 6D_116.sym) inserts
+ * into.
+ *
+ * Opcode 0x9998 (FS_PTP_OP_PUSH_FS) accepts a .fs recipe in either:
+ *   1. Data-phase mode (dataphase=2): payload is "FILE:<CODE>\n<recipe...>"
+ *      or raw "<recipe...>", param1 = apply_immediately (0 or 1).
+ *   2. Parameter-only mode (dataphase=0):
+ *      - param1 & 0xFF == 1: begin/reset; param2..param5 carry up to 16 ASCII
+ *        bytes of the target stock code (e.g. "50D" or "WIFILOOK").
+ *      - param1 & 0xFF == 2: append chunk; (param1 >> 8) & 0xFF is byte count
+ *        (1..16) packed little-endian in param2..param5.
+ *      - param1 & 0xFF == 3: commit; param2 = apply_immediately (0 or 1).
+ *      - param1 & 0xFF == 4: status ping; returns [film_active_count,
+ *        film_sim_stock, fs_ptp_pushed_count].
+ *
+ * The PTP handler itself does zero SD card I/O: it copies bytes into
+ * `fs_ptp_rx_buf` and returns PTP_RC_OK (0x2001). `fs_film_watch_task` drains
+ * `fs_ptp_rx_ready` on its own DryOS task, writes `ML/FILM/<CODE>.fs`
+ * atomically, registers the stock on the shelf if new, and triggers a live
+ * 3D YUV lattice re-bake.
+ */
+#define FS_PTP_OP_PUSH_FS  0x9998u
+#define FS_PTP_MGR_ADDR    0x0007AC6Cu
+#define FS_PTP_REMOVE_ADDR 0xFF292AE8u
+#define FS_PTP_RX_MAX      8192
+
+static char fs_ptp_rx_buf[FS_PTP_RX_MAX];
+static char fs_ptp_rx_name[40];
+static volatile int fs_ptp_rx_len = 0;
+static volatile int fs_ptp_rx_ready = 0;
+static volatile int fs_ptp_rx_apply = 0;
+static volatile uint32_t fs_ptp_pushed_count = 0;
+
+static void fs_ptp_unpack_u32(char *dst, int max_n, uint32_t p2, uint32_t p3,
+                              uint32_t p4, uint32_t p5)
+{
+  uint32_t w[4];
+  int i;
+  w[0] = p2; w[1] = p3; w[2] = p4; w[3] = p5;
+  for (i = 0; i < max_n && i < 16; i++)
+    dst[i] = (char)((w[i >> 2] >> ((i & 3) * 8)) & 0xFF);
+}
+
+static int fs_ptp_push_handler(void *priv, struct ptp_context *context,
+                               uint32_t opcode, uint32_t session,
+                               uint32_t transaction, uint32_t param1,
+                               uint32_t param2, uint32_t param3,
+                               uint32_t param4, uint32_t param5)
+{
+  struct ptp_msg msg;
+  int dsz = 0;
+  (void)priv;
+  (void)opcode;
+
+  memset(&msg, 0, sizeof(msg));
+  msg.id = PTP_RC_OK;
+  msg.session = session;
+  msg.transaction = transaction;
+
+  if (context && context->get_data_size)
+    dsz = context->get_data_size(context->handle);
+
+  if (dsz > 0 && context && context->recv_data) {
+    if (dsz >= FS_PTP_RX_MAX) {
+      msg.id = PTP_RC_GeneralError;
+    } else {
+      context->recv_data(context->handle, fs_ptp_rx_buf, dsz, 0, 0);
+      fs_ptp_rx_buf[dsz] = '\0';
+      if (dsz > 6 && !strncmp(fs_ptp_rx_buf, "FILE:", 5)) {
+        char *nl = strchr(fs_ptp_rx_buf + 5, '\n');
+        if (nl) {
+          int nlen = (int)(nl - (fs_ptp_rx_buf + 5));
+          int blen;
+          if (nlen > 0 && fs_ptp_rx_buf[5 + nlen - 1] == '\r')
+            nlen--;
+          if (nlen >= (int)sizeof(fs_ptp_rx_name))
+            nlen = (int)sizeof(fs_ptp_rx_name) - 1;
+          memcpy(fs_ptp_rx_name, fs_ptp_rx_buf + 5, nlen);
+          fs_ptp_rx_name[nlen] = '\0';
+          blen = dsz - (int)((nl + 1) - fs_ptp_rx_buf);
+          memmove(fs_ptp_rx_buf, nl + 1, blen + 1);
+          dsz = blen;
+        }
+      }
+      fs_ptp_rx_len = dsz;
+      fs_ptp_rx_apply = (param1 != 0);
+      fs_ptp_rx_ready = dsz;
+      fs_ptp_pushed_count++;
+      msg.param_count = 2;
+      msg.param[0] = (uint32_t)dsz;
+      msg.param[1] = fs_ptp_pushed_count;
+    }
+  } else {
+    uint32_t sub = param1 & 0xFFu;
+    if (sub == 1u) {
+      fs_ptp_rx_ready = 0;
+      fs_ptp_rx_len = 0;
+      memset(fs_ptp_rx_name, 0, sizeof(fs_ptp_rx_name));
+      fs_ptp_unpack_u32(fs_ptp_rx_name, 16, param2, param3, param4, param5);
+      fs_ptp_rx_name[sizeof(fs_ptp_rx_name) - 1] = '\0';
+      msg.param_count = 1;
+      msg.param[0] = 0;
+    } else if (sub == 2u) {
+      int nbytes = (int)((param1 >> 8) & 0xFFu);
+      if (nbytes < 0) nbytes = 0;
+      if (nbytes > 16) nbytes = 16;
+      if (fs_ptp_rx_len + nbytes < FS_PTP_RX_MAX) {
+        fs_ptp_unpack_u32(fs_ptp_rx_buf + fs_ptp_rx_len, nbytes,
+                          param2, param3, param4, param5);
+        fs_ptp_rx_len += nbytes;
+        fs_ptp_rx_buf[fs_ptp_rx_len] = '\0';
+        msg.param_count = 1;
+        msg.param[0] = (uint32_t)fs_ptp_rx_len;
+      } else {
+        msg.id = PTP_RC_GeneralError;
+      }
+    } else if (sub == 3u) {
+      fs_ptp_rx_apply = (param2 != 0);
+      fs_ptp_rx_ready = fs_ptp_rx_len;
+      fs_ptp_pushed_count++;
+      msg.param_count = 2;
+      msg.param[0] = (uint32_t)fs_ptp_rx_len;
+      msg.param[1] = fs_ptp_pushed_count;
+    } else if (sub == 4u) {
+      msg.param_count = 3;
+      msg.param[0] = (uint32_t)film_active_count;
+      msg.param[1] = (uint32_t)film_sim_stock;
+      msg.param[2] = fs_ptp_pushed_count;
+    } else {
+      msg.id = PTP_RC_ParameterNotSupported;
+    }
+  }
+
+  if (context && context->send_resp)
+    context->send_resp(context->handle, &msg);
+  return 0;
+}
+
+static int fs_ptp_is_registered(void)
+{
+  uint32_t mgr = *(volatile uint32_t *)FS_PTP_MGR_ADDR;
+  uint32_t head, cur;
+  int steps = 0;
+  if (mgr < 0x1000u || mgr >= 0x40000000u)
+    return 0;
+  head = mgr + 4u;
+  cur = *(volatile uint32_t *)head;
+  while (cur != head && cur >= 0x1000u && cur < 0x40000000u && steps < 256) {
+    if (*(volatile uint16_t *)(cur + 8u) == (uint16_t)FS_PTP_OP_PUSH_FS)
+      return 1;
+    cur = *(volatile uint32_t *)cur;
+    steps++;
+  }
+  return 0;
+}
+
+static void fs_ptp_ensure_registered(void)
+{
+  if (*(volatile uint32_t *)FS_PTP_MGR_ADDR != 0 && !fs_ptp_is_registered()) {
+    uint32_t rc = ptp_register_handler(FS_PTP_OP_PUSH_FS,
+                                       (void *)fs_ptp_push_handler, 0);
+    fs_log("ptp: registered Wi-Fi/USB .fs push opcode 0x%04x (rc=%u)",
+           FS_PTP_OP_PUSH_FS, (unsigned)rc);
+    fs_log_flush();
+  }
+}
+
+static void fs_ptp_unregister(void)
+{
+  if (fs_ptp_is_registered()) {
+    typedef int (*fs_ptp_rem_fn)(uint32_t, int);
+    ((fs_ptp_rem_fn)FS_PTP_REMOVE_ADDR)(FS_PTP_OP_PUSH_FS, 0);
+  }
+}
+
+static void fs_ptp_parse_recipe_name(const char *buf, char *out, int cap)
+{
+  const char *p = buf;
+  out[0] = '\0';
+  while (p && *p) {
+    while (*p == ' ' || *p == '\t' || *p == '\r') p++;
+    if (!strncmp(p, "NAME ", 5) || !strncmp(p, "NAME\t", 5)) {
+      int i = 0;
+      p += 5;
+      while (*p == ' ' || *p == '\t') p++;
+      while (*p && *p != '\r' && *p != '\n' && i < cap - 1)
+        out[i++] = *p++;
+      out[i] = '\0';
+      return;
+    }
+    p = strchr(p, '\n');
+    if (p) p++;
+  }
+}
+
+static void fs_ptp_drain_rx(void)
+{
+  int len = fs_ptp_rx_ready;
+  int apply = fs_ptp_rx_apply;
+  char code[16], label[32], tmp_path[64], dst_path[64];
+  const char *raw_name;
+  int i = 0, idx = -1;
+  FILE *fp;
+
+  if (len <= 0)
+    return;
+  fs_ptp_rx_ready = 0;
+
+  fs_ptp_parse_recipe_name(fs_ptp_rx_buf, label, sizeof(label));
+  raw_name = fs_ptp_rx_name[0] ? fs_ptp_rx_name : (label[0] ? label : "WIFILOOK");
+  if (strrchr(raw_name, '/'))
+    raw_name = strrchr(raw_name, '/') + 1;
+  while (*raw_name && *raw_name != '.' && i < (int)sizeof(code) - 1) {
+    char c = *raw_name++;
+    if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+        (c >= '0' && c <= '9') || c == '_' || c == '-')
+      code[i++] = c;
+  }
+  code[i] = '\0';
+  if (!code[0])
+    snprintf(code, sizeof(code), "WIFILOOK");
+
+  { static int ok; fs_ensure_dir("ML/FILM", &ok); }
+  snprintf(tmp_path, sizeof(tmp_path), "ML/FILM/%s.TMP", code);
+  snprintf(dst_path, sizeof(dst_path), "ML/FILM/%s.fs", code);
+
+  FIO_RemoveFile(tmp_path);
+  fp = FIO_CreateFile(tmp_path);
+  if (!fp) {
+    fs_log("ptp: failed to create %s", tmp_path);
+    fs_log_flush();
+    return;
+  }
+  FIO_WriteFile(fp, fs_ptp_rx_buf, len);
+  FIO_CloseFile(fp);
+  FIO_RemoveFile(dst_path);
+  FIO_RenameFile(tmp_path, dst_path);
+
+  /* Match existing stock by code, alias, or name; if new, register an XML */
+  for (i = 0; i < film_active_count; i++) {
+    const char *al = fs_stock_alias(&film_active_table[i]);
+    if (!strcasecmp(film_active_table[i].code, code) ||
+        (al && !strcasecmp(al, code)) ||
+        (label[0] && !strcasecmp(film_active_table[i].name, label))) {
+      idx = i;
+      break;
+    }
+  }
+  if (idx < 0) {
+    fs_register_look(code, label[0] ? label : code, "PUSHED OVER WIFI/PTP");
+    fs_load_films_xml();
+    fs_group_by_artwork();
+    for (i = 0; i < film_active_count; i++) {
+      if (!strcasecmp(film_active_table[i].code, code)) {
+        idx = i;
+        break;
+      }
+    }
+  }
+
+  if (apply && idx >= 0) {
+    film_sim_stock = idx;
+    fs_apply_film_now();
+    beep_times(1);
+  } else {
+    fs_yuvlook_dirty = 1;
+  }
+
+  fs_log("ptp: saved %s (%d B) -> stock %d ('%s') apply=%d",
+         dst_path, len, idx,
+         (idx >= 0) ? film_active_table[idx].name : label, apply);
+  fs_log_flush();
+  NotifyBox(2500, "WiFi .fs: %s",
+            (idx >= 0) ? film_active_table[idx].name : (label[0] ? label : code));
+}
+
 /* ------------------------------------------------- recipe inbox watcher
  *
  * The transport is somebody else's problem: an Eye-Fi card uploads, a card
@@ -6253,6 +6535,7 @@ static void fs_film_watch_task(void *unused)
 {
   unsigned int known = 0;
   unsigned int pending = 0;
+  int ticks = 0;
 
   /* the catalogue was just loaded, so this is the state on disk */
   known = fs_film_dir_sig(NULL);   /* no count: this runs before the card is
@@ -6261,7 +6544,8 @@ static void fs_film_watch_task(void *unused)
 
   while (1) {
     unsigned int sig;
-    msleep(3000);
+    msleep(500);
+    fs_ptp_ensure_registered();
 
     /* never reload the table out from under a screen that is reading it */
     /* also hold off while a develop is reading/writing the card: this scan
@@ -6270,6 +6554,17 @@ static void fs_film_watch_task(void *unused)
     if (fs_gui_active || fs_darkroom_active || fs_creator_active ||
         fs_wb_active || fs_develop_active || fs_view_active)
       continue;
+
+    if (fs_ptp_rx_ready > 0) {
+      fs_ptp_drain_rx();
+      known = fs_film_dir_sig(NULL);
+      pending = known;
+      fs_watch_hits = 0;
+    }
+
+    if (++ticks < 6)
+      continue;
+    ticks = 0;
 
     {
       /* If the directory cannot be read, say nothing and try again: the card
@@ -9593,10 +9888,10 @@ static struct menu_entry film_sim_menu[] = {
         .children = fs_menu_recipes,
     },
     {
-        .name = "Wheel",
+        .name = "Fuji Recipe",
         .select = menu_open_submenu,
         .icon_type = IT_ACTION,
-        .help = "Fuji recipe bundle plus the WB grid.",
+        .help = "Fuji recipe fields and the WB grid.",
         .children = fs_menu_fuji,
     },
     {
@@ -10114,6 +10409,7 @@ static unsigned int film_sim_init() {
 }
 
 static unsigned int film_sim_deinit() {
+  fs_ptp_unregister();
   fs_yuvhook_uninstall();
   /*
    * Deliberately NOT freeing fs_dump_raw / fs_dump_graded here.
