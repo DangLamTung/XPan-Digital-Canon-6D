@@ -1,17 +1,15 @@
 # XPan Digital — Canon EOS 6D
 
-![A group on a lookout terrace at golden hour, 65:24, straight off the
-camera](docs/img/promo.jpg)
+![Đà Lạt, 65:24](docs/img/promo.jpg)
 
-One frame, one camera, one file: the camera's own JPEG, cropped to the 65:24
-window it framed and resized — nothing developed again, nothing graded here.
-Đà Lạt, 2 November 2026.
+One frame, one camera: the camera's own JPEG, cut to the 65:24 window it was
+framed to. Đà Lạt, 2 November 2026.
 
-![The same frame through Classic Chrome, Portra 400 and Velvia 50](docs/img/looks.jpg)
+![The same frame with no look, then Classic Chrome, Portra 400 and Velvia 50](docs/img/looks.jpg)
 
-The same frame through three shipped recipes — cool and muted, warm and open,
-saturated and contrasty. A stock here is a bundle of curve, hue axes, split tone
-and grain, not a colour filter, and the gap between these three is the product.
+The same frame four times: untouched, then three shipped recipes. Two of the
+three carry their measured score; Classic Chrome is a hand-written look and has
+none.
 
 ## What those three images do and do not prove
 
