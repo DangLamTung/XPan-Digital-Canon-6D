@@ -3,120 +3,155 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>film_sim — film colour for the Canon 6D under Magic Lantern</title>
-<style>
-  :root{--ink:#15161a;--dim:#5b5f6b;--line:#e3e2df;--bg:#faf9f6;--accent:#8a5a2b}
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--ink);
-       font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif}
-  main{max-width:860px;margin:0 auto;padding:56px 22px 96px}
-  h1{font-size:34px;line-height:1.15;margin:0 0 6px;letter-spacing:-.02em}
-  .sub{color:var(--dim);margin:0 0 34px}
-  h2{font-size:20px;margin:44px 0 10px;letter-spacing:-.01em}
-  p{margin:0 0 14px}
-  a{color:var(--accent)}
-  code{background:#f1efea;padding:1px 5px;border-radius:4px;font-size:14px}
-  table{border-collapse:collapse;width:100%;margin:14px 0 6px;font-size:15px}
-  th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line)}
-  th{color:var(--dim);font-weight:600;font-size:13px;text-transform:uppercase;
-     letter-spacing:.04em}
-  td.n{text-align:right;font-variant-numeric:tabular-nums}
-  .lede{font-size:18px}
-  .box{background:#fff;border:1px solid var(--line);border-radius:10px;
-       padding:16px 18px;margin:18px 0}
-  .warn{border-left:3px solid #b4544a}
-  footer{margin-top:56px;color:var(--dim);font-size:14px;
-         border-top:1px solid var(--line);padding-top:18px}
-</style>
+<title>XPan Digital — film colour for the Canon 6D</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-<main>
 
-<h1>film&nbsp;sim</h1>
-<p class="sub">Film colour for the Canon EOS 6D, running under Magic Lantern.
-Recipes, an in-camera engine, and a score for every stock.</p>
+<header>
+  <div class="wrap top">
+    <div class="identity"><span class="mark"></span>XPan Digital</div>
+    <a class="repo" href="https://github.com/DangLamTung/XPan-Digital-Canon-6D">github.com/DangLamTung/XPan-Digital-Canon-6D</a>
+    <nav aria-label="sections">
+      <a href="#catalog" aria-current="page">Catalogue</a>
+      <a href="#method">Method</a>
+      <a href="#research">Research</a>
+    </nav>
+  </div>
+</header>
 
-<p class="lede">A stock here is a recipe, not a filter: a tone curve, 48 per-hue
-sectors, a split tone for shadows and highlights, halation and grain. The same
-recipe renders two ways — a full-precision RGB develop, and a 12×17×17 lattice
-baked for the camera's YUV buffer — so the picture on the screen and the file on
-the card are the same look.</p>
-
-<h2>The lattice</h2>
-<p>LiveView and the in-shutter grade both run against a baked table with
-<code>12</code> nodes along luma and <code>17</code> along each chroma axis —
-<code>SE_YUV3_NY</code> and <code>SE_YUV3_NC</code>, 3468 nodes. It is rebuilt
-when the stock changes, not per frame.</p>
-
-<h2>How a stock is scored</h2>
-<p>Each recipe renders every frame of a <b>101-frame corpus</b> through the same
-engine, is compared against a Dehancer reference of that frame in
-<b>CIEDE2000</b> per pixel, and scored by the median per frame. Twenty stocks
-carry a measured score. Lower is better.</p>
-
-<table>
-  <thead><tr><th>Stock</th><th class="n">frames</th><th class="n">mean ΔE00</th>
-  <th class="n">median ΔE00</th><th class="n">≤ 5.0</th></tr></thead>
-  <tbody>
-      <tr><td>Xp2 Super</td><td class="n">101</td><td class="n">1.12</td><td class="n"><b>0.99</b></td><td class="n">100%</td></tr>
-      <tr><td>Acros 100</td><td class="n">101</td><td class="n">2.10</td><td class="n"><b>2.17</b></td><td class="n">100%</td></tr>
-      <tr><td>Provia 100f</td><td class="n">101</td><td class="n">2.65</td><td class="n"><b>2.57</b></td><td class="n">100%</td></tr>
-      <tr><td>Gold 200</td><td class="n">101</td><td class="n">3.10</td><td class="n"><b>3.07</b></td><td class="n">99%</td></tr>
-      <tr><td>Portra 160vc</td><td class="n">101</td><td class="n">3.23</td><td class="n"><b>3.10</b></td><td class="n">95%</td></tr>
-      <tr><td>Hp5 Plus</td><td class="n">101</td><td class="n">3.23</td><td class="n"><b>3.21</b></td><td class="n">99%</td></tr>
-      <tr><td>Colorplus 200</td><td class="n">101</td><td class="n">3.20</td><td class="n"><b>3.21</b></td><td class="n">99%</td></tr>
-      <tr><td>Portra 800</td><td class="n">101</td><td class="n">3.33</td><td class="n"><b>3.25</b></td><td class="n">100%</td></tr>
-      <tr><td>Ektachrome E100</td><td class="n">101</td><td class="n">3.28</td><td class="n"><b>3.32</b></td><td class="n">99%</td></tr>
-      <tr><td>Superia 200</td><td class="n">102</td><td class="n">3.49</td><td class="n"><b>3.33</b></td><td class="n">96%</td></tr>
-      <tr><td>Portra 400</td><td class="n">101</td><td class="n">3.35</td><td class="n"><b>3.36</b></td><td class="n">98%</td></tr>
-      <tr><td>Velvia 100</td><td class="n">101</td><td class="n">3.49</td><td class="n"><b>3.39</b></td><td class="n">94%</td></tr>
-      <tr><td>Portra 160nc</td><td class="n">101</td><td class="n">3.61</td><td class="n"><b>3.56</b></td><td class="n">92%</td></tr>
-      <tr><td>Cinestill 50d</td><td class="n">101</td><td class="n">3.70</td><td class="n"><b>3.57</b></td><td class="n">91%</td></tr>
-      <tr><td>Cinestill 800t</td><td class="n">101</td><td class="n">3.76</td><td class="n"><b>3.74</b></td><td class="n">98%</td></tr>
-      <tr><td>Ektar 100</td><td class="n">101</td><td class="n">3.88</td><td class="n"><b>3.76</b></td><td class="n">85%</td></tr>
-      <tr><td>Pro 400h</td><td class="n">101</td><td class="n">3.76</td><td class="n"><b>3.82</b></td><td class="n">99%</td></tr>
-      <tr><td>Portra 160</td><td class="n">101</td><td class="n">3.96</td><td class="n"><b>3.90</b></td><td class="n">86%</td></tr>
-      <tr><td>Velvia 50</td><td class="n">101</td><td class="n">4.16</td><td class="n"><b>3.99</b></td><td class="n">75%</td></tr>
-      <tr><td>Kodachrome 64</td><td class="n">101</td><td class="n">4.72</td><td class="n"><b>4.80</b></td><td class="n">65%</td></tr>
-  </tbody>
-</table>
-<p class="sub" style="font-size:14px">Twenty of the 46 shipped recipes have a
-measured score. The rest are hand-written looks, not calibrated stocks.</p>
-
-<h2>Colour research</h2>
-<p>The interesting questions turned out to be measurable ones:</p>
-<ul>
-  <li><b>Classic Negative is Fujicolor Superia.</b> Against the Superia 200
-  reference, <code>SUP200.fs</code> scores a median ΔE00 of 3.07 on frame 001,
-  while the hand-written <code>classicneg.fs</code> scores 9.43 — three times the
-  error — which is why it is kept out of calibrated comparisons.</li>
-  <li><b>Ektar 100 and Portra 160 look alike, and the reference says the same.</b>
-  Our renders separate them by a median 5.19 ΔE00; Dehancer's own renders of the
-  two separate them by only 3.74. The likeness is in the films.</li>
-  <li><b>Grain was invisible because the amplitude floored to zero.</b>
-  <code>grain × 62 / 100 × 2 / 7</code> returned <code>0</code> for every stock
-  with GRAIN ≤ 6, so Ektar and Portra drew no grain at all. The curve is now
-  4/7 with a floor of 2.</li>
-</ul>
-
-<div class="box warn">
-<b>What this page does not claim.</b> Scores are against Dehancer, not against
-film. A corpus of 101 frames is a sample, not a law. The three-up strip in the
-repository shows that recipes differ, not that they are right — the number is the
-evidence.
+<div class="hero">
+  <div class="wrap intro">
+    <div>
+      <p class="model">CANON EOS 6D<span>·</span>DIGIC 5+<span>·</span>FIRMWARE 1.1.6<span>·</span>MAGIC LANTERN</p>
+      <h1>Film colour,<br>with a score.</h1>
+      <p class="summary">A stock here is a recipe, not a filter: a tone curve, 48 per-hue
+      sectors, a split tone, halation and grain. It renders twice — a full-precision RGB
+      develop and a 12 × 17 × 17 lattice for the camera's YUV buffer — so the picture on
+      the screen and the file on the card are the same look.</p>
+    </div>
+    <figure>
+      <div class="strip"><span></span><img src="img/promo.jpg" alt="Đà Lạt, 65:24"><span></span></div>
+      <figcaption><b>65:24</b> · Đà Lạt, 2 November 2026</figcaption>
+    </figure>
+  </div>
 </div>
 
-<h2>Code and data</h2>
-<p>Repository: <a href="https://github.com/DangLamTung/XPan-Digital-Canon-6D">DangLamTung/XPan-Digital-Canon-6D</a>.
-The full table, method and the list of things this project used to claim wrongly
-are in <a href="https://github.com/DangLamTung/XPan-Digital-Canon-6D/blob/wip-experiment/docs/lattice-and-calibration.md">docs/lattice-and-calibration.md</a>.</p>
+<main class="wrap">
+  <nav class="catalog" aria-label="brands">
+    <a href="#kodak">Kodak <span>9</span></a>
+    <a href="#fujifilm">Fujifilm <span>6</span></a>
+    <a href="#cinestill">CineStill <span>2</span></a>
+    <a href="#ilford">Ilford <span>2</span></a>
+    <a href="#other">Other <span>1</span></a>
+  </nav>
 
-<footer>
-Magic Lantern module for the Canon 6D (DIGIC 5+, firmware 1.1.6). Not
-affiliated with Canon, Fujifilm or the Magic Lantern project; stock names
-describe what a look imitates and are trademarks of their owners.
+  <div class="notes">
+    <span>20 calibrated stocks · 101-frame corpus · CIEDE2000 per pixel</span>
+    <span>lower is better</span>
+  </div>
+
+  <section class="group" id="kodak">
+    <h2><i></i>Kodak<small>9 calibrated</small></h2>
+    <table>
+      <thead><tr><th>Stock</th><th>mean ΔE00</th><th>median ΔE00</th><th>≤ 5.0</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Gold 200<p class="variant">101 frames · 99% at or under 5.0</p></th><td>3.10</td><td><b>3.07</b></td><td>99%</td></tr>
+        <tr><th scope="row">Portra 160VC<p class="variant">101 frames · 95% at or under 5.0</p></th><td>3.23</td><td><b>3.10</b></td><td>95%</td></tr>
+        <tr><th scope="row">ColorPlus 200<p class="variant">101 frames · 99% at or under 5.0</p></th><td>3.20</td><td><b>3.21</b></td><td>99%</td></tr>
+        <tr><th scope="row">Portra 800<p class="variant">101 frames · 100% at or under 5.0</p></th><td>3.33</td><td><b>3.25</b></td><td>100%</td></tr>
+        <tr><th scope="row">Portra 400<p class="variant">101 frames · 98% at or under 5.0</p></th><td>3.35</td><td><b>3.36</b></td><td>98%</td></tr>
+        <tr><th scope="row">Portra 160NC<p class="variant">101 frames · 92% at or under 5.0</p></th><td>3.61</td><td><b>3.56</b></td><td>92%</td></tr>
+        <tr><th scope="row">Ektar 100<p class="variant">101 frames · 85% at or under 5.0</p></th><td>3.88</td><td><b>3.76</b></td><td>85%</td></tr>
+        <tr><th scope="row">Portra 160<p class="variant">101 frames · 86% at or under 5.0</p></th><td>3.96</td><td><b>3.90</b></td><td>86%</td></tr>
+        <tr><th scope="row">Kodachrome 64<p class="variant">101 frames · 65% at or under 5.0</p></th><td>4.72</td><td><b>4.80</b></td><td>65%</td></tr>
+      </tbody>
+    </table>
+  </section>
+  <section class="group" id="fujifilm">
+    <h2><i></i>Fujifilm<small>6 calibrated</small></h2>
+    <table>
+      <thead><tr><th>Stock</th><th>mean ΔE00</th><th>median ΔE00</th><th>≤ 5.0</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Acros 100<p class="variant">101 frames · 100% at or under 5.0</p></th><td>2.10</td><td><b>2.17</b></td><td>100%</td></tr>
+        <tr><th scope="row">Provia 100F<p class="variant">101 frames · 100% at or under 5.0</p></th><td>2.65</td><td><b>2.57</b></td><td>100%</td></tr>
+        <tr><th scope="row">Superia 200<p class="variant">102 frames · 96% at or under 5.0</p></th><td>3.49</td><td><b>3.33</b></td><td>96%</td></tr>
+        <tr><th scope="row">Velvia 100<p class="variant">101 frames · 94% at or under 5.0</p></th><td>3.49</td><td><b>3.39</b></td><td>94%</td></tr>
+        <tr><th scope="row">Pro 400H<p class="variant">101 frames · 99% at or under 5.0</p></th><td>3.76</td><td><b>3.82</b></td><td>99%</td></tr>
+        <tr><th scope="row">Velvia 50<p class="variant">101 frames · 75% at or under 5.0</p></th><td>4.16</td><td><b>3.99</b></td><td>75%</td></tr>
+      </tbody>
+    </table>
+  </section>
+  <section class="group" id="cinestill">
+    <h2><i></i>CineStill<small>2 calibrated</small></h2>
+    <table>
+      <thead><tr><th>Stock</th><th>mean ΔE00</th><th>median ΔE00</th><th>≤ 5.0</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">CineStill 50D<p class="variant">101 frames · 91% at or under 5.0</p></th><td>3.70</td><td><b>3.57</b></td><td>91%</td></tr>
+        <tr><th scope="row">CineStill 800T<p class="variant">101 frames · 98% at or under 5.0</p></th><td>3.76</td><td><b>3.74</b></td><td>98%</td></tr>
+      </tbody>
+    </table>
+  </section>
+  <section class="group" id="ilford">
+    <h2><i></i>Ilford<small>2 calibrated</small></h2>
+    <table>
+      <thead><tr><th>Stock</th><th>mean ΔE00</th><th>median ΔE00</th><th>≤ 5.0</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">XP2 Super<p class="variant">101 frames · 100% at or under 5.0</p></th><td>1.12</td><td><b>0.99</b></td><td>100%</td></tr>
+        <tr><th scope="row">HP5 Plus<p class="variant">101 frames · 99% at or under 5.0</p></th><td>3.23</td><td><b>3.21</b></td><td>99%</td></tr>
+      </tbody>
+    </table>
+  </section>
+  <section class="group" id="other">
+    <h2><i></i>Other<small>1 calibrated</small></h2>
+    <table>
+      <thead><tr><th>Stock</th><th>mean ΔE00</th><th>median ΔE00</th><th>≤ 5.0</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Ektachrome E100<p class="variant">101 frames · 99% at or under 5.0</p></th><td>3.28</td><td><b>3.32</b></td><td>99%</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="prose" id="method">
+    <h2>How a stock is scored</h2>
+    <p>Each recipe renders every frame of a <b>101-frame corpus</b> through the same
+    engine, is compared against a Dehancer reference of that frame in
+    <b>CIEDE2000</b> per pixel, and scored by the median per frame. Twenty of the 46
+    shipped recipes have a score; the rest are hand-written looks, not calibrated
+    stocks.</p>
+    <p>The lattice that runs on the camera has <code>12</code> nodes along luma and
+    <code>17</code> along each chroma axis — <code>SE_YUV3_NY</code> and
+    <code>SE_YUV3_NC</code>, 3468 nodes — rebuilt when the stock changes, not per frame.</p>
+  </section>
+
+  <section class="prose" id="research">
+    <h2>Colour research</h2>
+    <ul>
+      <li><b>Classic Negative is Fujicolor Superia.</b> Against the Superia 200 reference
+      <code>SUP200.fs</code> scores a median ΔE00 of 3.07 on frame 001, while the
+      hand-written <code>classicneg.fs</code> scores 9.43 — three times the error, which
+      is why it stays out of calibrated comparisons.</li>
+      <li><b>Ektar 100 and Portra 160 look alike, and the reference agrees.</b> Our
+      renders separate them by 5.19 ΔE00; Dehancer's own renders separate the two films
+      by only 3.74. The likeness is in the films, not in the code.</li>
+      <li><b>Grain was invisible because the amplitude floored to zero.</b>
+      <code>grain × 62 / 100 × 2 / 7</code> returned 0 for every stock with GRAIN ≤ 6, so
+      Ektar and Portra drew none. The curve is now 4/7 with a floor of 2.</li>
+    </ul>
+  </section>
+
+  <div class="box">
+    <b>What this page does not claim.</b> Scores are against Dehancer, not against film.
+    A corpus of 101 frames is a sample, not a law. The numbered table is the evidence;
+    the pictures are only illustration.
+  </div>
+</main>
+
+<footer class="wrap">
+  Magic Lantern module for the Canon 6D. Not affiliated with Canon, Fujifilm or the
+  Magic Lantern project; stock names describe what a look imitates and are trademarks of
+  their owners.
 </footer>
 
-</main>
 </body>
 </html>
