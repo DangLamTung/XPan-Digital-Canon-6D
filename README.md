@@ -13,6 +13,48 @@ The same frame through three shipped recipes — cool and muted, warm and open,
 saturated and contrasty. A stock here is a bundle of curve, hue axes, split tone
 and grain, not a colour filter, and the gap between these three is the product.
 
+## What those three images do and do not prove
+
+They show that three recipes render one scene three different ways. That is all
+they show. A three-up strip cannot say whether a stock is *right*: any two
+curves can look different from each other and both be wrong. The evidence for a
+stock is a number, and it is kept separately.
+
+## How the colour is made
+
+A stock is a plain text recipe, `ML/FILM/<NAME>.fs`, holding a tone curve, 48
+per-hue saturation / rotation / luminance sectors, a split tone for shadows and
+highlights, halation and grain. Nothing about it is a lookup table of a
+photograph; it is a description of an emulsion.
+
+Two paths turn that description into pixels:
+
+* **Develop** (menu **Develop**) decodes the CR2, applies the recipe in RGB at
+  full precision, and writes a new JPEG. This is the reference rendering.
+* **Shot / LiveView** bakes the same recipe into a **12 x 17 x 17** (Y, Cb, Cr)
+  lattice — 3468 nodes — and grades the camera's YUV buffer against it. One
+  lattice per stock, rebuilt when the stock changes.
+
+## How a stock is checked
+
+Each recipe is rendered through the same engine on a corpus of **101 frames**,
+compared with a Dehancer reference of the same frame in **CIEDE2000**, and scored
+by the median per frame. Twenty stocks carry a measured score; the best is XP2
+at 0.99 and the worst is Kodachrome 64 at 4.80:
+
+| Stock | median dE00 | Stock | median dE00 |
+|---|---|---|---|
+| XP2 Super | 0.99 | Portra 400 | 3.36 |
+| Acros 100 | 2.17 | Velvia 100 | 3.39 |
+| Provia 100F | 2.57 | CineStill 50D | 3.57 |
+| Gold 200 | 3.07 | Ektar 100 | 3.76 |
+| ColorPlus 200 | 3.22 | Portra 160 | 3.90 |
+| Portra 800 | 3.25 | Velvia 50 | 3.99 |
+| Superia 200 | 3.33 | Kodachrome 64 | 4.80 |
+
+Full table, method and the list of things this repository used to claim wrongly:
+**[docs/lattice-and-calibration.md](docs/lattice-and-calibration.md)**.
+
 > ## Disclaimer — read before installing
 >
 > **This is unofficial, unsupported software.** It is not affiliated with,
