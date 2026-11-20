@@ -32,7 +32,10 @@ int main(void)
     f.grain = 1;
     f.grain_size = 0;
 
-    n = fs_fuji_write(&f, buf, sizeof buf);
+    /* base_text is the base simulation's own recipe, merged in when
+     * f.base_sim is set. This test builds a recipe with base_sim = 0, so it
+     * passes NULL: nothing to merge. */
+    n = fs_fuji_write(&f, NULL, buf, sizeof buf);
     if (n < 0) { puts("FAIL: did not fit"); return 1; }
     printf("----\n%s----\n", buf);
 
