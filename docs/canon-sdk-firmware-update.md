@@ -81,3 +81,44 @@ Not settled, and not answerable from this binary:
 A capture of `DS_UpdateFirmware` running once against a real body — USBPcap or
 `tools/ptpcap.py` — would give the parameter values and the reply codes in order.
 Without that, "downgrade by hand" stays a possibility, not a method.
+
+## Does the SDK have any path to the boot flags? No
+
+Enumerated every vendor opcode in the arm64 slice (174 constants, `mov w?, #0x9xxx`
+with the enclosing symbol). There is **no `0x9050` and no `0x9052`** anywhere in the
+binary:
+
+```
+$ grep -cE "0x9050|0x9052" edsdk.asm
+0
+```
+
+and no string matching `boot`, `bootdisk`, `bootflag`, `UpdateMode` or
+`firmwareupdate`. So the event-procedure pair that MLinstall uses to call
+`EnableBootDisk` is **not exposed through this SDK**, in any version of its
+public or internal API.
+
+The only firmware-adjacent path is `0x911f` above, which streams a file into the
+body's update routine. A command that flips the boot flags is a different
+mechanism entirely, and Canon keeps it out of EDSDK.
+
+## What else the opcode table gives us
+
+Selected vendor opcodes, with the function that issues them:
+
+| opcode | function | note |
+|---|---|---|
+| `0x9101`–`0x9107` | GetStorageIDs, GetStorageInfo, GetObjectInfo, GetObject, DeleteObject, FormatStore, GetPartialObject | the standard storage set, in Canon numbering |
+| `0x9113` / `0x9114` | Get/SetRemoteMode | what the SDK calls before remote capture |
+| `0x9115` / `0x9116` | SetEventMode / GetEvent | property event subscription |
+| `0x911f` | UpdateFirmware | streams a `.FIR` |
+| `0x9193` | `DS_WriteLookFile` | **writes a look file to the body** — the closest thing in the SDK to pushing a recipe |
+| `0x9199` | SetCsdFileData | the CSD file introduced in 13.20.11 |
+| `0x9205` / `0x9206` | SetPrivateKeyData / DeletePrivateKeyData | key material, not exposed publicly |
+| `0x918a` / `0x9192` | SetUserPictureStyleData / …PCFlavorParam | picture-style flavour parameters |
+
+`0x9193 DS_WriteLookFile` is worth a look for this project: it is a vendor command
+that hands the body a look file, which is exactly the shape of our `.fs` push
+(`0x9998`). The two are not the same opcode, but comparing their parameters would
+say whether Canon already has a channel we could piggy-back on instead of the
+module's own.
