@@ -1,0 +1,40 @@
+{
+  "stock": "CineStill 800T",
+  "fs": "800T.fs",
+  "corpus_101": {
+    "stock": "CineStill 800T",
+    "brand": "cinestill",
+    "fs": "800T.fs",
+    "n": 101,
+    "mean": 3.7016147860750115,
+    "median": 3.661065313226534,
+    "pass5": 98,
+    "skin": 3.6762000253807607
+  },
+  "board": [
+    {
+      "frame": "001_IMG_6883.jpg",
+      "mean": 3.29,
+      "median": 2.95,
+      "p90": 4.83
+    },
+    {
+      "frame": "015_IMG_8215.jpg",
+      "mean": 3.73,
+      "median": 3.14,
+      "p90": 5.6
+    },
+    {
+      "frame": "018_IMG_1553.jpg",
+      "mean": 3.2,
+      "median": 2.94,
+      "p90": 5.19
+    },
+    {
+      "frame": "054_IMG_6176.jpg",
+      "mean": 5.38,
+      "median": 4.26,
+      "p90": 9.95
+    }
+  ]
+}

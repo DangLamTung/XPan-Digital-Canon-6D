@@ -1,0 +1,40 @@
+{
+  "stock": "HP5 Plus",
+  "fs": "HP5.fs",
+  "corpus_101": {
+    "stock": "HP5 Plus",
+    "brand": "ilford",
+    "fs": "HP5.fs",
+    "n": 101,
+    "mean": 3.312438461756606,
+    "median": 3.258242303889953,
+    "pass5": 100,
+    "skin": 0.0
+  },
+  "board": [
+    {
+      "frame": "001_IMG_6883.jpg",
+      "mean": 3.26,
+      "median": 3.0,
+      "p90": 4.84
+    },
+    {
+      "frame": "015_IMG_8215.jpg",
+      "mean": 4.12,
+      "median": 4.11,
+      "p90": 5.71
+    },
+    {
+      "frame": "018_IMG_1553.jpg",
+      "mean": 3.34,
+      "median": 3.56,
+      "p90": 4.69
+    },
+    {
+      "frame": "054_IMG_6176.jpg",
+      "mean": 4.27,
+      "median": 3.74,
+      "p90": 7.85
+    }
+  ]
+}

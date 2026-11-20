@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Install Guide — XPan Digital for Canon EOS 6D</title>
+<meta name="description" content="Step-by-step installation guide for XPan Digital (Magic Lantern film_sim) on Canon EOS 6D firmware 1.1.6, plus Lightroom XMP Wi-Fi push.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <div class="wrap top">
+    <a class="identity" href="index.html"><span class="mark"></span>XPan Digital</a>
+    <nav class="nav-links" aria-label="sections">
+      <a href="index.html">Overview</a>
+      <a href="#new-card">New SD Card</a>
+      <a href="#setup">First Setup</a>
+      <a href="#xmp-wifi">Lightroom XMP</a>
+      <a href="#build">Build</a>
+    </nav>
+    <a class="gh-pill" href="https://github.com/DangLamTung/XPan-Digital-Canon-6D">GitHub →</a>
+  </div>
+</header>
+
+<section class="hero" style="padding:44px 0 48px">
+  <div class="wrap">
+    <p class="eyebrow">Canon EOS 6D · Firmware 1.1.6 Only</p>
+    <h1>Install &amp; <em>Quick Start</em></h1>
+    <p class="summary" style="max-width:40rem;margin-top:14px">
+      Everything runs off the SD card — Canon's ROM is never modified. Remove the
+      card and the camera boots factory firmware normally.
+    </p>
+  </div>
+</section>
+
+<main class="wrap">
+  <!-- ── Requirements ─────────────────────────────────────── -->
+  <section id="requirements">
+    <div class="section-head">
+      <div>
+        <p class="section-kicker">Before You Start</p>
+        <h2>Requirements</h2>
+      </div>
+    </div>
+    <div class="arch-grid">
+      <article class="arch-card">
+        <span class="tag">Camera</span>
+        <h3>Canon EOS 6D (FW 1.1.6)</h3>
+        <p>Check <b>Menu → Firmware Ver.</b> on your 6D. It must be <code>1.1.6</code> — other versions will not boot this build.</p>
+      </article>
+      <article class="arch-card">
+        <span class="tag">Storage</span>
+        <h3>SD / SDXC Card</h3>
+        <p>Format the card <b>in the camera first</b> (FAT32 or exFAT). Keep a full battery while running the one-time bootflag step.</p>
+      </article>
+      <article class="arch-card">
+        <span class="tag">Package</span>
+        <h3>Release Zip or Local Build</h3>
+        <p>Download <code>magiclantern.zip</code> from <a href="https://github.com/DangLamTung/XPan-Digital-Canon-6D/releases" style="color:var(--amber);text-decoration:underline">GitHub Releases</a> or build from source below.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- ── Step-by-Step New Card ────────────────────────────── -->
+  <section id="new-card">
+    <div class="section-head">
+      <div>
+        <p class="section-kicker">Step by Step</p>
+        <h2>Install on a new SD card</h2>
+      </div>
+    </div>
+
+    <div class="step-list">
+      <div class="step-card">
+        <div class="step-num">01</div>
+        <div>
+          <h3>Format the SD card in the Canon 6D</h3>
+          <p>Insert the SD card into the camera and run <b>Menu → Format card</b> (standard format is fine).</p>
+        </div>
+      </div>
+
+      <div class="step-card">
+        <div class="step-num">02</div>
+        <div>
+          <h3>Copy files to the SD card root</h3>
+          <p>Unzip <code>magiclantern.zip</code> and copy <code>autoexec.bin</code>, <code>ML-SETUP.FIR</code>, and the entire <code>ML/</code> folder to the root of the card:</p>
+          <pre class="code-block">/Volumes/EOS_DIGITAL/
+├── autoexec.bin
+├── ML-SETUP.FIR
+└── ML/
+    ├── FILM/          # 46+ .fs film recipes
+    ├── FILMS/         # Shelf XML catalogue
+    ├── FILMSIM/       # Canister art (CANS.DAT)
+    ├── modules/       # film_sim.mo + 6D_116.sym
+    └── SETTINGS/      # film_sim.en</pre>
+        </div>
+      </div>
+
+      <div class="step-card">
+        <div class="step-num">03</div>
+        <div>
+          <h3>Enable BootDisk (one time per body)</h3>
+          <p>Put the card back in the 6D, switch to <b>M</b> mode, open <b>Menu → Firmware Ver. 1.1.6 → Update</b>, and confirm running <code>ML-SETUP.FIR</code>. Wait for the green confirmation screen, then power cycle the camera.</p>
+        </div>
+      </div>
+
+      <div class="step-card">
+        <div class="step-num">04</div>
+        <div>
+          <h3>Enable Film Sim in Magic Lantern</h3>
+          <p>Press <b>ERASE (Trash)</b> to open the ML menu → <b>Modules</b> → ensure <code>film_sim.mo</code> is enabled (and <code>film_lv.mo</code> is disabled/removed so they do not conflict), then reboot once.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── First-Time Camera Setup ──────────────────────────── -->
+  <section id="setup">
+    <div class="section-head">
+      <div>
+        <p class="section-kicker">On The Camera</p>
+        <h2>First-time shooting setup</h2>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <article class="arch-card">
+        <span class="tag">1 · Pick a Stock</span>
+        <h3>Film Dev → Film Shelf</h3>
+        <p>Turn <b>Film Sim → On</b>, open <b>Film Shelf</b>, turn the main dial to browse 35 mm canisters, and press <b>SET</b> to apply. The <code>12×17×17</code> YUV lattice bakes automatically in ~150 ms.</p>
+      </article>
+
+      <article class="arch-card">
+        <span class="tag">2 · Add Colour to LiveView &amp; XPan Bars</span>
+        <h3>Film Dev → LiveView &amp; Aspect</h3>
+        <p>Enable <b>LiveView → LiveView Filter</b> to grade the live LCD feed in real time, and set <b>Aspect → 65:24 XPan</b> (or <code>2.39:1</code>, <code>16:9</code>, <code>1:1</code>, <code>4:5</code>) for matching LiveView framing bars and in-shutter JPEG crops.</p>
+      </article>
+
+      <article class="arch-card">
+        <span class="tag">3 · Shot Info Header &amp; Paper Frame</span>
+        <h3>Film Dev → Header</h3>
+        <p>Enable <b>Header</b> to burn a white or dark gallery border with the film canister, camera body, lens, aperture, shutter speed, and ISO straight into the JPEG on the card.</p>
+      </article>
+
+      <article class="arch-card">
+        <span class="tag">4 · Custom Colour</span>
+        <h3>Film Dev → Custom Look</h3>
+        <p>Open <b>Open Creator</b> to tune all 12 colour wedges (<code>Sat / Lum / Hue</code>) and press <b>Q</b> for the 5-point Highlight/Shadow curve. Press <b>PLAY</b> to save to a slot.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- ── Lightroom XMP & Wi-Fi Push ───────────────────────── -->
+  <section id="xmp-wifi">
+    <div class="section-head">
+      <div>
+        <p class="section-kicker">Wireless Workflow</p>
+        <h2>Import Lightroom .xmp presets over Wi-Fi</h2>
+      </div>
+      <p class="section-sub">
+        Convert any Lightroom / Camera Raw <code>.xmp</code> preset into a 48-sector
+        <code>.fs</code> recipe and push it directly to your 6D over Canon's built-in Wi-Fi.
+      </p>
+    </div>
+
+    <div class="step-list">
+      <div class="step-card">
+        <div class="step-num">01</div>
+        <div>
+          <h3>Enable Wi-Fi on the Canon 6D</h3>
+          <p>On the camera: <b>Menu → Wi-Fi → Enable → Wi-Fi function → EOS Utility (Connect to computer)</b>. Connect your computer and 6D to the same Wi-Fi network (or the camera's own AP).</p>
+        </div>
+      </div>
+
+      <div class="step-card">
+        <div class="step-num">02</div>
+        <div>
+          <h3>Push a Lightroom .xmp or .fs recipe</h3>
+          <p><code>tools/push_fs.py</code> auto-discovers the 6D on PTP/IP port <code>15740</code>, converts <code>.xmp</code> on the fly, writes <code>ML/FILM/&lt;CODE&gt;.fs</code>, registers it on the Film Shelf, and activates it live:</p>
+          <pre class="code-block"># Check connection to film_sim on the 6D
+./tools/push_fs.py --status
+
+# Convert &amp; push a Lightroom .xmp preset directly to the 6D
+./tools/push_fs.py "My_Portra_Preset.xmp" --name MYPORTRA
+
+# Or convert offline to a .fs file for copying to ML/FILM/
+./tools/xmp2fs.py "My_Portra_Preset.xmp" ML/FILM/MYPORTRA.fs</pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Build From Source ────────────────────────────────── -->
+  <section id="build">
+    <div class="section-head">
+      <div>
+        <p class="section-kicker">Developers · macOS / Linux</p>
+        <h2>Build &amp; install from source</h2>
+      </div>
+    </div>
+    <pre class="code-block">git clone https://github.com/DangLamTung/XPan-Digital-Canon-6D.git
+cd XPan-Digital-Canon-6D
+
+# Clean build for Canon 6D 1.1.6
+./build.sh 6D.116 clean
+
+# Install &amp; verify MD5 directly onto a mounted SD card
+./install-sd.sh /Volumes/EOS_DIGITAL</pre>
+
+    <div class="note-box">
+      <b>Safety note:</b> Magic Lantern is unofficial firmware software. Always test
+      new builds with a charged battery, keep backups of your photos, and never pull
+      the battery during firmware update or SD card writes.
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot-inner">
+    <span><a href="index.html" style="color:var(--amber)">← Back to XPan Digital Overview</a></span>
+    <span>Canon EOS 6D (1.1.6) · GPL v2</span>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,40 @@
+{
+  "stock": "Portra 160",
+  "fs": "P160.fs",
+  "corpus_101": {
+    "stock": "Portra 160",
+    "brand": "kodak",
+    "fs": "P160.fs",
+    "n": 101,
+    "mean": 3.2667120817828086,
+    "median": 3.297033975790095,
+    "pass5": 100,
+    "skin": 3.1375071634399028
+  },
+  "board": [
+    {
+      "frame": "001_IMG_6883.jpg",
+      "mean": 2.24,
+      "median": 1.96,
+      "p90": 4.15
+    },
+    {
+      "frame": "015_IMG_8215.jpg",
+      "mean": 3.5,
+      "median": 3.29,
+      "p90": 5.68
+    },
+    {
+      "frame": "018_IMG_1553.jpg",
+      "mean": 3.26,
+      "median": 3.13,
+      "p90": 5.76
+    },
+    {
+      "frame": "054_IMG_6176.jpg",
+      "mean": 3.82,
+      "median": 3.32,
+      "p90": 6.97
+    }
+  ]
+}

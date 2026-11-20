@@ -1,0 +1,40 @@
+{
+  "stock": "Gold 200",
+  "fs": "gold.fs",
+  "corpus_101": {
+    "stock": "Gold 200",
+    "brand": "kodak",
+    "fs": "gold.fs",
+    "n": 101,
+    "mean": 3.1691792321260044,
+    "median": 3.1821096193345726,
+    "pass5": 100,
+    "skin": 2.831681769715944
+  },
+  "board": [
+    {
+      "frame": "001_IMG_6883.jpg",
+      "mean": 2.28,
+      "median": 1.92,
+      "p90": 4.31
+    },
+    {
+      "frame": "015_IMG_8215.jpg",
+      "mean": 2.66,
+      "median": 2.45,
+      "p90": 4.38
+    },
+    {
+      "frame": "018_IMG_1553.jpg",
+      "mean": 2.88,
+      "median": 2.72,
+      "p90": 4.56
+    },
+    {
+      "frame": "054_IMG_6176.jpg",
+      "mean": 3.8,
+      "median": 3.26,
+      "p90": 6.93
+    }
+  ]
+}

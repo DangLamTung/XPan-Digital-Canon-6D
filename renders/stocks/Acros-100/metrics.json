@@ -1,0 +1,40 @@
+{
+  "stock": "Acros 100",
+  "fs": "acros.fs",
+  "corpus_101": {
+    "stock": "Acros 100",
+    "brand": "fujifilm",
+    "fs": "acros.fs",
+    "n": 101,
+    "mean": 2.2658488631067133,
+    "median": 2.2396159480904845,
+    "pass5": 100,
+    "skin": 0.0
+  },
+  "board": [
+    {
+      "frame": "001_IMG_6883.jpg",
+      "mean": 2.34,
+      "median": 2.28,
+      "p90": 3.51
+    },
+    {
+      "frame": "015_IMG_8215.jpg",
+      "mean": 2.19,
+      "median": 1.94,
+      "p90": 4.11
+    },
+    {
+      "frame": "018_IMG_1553.jpg",
+      "mean": 2.07,
+      "median": 2.14,
+      "p90": 3.46
+    },
+    {
+      "frame": "054_IMG_6176.jpg",
+      "mean": 3.05,
+      "median": 2.46,
+      "p90": 5.82
+    }
+  ]
+}

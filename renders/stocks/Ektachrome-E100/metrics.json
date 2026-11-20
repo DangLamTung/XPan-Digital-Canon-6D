@@ -1,0 +1,40 @@
+{
+  "stock": "Ektachrome E100",
+  "fs": "E100.fs",
+  "corpus_101": {
+    "stock": "Ektachrome E100",
+    "brand": "kodak",
+    "fs": "E100.fs",
+    "n": 101,
+    "mean": 3.16142175695906,
+    "median": 3.175921003077385,
+    "pass5": 100,
+    "skin": 3.248098545777103
+  },
+  "board": [
+    {
+      "frame": "001_IMG_6883.jpg",
+      "mean": 2.53,
+      "median": 2.24,
+      "p90": 4.36
+    },
+    {
+      "frame": "015_IMG_8215.jpg",
+      "mean": 3.34,
+      "median": 3.18,
+      "p90": 5.41
+    },
+    {
+      "frame": "018_IMG_1553.jpg",
+      "mean": 2.68,
+      "median": 2.5,
+      "p90": 4.5
+    },
+    {
+      "frame": "054_IMG_6176.jpg",
+      "mean": 4.06,
+      "median": 3.64,
+      "p90": 7.3
+    }
+  ]
+}

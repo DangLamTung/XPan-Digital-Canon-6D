@@ -1,0 +1,202 @@
+[
+  {
+    "stock": "XP2 Super",
+    "brand": "ilford",
+    "fs": "XP2.fs",
+    "n": 101,
+    "mean": 1.6489276069166592,
+    "median": 1.4899987061342996,
+    "pass5": 100,
+    "skin": 0.0
+  },
+  {
+    "stock": "Acros 100",
+    "brand": "fujifilm",
+    "fs": "acros.fs",
+    "n": 101,
+    "mean": 2.2658488631067133,
+    "median": 2.2396159480904845,
+    "pass5": 100,
+    "skin": 0.0
+  },
+  {
+    "stock": "Provia 100F",
+    "brand": "fujifilm",
+    "fs": "provia.fs",
+    "n": 101,
+    "mean": 2.50411716951256,
+    "median": 2.411936310370471,
+    "pass5": 100,
+    "skin": 2.665950672161285
+  },
+  {
+    "stock": "ColorPlus 200",
+    "brand": "kodak",
+    "fs": "CP200.fs",
+    "n": 101,
+    "mean": 2.8495618618614307,
+    "median": 2.822769173984483,
+    "pass5": 100,
+    "skin": 2.9166026895975823
+  },
+  {
+    "stock": "Portra 160VC",
+    "brand": "kodak",
+    "fs": "P160VC.fs",
+    "n": 101,
+    "mean": 2.8953625651841124,
+    "median": 2.9410320942428068,
+    "pass5": 99,
+    "skin": 3.061011903186793
+  },
+  {
+    "stock": "Portra 800",
+    "brand": "kodak",
+    "fs": "P800.fs",
+    "n": 101,
+    "mean": 3.080362772492318,
+    "median": 3.0609333639751966,
+    "pass5": 100,
+    "skin": 3.1194684634343512
+  },
+  {
+    "stock": "Portra 400",
+    "brand": "kodak",
+    "fs": "portra.fs",
+    "n": 101,
+    "mean": 3.0388284997873916,
+    "median": 3.0940340451767465,
+    "pass5": 100,
+    "skin": 2.8021460854386198
+  },
+  {
+    "stock": "Ektachrome E100",
+    "brand": "kodak",
+    "fs": "E100.fs",
+    "n": 101,
+    "mean": 3.16142175695906,
+    "median": 3.175921003077385,
+    "pass5": 100,
+    "skin": 3.248098545777103
+  },
+  {
+    "stock": "Gold 200",
+    "brand": "kodak",
+    "fs": "gold.fs",
+    "n": 101,
+    "mean": 3.1691792321260044,
+    "median": 3.1821096193345726,
+    "pass5": 100,
+    "skin": 2.831681769715944
+  },
+  {
+    "stock": "HP5 Plus",
+    "brand": "ilford",
+    "fs": "HP5.fs",
+    "n": 101,
+    "mean": 3.312438461756606,
+    "median": 3.258242303889953,
+    "pass5": 100,
+    "skin": 0.0
+  },
+  {
+    "stock": "Portra 160NC",
+    "brand": "kodak",
+    "fs": "P160NC.fs",
+    "n": 101,
+    "mean": 3.200596041715105,
+    "median": 3.2897468763274094,
+    "pass5": 100,
+    "skin": 3.164909342967489
+  },
+  {
+    "stock": "Portra 160",
+    "brand": "kodak",
+    "fs": "P160.fs",
+    "n": 101,
+    "mean": 3.2667120817828086,
+    "median": 3.297033975790095,
+    "pass5": 100,
+    "skin": 3.1375071634399028
+  },
+  {
+    "stock": "Pro 400H",
+    "brand": "fujifilm",
+    "fs": "400H.fs",
+    "n": 101,
+    "mean": 3.351940081386378,
+    "median": 3.3661745722727887,
+    "pass5": 100,
+    "skin": 2.7389887549049097
+  },
+  {
+    "stock": "CineStill 50D",
+    "brand": "cinestill",
+    "fs": "50D.fs",
+    "n": 101,
+    "mean": 3.4918419028768453,
+    "median": 3.459147971575367,
+    "pass5": 98,
+    "skin": 4.390290563055711
+  },
+  {
+    "stock": "Velvia 100",
+    "brand": "fujifilm",
+    "fs": "V100.fs",
+    "n": 101,
+    "mean": 3.5805751371216603,
+    "median": 3.4757422431449556,
+    "pass5": 95,
+    "skin": 3.423793807207183
+  },
+  {
+    "stock": "Superia 200",
+    "brand": "fujifilm",
+    "fs": "SUP200.fs",
+    "n": 101,
+    "mean": 3.640328640480831,
+    "median": 3.5000192015116065,
+    "pass5": 96,
+    "skin": 3.461545754654349
+  },
+  {
+    "stock": "Ektar 100",
+    "brand": "kodak",
+    "fs": "EK100.fs",
+    "n": 101,
+    "mean": 3.695871450993622,
+    "median": 3.6372362916067136,
+    "pass5": 92,
+    "skin": 3.3284754654544244
+  },
+  {
+    "stock": "CineStill 800T",
+    "brand": "cinestill",
+    "fs": "800T.fs",
+    "n": 101,
+    "mean": 3.7016147860750115,
+    "median": 3.661065313226534,
+    "pass5": 98,
+    "skin": 3.6762000253807607
+  },
+  {
+    "stock": "Kodachrome 64",
+    "brand": "kodak",
+    "fs": "KCHR64.fs",
+    "n": 101,
+    "mean": 4.182165963593945,
+    "median": 4.122561090586886,
+    "pass5": 86,
+    "skin": 2.541984745627306
+  },
+  {
+    "stock": "Velvia 50",
+    "brand": "fujifilm",
+    "fs": "velvia.fs",
+    "n": 101,
+    "mean": 4.433961173917453,
+    "median": 4.413784555733528,
+    "pass5": 71,
+    "skin": 3.663468090713689
+  }
+]

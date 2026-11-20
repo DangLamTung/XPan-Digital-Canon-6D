@@ -1,0 +1,40 @@
+{
+  "stock": "Pro 400H",
+  "fs": "400H.fs",
+  "corpus_101": {
+    "stock": "Pro 400H",
+    "brand": "fujifilm",
+    "fs": "400H.fs",
+    "n": 101,
+    "mean": 3.351940081386378,
+    "median": 3.3661745722727887,
+    "pass5": 100,
+    "skin": 2.7389887549049097
+  },
+  "board": [
+    {
+      "frame": "001_IMG_6883.jpg",
+      "mean": 2.72,
+      "median": 2.58,
+      "p90": 4.16
+    },
+    {
+      "frame": "015_IMG_8215.jpg",
+      "mean": 3.32,
+      "median": 3.06,
+      "p90": 5.5
+    },
+    {
+      "frame": "018_IMG_1553.jpg",
+      "mean": 2.75,
+      "median": 2.47,
+      "p90": 4.49
+    },
+    {
+      "frame": "054_IMG_6176.jpg",
+      "mean": 3.91,
+      "median": 3.35,
+      "p90": 7.0
+    }
+  ]
+}

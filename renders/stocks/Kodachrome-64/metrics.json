@@ -1,0 +1,40 @@
+{
+  "stock": "Kodachrome 64",
+  "fs": "KCHR64.fs",
+  "corpus_101": {
+    "stock": "Kodachrome 64",
+    "brand": "kodak",
+    "fs": "KCHR64.fs",
+    "n": 101,
+    "mean": 4.182165963593945,
+    "median": 4.122561090586886,
+    "pass5": 86,
+    "skin": 2.541984745627306
+  },
+  "board": [
+    {
+      "frame": "001_IMG_6883.jpg",
+      "mean": 2.37,
+      "median": 2.21,
+      "p90": 3.83
+    },
+    {
+      "frame": "015_IMG_8215.jpg",
+      "mean": 3.1,
+      "median": 2.81,
+      "p90": 5.19
+    },
+    {
+      "frame": "018_IMG_1553.jpg",
+      "mean": 2.41,
+      "median": 2.32,
+      "p90": 3.7
+    },
+    {
+      "frame": "054_IMG_6176.jpg",
+      "mean": 3.53,
+      "median": 3.06,
+      "p90": 6.25
+    }
+  ]
+}

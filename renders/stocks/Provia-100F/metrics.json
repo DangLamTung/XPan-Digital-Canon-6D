@@ -1,0 +1,40 @@
+{
+  "stock": "Provia 100F",
+  "fs": "provia.fs",
+  "corpus_101": {
+    "stock": "Provia 100F",
+    "brand": "fujifilm",
+    "fs": "provia.fs",
+    "n": 101,
+    "mean": 2.50411716951256,
+    "median": 2.411936310370471,
+    "pass5": 100,
+    "skin": 2.665950672161285
+  },
+  "board": [
+    {
+      "frame": "001_IMG_6883.jpg",
+      "mean": 2.12,
+      "median": 1.87,
+      "p90": 3.59
+    },
+    {
+      "frame": "015_IMG_8215.jpg",
+      "mean": 2.67,
+      "median": 2.44,
+      "p90": 4.44
+    },
+    {
+      "frame": "018_IMG_1553.jpg",
+      "mean": 2.03,
+      "median": 1.93,
+      "p90": 3.2
+    },
+    {
+      "frame": "054_IMG_6176.jpg",
+      "mean": 3.59,
+      "median": 3.01,
+      "p90": 6.66
+    }
+  ]
+}

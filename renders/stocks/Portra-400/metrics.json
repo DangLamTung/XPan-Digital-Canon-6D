@@ -1,0 +1,40 @@
+{
+  "stock": "Portra 400",
+  "fs": "portra.fs",
+  "corpus_101": {
+    "stock": "Portra 400",
+    "brand": "kodak",
+    "fs": "portra.fs",
+    "n": 101,
+    "mean": 3.0388284997873916,
+    "median": 3.0940340451767465,
+    "pass5": 100,
+    "skin": 2.8021460854386198
+  },
+  "board": [
+    {
+      "frame": "001_IMG_6883.jpg",
+      "mean": 2.28,
+      "median": 2.1,
+      "p90": 3.72
+    },
+    {
+      "frame": "015_IMG_8215.jpg",
+      "mean": 2.87,
+      "median": 2.66,
+      "p90": 4.51
+    },
+    {
+      "frame": "018_IMG_1553.jpg",
+      "mean": 2.92,
+      "median": 2.84,
+      "p90": 4.39
+    },
+    {
+      "frame": "054_IMG_6176.jpg",
+      "mean": 3.59,
+      "median": 3.06,
+      "p90": 6.62
+    }
+  ]
+}

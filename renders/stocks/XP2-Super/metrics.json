@@ -1,0 +1,40 @@
+{
+  "stock": "XP2 Super",
+  "fs": "XP2.fs",
+  "corpus_101": {
+    "stock": "XP2 Super",
+    "brand": "ilford",
+    "fs": "XP2.fs",
+    "n": 101,
+    "mean": 1.6489276069166592,
+    "median": 1.4899987061342996,
+    "pass5": 100,
+    "skin": 0.0
+  },
+  "board": [
+    {
+      "frame": "001_IMG_6883.jpg",
+      "mean": 1.77,
+      "median": 0.95,
+      "p90": 3.97
+    },
+    {
+      "frame": "015_IMG_8215.jpg",
+      "mean": 2.07,
+      "median": 1.66,
+      "p90": 4.33
+    },
+    {
+      "frame": "018_IMG_1553.jpg",
+      "mean": 1.56,
+      "median": 1.01,
+      "p90": 3.49
+    },
+    {
+      "frame": "054_IMG_6176.jpg",
+      "mean": 3.13,
+      "median": 2.07,
+      "p90": 7.26
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "stock": "Portra 160NC",
+  "fs": "P160NC.fs",
+  "corpus_101": {
+    "stock": "Portra 160NC",
+    "brand": "kodak",
+    "fs": "P160NC.fs",
+    "n": 101,
+    "mean": 3.200596041715105,
+    "median": 3.2897468763274094,
+    "pass5": 100,
+    "skin": 3.164909342967489
+  },
+  "board": [
+    {
+      "frame": "001_IMG_6883.jpg",
+      "mean": 2.31,
+      "median": 2.04,
+      "p90": 4.34
+    },
+    {
+      "frame": "015_IMG_8215.jpg",
+      "mean": 3.45,
+      "median": 3.29,
+      "p90": 5.67
+    },
+    {
+      "frame": "018_IMG_1553.jpg",
+      "mean": 3.16,
+      "median": 3.04,
+      "p90": 5.2
+    },
+    {
+      "frame": "054_IMG_6176.jpg",
+      "mean": 3.77,
+      "median": 3.34,
+      "p90": 6.67
+    }
+  ]
+}

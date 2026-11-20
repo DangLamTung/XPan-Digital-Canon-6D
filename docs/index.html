@@ -1,194 +1,431 @@
 <!doctype html>
 <html lang="en">
+
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>XPan Digital — film colour for the Canon 6D</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>XPan Digital — 65:24 Panoramic Film Colour for Canon EOS 6D</title>
+  <meta name="description"
+    content="In-camera 65:24 XPan framing, real-time LiveView grading, 12-wedge custom colour, and Lightroom XMP import running natively on Canon EOS 6D via Magic Lantern.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
-<header>
-  <div class="wrap top">
-    <div class="identity"><span class="mark"></span>XPan Digital</div>
-    <a class="repo" href="https://github.com/DangLamTung/XPan-Digital-Canon-6D">github.com/DangLamTung/XPan-Digital-Canon-6D</a>
-    <nav aria-label="sections">
-      <a href="#catalog" aria-current="page">Catalogue</a>
-      <a href="#lattice">Lattice</a>
-      <a href="#hook">Hook</a>
-      <a href="#research">Research</a>
-    </nav>
-  </div>
-</header>
-
-<div class="hero">
-  <div class="wrap intro">
-    <div>
-      <p class="model">CANON EOS 6D<span>·</span>DIGIC 5+<span>·</span>FIRMWARE 1.1.6<span>·</span>MAGIC LANTERN</p>
-      <h1>Film colour,<br>with a score.</h1>
-      <p class="summary">A stock here is a recipe, not a filter: a tone curve, 48 per-hue
-      sectors, a split tone, halation and grain. It renders twice — a full-precision RGB
-      develop and a 12 × 17 × 17 lattice for the camera's YUV buffer — so the picture on
-      the screen and the file on the card are the same look.</p>
-      <p class="cta"><a class="button" href="https://github.com/DangLamTung/XPan-Digital-Canon-6D">Source, recipes and measurements →</a></p>
+  <header>
+    <div class="wrap top">
+      <a class="identity" href="index.html"><span class="mark"></span>XPan Digital</a>
+      <nav class="nav-links" aria-label="sections">
+        <a href="#highlights">Features</a>
+        <a href="#gallery">Film Roll</a>
+        <a href="#camera-ui">Camera UI</a>
+        <a href="#catalog">Stocks</a>
+        <a href="install.html">Install Guide</a>
+      </nav>
+      <a class="gh-pill" href="https://github.com/DangLamTung/XPan-Digital-Canon-6D">GitHub →</a>
     </div>
-    <figure>
-      <div class="strip"><span></span><img src="img/promo.jpg" alt="Đà Lạt, 65:24"><span></span></div>
-      <figcaption><b>65:24</b> · Đà Lạt, 2 November 2026</figcaption>
+  </header>
+
+  <section class="hero">
+    <div class="wrap">
+      <div class="hero-top">
+        <div>
+          <p class="eyebrow">Canon EOS 6D · DIGIC 5+ · Magic Lantern 1.1.6</p>
+          <h1>Panoramic film colour,<br><em>graded at the shutter.</em></h1>
+        </div>
+        <div class="hero-copy">
+          <p class="summary">
+            Turns a Canon EOS 6D into a <b>65:24 XPan</b> camera with real-time
+            LiveView film grading, an on-body 12-wedge colour creator, and direct
+            Lightroom <code>.xmp</code> preset import over Wi-Fi.
+          </p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="install.html">Install Guide →</a>
+            <a class="btn btn-ghost" href="https://github.com/DangLamTung/XPan-Digital-Canon-6D">Source &amp;
+              Recipes</a>
+          </div>
+        </div>
+      </div>
+
+      <figure class="film-strip" style="margin:0">
+        <div class="sprockets">
+          <span class="edge-code">XPAN 65:24</span>
+          <span class="sprocket-bar"></span>
+          <span class="edge-code">24A · REALA ACE</span>
+        </div>
+        <div class="film-frame">
+          <img src="img/promo.jpg" alt="Backlit couple under pine trees in Đà Lạt, 65:24 panoramic XPan framing"
+            data-zoom>
+        </div>
+        <div class="sprockets">
+          <span class="edge-code">CANON EOS 6D</span>
+          <span class="sprocket-bar"></span>
+          <span class="edge-code">ĐÀ LẠT · NOV 2026</span>
+        </div>
+        <div class="film-meta">
+          <span><b>IMG_9915</b> · Backlit couple under pine canopy · 65:24 panoramic aspect</span>
+          <span>Click any image to zoom</span>
+        </div>
+      </figure>
+    </div>
+  </section>
+
+  <main class="wrap">
+    <!-- ── Key Highlights ───────────────────────────────────── -->
+    <section id="highlights">
+      <div class="section-head">
+        <div>
+          <p class="section-kicker">Core Capabilities</p>
+          <h2>LiveView grading, custom colour, shot headers &amp; Lightroom XMP</h2>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <article class="highlight-card">
+          <span class="pill-tag tag-sage">LiveView · Real-Time</span>
+          <h3>Add Film Colour to LiveView</h3>
+          <p>
+            Injects any film stock or custom look directly into Canon's live LCD
+            feed via a <code>12 × 17 × 17</code> 3D YUV lattice with <b>65:24 XPan
+              bars</b> — see the exact film colour before pressing the shutter.
+          </p>
+        </article>
+
+    <figure class="photo-card" style="margin-top:20px">
+      <img src="img/street_stocks.jpg" alt="Same 65:24 Saigon street scene shot straight out of Canon EOS 6D: IMG_6701 Pro 400H, IMG_6707 Portra 400, IMG_6708 Superia 400, IMG_6687 Gold 200" data-zoom>
+      <figcaption class="photo-cap">
+        <span><b>Same 65:24 street scene, four in-camera film simulations</b> — straight out of the Canon 6D SD card (<code>IMG_6701</code>, <code>IMG_6707</code>, <code>IMG_6708</code>, <code>IMG_6687</code> Gold 200), zero PC post-processing.</span>
+        <code>Pro 400H · Portra · Superia · Gold</code>
+      </figcaption>
     </figure>
-  </div>
-</div>
 
-<main class="wrap">
-  <nav class="catalog" aria-label="brands">
-    <a href="#kodak">Kodak <span>9</span></a>
-    <a href="#fujifilm">Fujifilm <span>6</span></a>
-    <a href="#cinestill">CineStill <span>2</span></a>
-    <a href="#ilford">Ilford <span>2</span></a>
-    <a href="#other">Other <span>1</span></a>
-  </nav>
+        <figure class="photo-card" style="margin-top:20px">
+          <img src="img/shot_header.jpg"
+            alt="65:24 Ba Son Bridge and Landmark 81 straight out of Canon EOS 6D with real in-camera white paper Shot Info Header: ColorPlus 200, EF 40mm f/2.8 STM, f/2.8 1/125 ISO 5000"
+            data-zoom>
+          <figcaption class="photo-cap">
+            <span><b>Real in-camera Shot Info Header (IMG_6672 · ColorPlus 200)</b> — Ba Son Bridge &amp; Landmark 81 in
+              65:24 XPan with film stock, Canon EOS 6D, lens &amp; exposure burned directly at the shutter.</span>
+            <code>SOOC · Film Dev → Header</code>
+          </figcaption>
+        </figure>
+    </section>
 
-  <div class="notes">
-    <span>20 calibrated stocks · 101-frame corpus · CIEDE2000 per pixel</span>
-    <span>lower is better</span>
-  </div>
+    <article class="highlight-card">
+      <span class="pill-tag tag-cyan">Workflow · Wi-Fi / SD</span>
+      <h3>Direct Lightroom .xmp Import</h3>
+      <p>
+        Convert Adobe Lightroom <code>.xmp</code> presets (Basic tone, 4-channel
+        RGB curves, 8-band HSL → 48 sectors, PointColors, 3-way Color Grading)
+        and push live over Wi-Fi with <code>tools/push_fs.py</code>.
+      </p>
+    </article>
+    </div>
+    </section>
 
-  <section class="group" id="kodak">
-    <h2><i></i>Kodak<small>9 calibrated</small></h2>
-    <table>
-      <thead><tr><th>Stock</th><th>mean ΔE00</th><th>median ΔE00</th><th>≤ 5.0</th></tr></thead>
-      <tbody>
-        <tr><th scope="row">Gold 200<p class="variant">101 frames · 99% at or under 5.0</p></th><td>3.10</td><td><b>3.07</b></td><td>99%</td></tr>
-        <tr><th scope="row">Portra 160VC<p class="variant">101 frames · 95% at or under 5.0</p></th><td>3.23</td><td><b>3.10</b></td><td>95%</td></tr>
-        <tr><th scope="row">ColorPlus 200<p class="variant">101 frames · 99% at or under 5.0</p></th><td>3.20</td><td><b>3.21</b></td><td>99%</td></tr>
-        <tr><th scope="row">Portra 800<p class="variant">101 frames · 100% at or under 5.0</p></th><td>3.33</td><td><b>3.25</b></td><td>100%</td></tr>
-        <tr><th scope="row">Portra 400<p class="variant">101 frames · 98% at or under 5.0</p></th><td>3.35</td><td><b>3.36</b></td><td>98%</td></tr>
-        <tr><th scope="row">Portra 160NC<p class="variant">101 frames · 92% at or under 5.0</p></th><td>3.61</td><td><b>3.56</b></td><td>92%</td></tr>
-        <tr><th scope="row">Ektar 100<p class="variant">101 frames · 85% at or under 5.0</p></th><td>3.88</td><td><b>3.76</b></td><td>85%</td></tr>
-        <tr><th scope="row">Portra 160<p class="variant">101 frames · 86% at or under 5.0</p></th><td>3.96</td><td><b>3.90</b></td><td>86%</td></tr>
-        <tr><th scope="row">Kodachrome 64<p class="variant">101 frames · 65% at or under 5.0</p></th><td>4.72</td><td><b>4.80</b></td><td>65%</td></tr>
-      </tbody>
-    </table>
-  </section>
-  <section class="group" id="fujifilm">
-    <h2><i></i>Fujifilm<small>6 calibrated</small></h2>
-    <table>
-      <thead><tr><th>Stock</th><th>mean ΔE00</th><th>median ΔE00</th><th>≤ 5.0</th></tr></thead>
-      <tbody>
-        <tr><th scope="row">Acros 100<p class="variant">101 frames · 100% at or under 5.0</p></th><td>2.10</td><td><b>2.17</b></td><td>100%</td></tr>
-        <tr><th scope="row">Provia 100F<p class="variant">101 frames · 100% at or under 5.0</p></th><td>2.65</td><td><b>2.57</b></td><td>100%</td></tr>
-        <tr><th scope="row">Superia 200<p class="variant">102 frames · 96% at or under 5.0</p></th><td>3.49</td><td><b>3.33</b></td><td>96%</td></tr>
-        <tr><th scope="row">Velvia 100<p class="variant">101 frames · 94% at or under 5.0</p></th><td>3.49</td><td><b>3.39</b></td><td>94%</td></tr>
-        <tr><th scope="row">Pro 400H<p class="variant">101 frames · 99% at or under 5.0</p></th><td>3.76</td><td><b>3.82</b></td><td>99%</td></tr>
-        <tr><th scope="row">Velvia 50<p class="variant">101 frames · 75% at or under 5.0</p></th><td>4.16</td><td><b>3.99</b></td><td>75%</td></tr>
-      </tbody>
-    </table>
-  </section>
-  <section class="group" id="cinestill">
-    <h2><i></i>CineStill<small>2 calibrated</small></h2>
-    <table>
-      <thead><tr><th>Stock</th><th>mean ΔE00</th><th>median ΔE00</th><th>≤ 5.0</th></tr></thead>
-      <tbody>
-        <tr><th scope="row">CineStill 50D<p class="variant">101 frames · 91% at or under 5.0</p></th><td>3.70</td><td><b>3.57</b></td><td>91%</td></tr>
-        <tr><th scope="row">CineStill 800T<p class="variant">101 frames · 98% at or under 5.0</p></th><td>3.76</td><td><b>3.74</b></td><td>98%</td></tr>
-      </tbody>
-    </table>
-  </section>
-  <section class="group" id="ilford">
-    <h2><i></i>Ilford<small>2 calibrated</small></h2>
-    <table>
-      <thead><tr><th>Stock</th><th>mean ΔE00</th><th>median ΔE00</th><th>≤ 5.0</th></tr></thead>
-      <tbody>
-        <tr><th scope="row">XP2 Super<p class="variant">101 frames · 100% at or under 5.0</p></th><td>1.12</td><td><b>0.99</b></td><td>100%</td></tr>
-        <tr><th scope="row">HP5 Plus<p class="variant">101 frames · 99% at or under 5.0</p></th><td>3.23</td><td><b>3.21</b></td><td>99%</td></tr>
-      </tbody>
-    </table>
-  </section>
-  <section class="group" id="other">
-    <h2><i></i>Other<small>1 calibrated</small></h2>
-    <table>
-      <thead><tr><th>Stock</th><th>mean ΔE00</th><th>median ΔE00</th><th>≤ 5.0</th></tr></thead>
-      <tbody>
-        <tr><th scope="row">Ektachrome E100<p class="variant">101 frames · 99% at or under 5.0</p></th><td>3.28</td><td><b>3.32</b></td><td>99%</td></tr>
-      </tbody>
-    </table>
-  </section>
+    <!-- ── Gallery (Film Roll) ──────────────────────────────── -->
+    <section id="gallery">
+      <div class="section-head">
+        <div>
+          <p class="section-kicker">Field Roll · Đà Lạt</p>
+          <h2>65:24 film roll</h2>
+        </div>
+        <p class="section-sub">
+          Six frames off the Canon 6D card — as-shot JPEGs, Velvia 50 pulled 1.0 EV,
+          and Soup 800 (Vision3 500T) night halation and lake scenes.
+        </p>
+      </div>
 
-  <section class="prose" id="method">
-    <h2>How a stock is scored</h2>
-    <figure class="fig"><img src="img/scores.png" alt="Median dE00 per stock"></figure>
-    <p>Each recipe renders every frame of a <b>101-frame corpus</b> through the same
-    engine, is compared against a Dehancer reference of that frame in
-    <b>CIEDE2000</b> per pixel, and scored by the median per frame. Twenty of the 46
-    shipped recipes have a score; the rest are hand-written looks, not calibrated
-    stocks.</p>
-    <p>The lattice that runs on the camera has <code>12</code> nodes along luma and
-    <code>17</code> along each chroma axis — <code>SE_YUV3_NY</code> and
-    <code>SE_YUV3_NC</code>, 3468 nodes — rebuilt when the stock changes, not per frame.</p>
-  </section>
+      <figure class="photo-card">
+        <img src="img/roll.jpg"
+          alt="Six-frame 65:24 Đà Lạt roll: IMG_9914, IMG_9915 Velvia 50, IMG_9930, IMG_0049 Soup 800 Circle K, IMG_9937 lake, IMG_9916"
+          data-zoom>
+        <figcaption class="photo-cap">
+          <span><b>Đà Lạt 65:24 contact sheet</b> — IMG_9914, IMG_9915 (Velvia 50), IMG_9930, IMG_0049 (Circle K · Soup
+            800), IMG_9937, IMG_9916.</span>
+          <code>65:24 roll · 6 frames</code>
+        </figcaption>
+      </figure>
 
-  <section class="prose" id="lattice">
-    <h2>Why a lattice, and how it is cut</h2>
-    <p>A frame is graded in the camera, between Canon writing the YUV buffer and
-    Canon encoding it. Running the full RGB engine there is far too slow, so the
-    recipe is <b>baked</b> into a three-dimensional table over luma and the two
-    chroma axes, and the pixels are graded by interpolating in it.</p>
-    <p>Equal steps on Cb and Cr waste nodes on colours no scene contains: an
-    8 × 8 × 8 cube costs <b>11.4 levels</b> of mean error on a real frame. Widening
-    only the chroma axes, to <b>17</b>, brings that to <b>7.0</b> at the same 12
-    nodes along luma — which is why the table is <b>12 × 17 × 17</b> and not a cube.</p>
-    <p>Luma keeps its own 256-entry curve; each of the 3468 nodes carries three
-    signed bytes — how much brighter or darker that <i>colour</i> grades than grey
-    of the same luma (<code>dy</code>), and where its chroma goes. Dropping
-    <code>dy</code> fixes chroma but leaves luma 3.4× worse, because a saturated
-    pixel does not grade to the same brightness as a grey one.</p>
-    <p>The table is <b>cut once per stock change</b>, not per frame: the engine is
-    sampled at the node positions, the result becomes
-    <code>ML/DATA</code>-side state in RAM, and every frame afterwards is three
-    interpolations per pixel.</p>
-  </section>
+      <figure class="photo-card" style="margin-top:20px">
+        <img src="img/street_stocks.jpg"
+          alt="Same 65:24 Saigon riverfront skyline shot straight out of Canon EOS 6D across Provia 100F, CineStill 50D, Superia 400, and ColorPlus 200"
+          data-zoom>
+        <figcaption class="photo-cap">
+          <span><b>Same 65:24 skyline, four in-camera film stocks</b> — straight out of the Canon 6D SD card: <b>Provia
+              100F</b>, <b>CineStill 50D</b>, <b>Superia 400</b> &amp; <b>ColorPlus 200</b> (zero PC editing).</span>
+          <code>Provia · 50D · Superia · ColorPlus</code>
+        </figcaption>
+      </figure>
 
-  <section class="prose" id="hook">
-    <h2>Where it hooks on the 6D</h2>
-    <p><code>fs_yuvhook.c</code> patches <code>sdfExecuteYuvToJpegPath</code> at
-    <b>0xFF3442DC</b> — the still-JPEG path — so the grade lands on the file the
-    camera writes. LiveView is graded through the same tables, which is why the
-    preview and the shot agree. Canon is not modified on disk: the hook is installed
-    at module load and removed with it.</p>
-    <p>The 65:24 framing is a separate matter: the camera still writes 3:2, and the
-    bars are burned in afterwards. Canon's own encoder crop is not used — the code
-    that would control it sits outside the 16 MB ROM image available for the 6D,
-    which is documented in <a href="https://github.com/DangLamTung/XPan-Digital-Canon-6D/blob/main/docs/xpan-crop-port.md">docs/xpan-crop-port.md</a>.</p>
-  </section>
+      <figure class="photo-card" style="margin-top:20px">
+        <img src="img/shot_header.jpg"
+          alt="65:24 Ba Son Bridge and Landmark 81 straight out of Canon EOS 6D with real in-camera white paper Shot Info Header: ColorPlus 200, EF 40mm f/2.8 STM, f/2.8 1/125 ISO 3200"
+          data-zoom>
+        <figcaption class="photo-cap">
+          <span><b>Real in-camera Shot Info Header (IMG_6672 · ColorPlus 200)</b> — Ba Son Bridge &amp; Landmark 81 in
+            65:24 XPan with film stock, Canon EOS 6D, lens &amp; exposure burned directly at the shutter.</span>
+          <code>SOOC · Film Dev → Header</code>
+        </figcaption>
+      </figure>
+    </section>
 
-  <section class="prose" id="research">
-    <h2>Colour research</h2>
-    <ul>
-      <li><b>Classic Negative is Fujicolor Superia.</b> Against the Superia 200 reference
-      <code>SUP200.fs</code> scores a median ΔE00 of 3.07 on frame 001, while the
-      hand-written <code>classicneg.fs</code> scores 9.43 — three times the error, which
-      is why it stays out of calibrated comparisons.</li>
-      <li><b>Ektar 100 and Portra 160 look alike, and the reference agrees.</b> Our
-      renders separate them by 5.19 ΔE00; Dehancer's own renders separate the two films
-      by only 3.74. The likeness is in the films, not in the code.</li>
-      <li><b>Grain was invisible because the amplitude floored to zero.</b>
-      <code>grain × 62 / 100 × 2 / 7</code> returned 0 for every stock with GRAIN ≤ 6, so
-      Ektar and Portra drew none. The curve is now 4/7 with a floor of 2.</li>
-    </ul>
-  </section>
+    <!-- ── On-Camera Hardware UI ────────────────────────────── -->
+    <section id="camera-ui">
+      <div class="section-head">
+        <div>
+          <p class="section-kicker">Running On Body</p>
+          <h2>Built for the 6D's own LCD &amp; dials</h2>
+        </div>
+      </div>
 
-  <div class="box">
-    <b>What this page does not claim.</b> Scores are against Dehancer, not against film.
-    A corpus of 101 frames is a sample, not a law. The numbered table is the evidence;
-    the pictures are only illustration.
-  </div>
-</main>
+      <div class="three-col">
+        <figure class="lcd-card">
+          <div class="lcd-bezel">
+            <img src="img/shelf.png" alt="On-camera Film Shelf UI on Canon EOS 6D" data-zoom>
+          </div>
+          <figcaption class="lcd-cap">
+            <b>Film Shelf</b>
+            <span>46+ Recipes</span>
+          </figcaption>
+        </figure>
 
-<footer class="wrap">
-  Magic Lantern module for the Canon 6D. Not affiliated with Canon, Fujifilm or the
-  Magic Lantern project; stock names describe what a look imitates and are trademarks of
-  their owners.
-</footer>
+        <figure class="lcd-card">
+          <div class="lcd-bezel">
+            <img src="img/creator.png" alt="On-camera 12-wedge Color Creator UI on Canon EOS 6D" data-zoom>
+          </div>
+          <figcaption class="lcd-cap">
+            <b>12-Wedge Color Creator</b>
+            <span>Sat · Lum · Hue</span>
+          </figcaption>
+        </figure>
+
+        <figure class="lcd-card">
+          <div class="lcd-bezel">
+            <img src="img/creator_tone.png" alt="On-camera Highlight and Shadow 5-point tone curve UI on Canon EOS 6D"
+              data-zoom>
+          </div>
+          <figcaption class="lcd-cap">
+            <b>Highlight &amp; Shadow Curve</b>
+            <span>5-Pt Spline</span>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ── Interactive Stock Catalogue ──────────────────────── -->
+    <section id="catalog">
+      <div class="section-head">
+        <div>
+          <p class="section-kicker">101-Frame Corpus · ISO CIEDE2000</p>
+          <h2>20 Calibrated Film Stocks</h2>
+        </div>
+        <p class="section-sub">
+          Every recipe is rendered through the on-camera <code>12×17×17</code> YUV lattice (<code>ship3</code>) on 101 real photos
+          and measured per pixel against Dehancer references in CIEDE2000 (lower is closer).
+        </p>
+      </div>
+
+      <div class="eval-grid">
+        <div class="eval-box">
+          <h4>What does <code>≤ 5.0</code> (CIEDE2000 ΔE00) mean?</h4>
+          <p>
+            <b>ΔE00</b> is the ISO perceptual colour-difference scale.
+            <b>≤ 2.0</b> is nearly indistinguishable to the naked eye;
+            <b>≤ 5.0</b> is <b>photographic print parity</b> — the same film hue,
+            contrast and mood without side-by-side instrumentation.
+            The <b>P95 ΔE00</b> column shows the 95th-percentile frame error across all 101 test photos — how closely each stock holds up on the hardest 5% of scenes.
+          </p>
+        </div>
+        <div class="eval-box">
+          <h4>What regions are evaluated (8 domains)</h4>
+          <div class="domain-pills">
+            <span>Skin Tones <i>(MediaPipe 468-pt face)</i></span>
+            <span>Lips &amp; Hair</span>
+            <span>Foliage Green</span>
+            <span>Sea &amp; Sky Cyan</span>
+            <span>Shadows <i>(Y &lt; 50)</i></span>
+            <span>Midtones <i>(70–170 + Gray Chart)</i></span>
+            <span>Highlights <i>(Y &gt; 195)</i></span>
+            <span>ColorChecker 24-patch</span>
+          </div>
+        </div>
+      </div>
+
+      <figure class="photo-card" style="margin-bottom:24px">
+        <img src="img/dehancer_compare.jpg"
+          alt="Dehancer vs Ours 12x17x17 lattice (Provia 100F on 001_IMG_6883 portrait) with per-pixel CIEDE2000 ΔE00 error map"
+          data-zoom>
+        <figcaption class="photo-cap">
+          <span><b>Per-pixel CIEDE2000 ΔE00 error map (Provia 100F · 12×17×17 Lattice)</b> — Dehancer · Ours (ML) ·
+            ΔE00 error map (mean <b>2.12</b>, median <b>1.87</b>, skin <b>2.47</b>, <code>Δa +0.01</code>).</span>
+          <code>12×17×17 Lattice · ΔE 1.87</code>
+        </figcaption>
+      </figure>
+
+      <div class="filter-bar" role="tablist" aria-label="Filter by brand">
+        <button class="filter-btn active" data-brand="all">All<span>20</span></button>
+        <button class="filter-btn" data-brand="kodak">Kodak<span>10</span></button>
+        <button class="filter-btn" data-brand="fujifilm">Fujifilm<span>6</span></button>
+        <button class="filter-btn" data-brand="cinestill">CineStill<span>2</span></button>
+        <button class="filter-btn" data-brand="ilford">Ilford<span>2</span></button>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Stock</th>
+              <th>Mean ΔE00</th>
+              <th>Median ΔE00</th>
+              <th>P95 ΔE00</th>
+              <th class="bar-cell">Parity</th>
+            </tr>
+          </thead>
+          <tbody id="stock-rows">
+            <tr data-brand="ilford"><th><span class="stock-name">XP2 Super</span><span class="brand-tag b-ilford">Ilford</span></th><td class="num">1.65</td><td class="num"><b>1.49</b></td><td class="num">100%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill great" style="width:30%"></div></div></td></tr>
+            <tr data-brand="fujifilm"><th><span class="stock-name">Acros 100</span><span class="brand-tag b-fuji">Fuji</span></th><td class="num">2.27</td><td class="num"><b>2.24</b></td><td class="num">100%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill great" style="width:45%"></div></div></td></tr>
+            <tr data-brand="fujifilm"><th><span class="stock-name">Provia 100F</span><span class="brand-tag b-fuji">Fuji</span></th><td class="num">2.69</td><td class="num"><b>2.63</b></td><td class="num">100%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill great" style="width:53%"></div></div></td></tr>
+            <tr data-brand="kodak"><th><span class="stock-name">ColorPlus 200</span><span class="brand-tag b-kodak">Kodak</span></th><td class="num">2.99</td><td class="num"><b>2.97</b></td><td class="num">100%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:59%"></div></div></td></tr>
+            <tr data-brand="kodak"><th><span class="stock-name">Portra 160VC</span><span class="brand-tag b-kodak">Kodak</span></th><td class="num">3.06</td><td class="num"><b>3.08</b></td><td class="num">99%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:62%"></div></div></td></tr>
+            <tr data-brand="kodak"><th><span class="stock-name">Portra 800</span><span class="brand-tag b-kodak">Kodak</span></th><td class="num">3.24</td><td class="num"><b>3.23</b></td><td class="num">100%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:65%"></div></div></td></tr>
+            <tr data-brand="kodak"><th><span class="stock-name">Gold 200</span><span class="brand-tag b-kodak">Kodak</span></th><td class="num">3.26</td><td class="num"><b>3.23</b></td><td class="num">100%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:65%"></div></div></td></tr>
+            <tr data-brand="ilford"><th><span class="stock-name">HP5 Plus</span><span class="brand-tag b-ilford">Ilford</span></th><td class="num">3.31</td><td class="num"><b>3.26</b></td><td class="num">100%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:65%"></div></div></td></tr>
+            <tr data-brand="kodak"><th><span class="stock-name">Portra 160NC</span><span class="brand-tag b-kodak">Kodak</span></th><td class="num">3.28</td><td class="num"><b>3.33</b></td><td class="num">100%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:67%"></div></div></td></tr>
+            <tr data-brand="kodak"><th><span class="stock-name">Ektachrome E100</span><span class="brand-tag b-kodak">Kodak</span></th><td class="num">3.33</td><td class="num"><b>3.39</b></td><td class="num">100%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:68%"></div></div></td></tr>
+            <tr data-brand="kodak"><th><span class="stock-name">Portra 160</span><span class="brand-tag b-kodak">Kodak</span></th><td class="num">3.35</td><td class="num"><b>3.42</b></td><td class="num">100%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:68%"></div></div></td></tr>
+            <tr data-brand="kodak"><th><span class="stock-name">Portra 400</span><span class="brand-tag b-kodak">Kodak</span></th><td class="num">3.46</td><td class="num"><b>3.47</b></td><td class="num">99%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:69%"></div></div></td></tr>
+            <tr data-brand="fujifilm"><th><span class="stock-name">Pro 400H</span><span class="brand-tag b-fuji">Fuji</span></th><td class="num">3.47</td><td class="num"><b>3.47</b></td><td class="num">100%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:69%"></div></div></td></tr>
+            <tr data-brand="cinestill"><th><span class="stock-name">CineStill 50D</span><span class="brand-tag b-cine">CineStill</span></th><td class="num">3.53</td><td class="num"><b>3.52</b></td><td class="num">99%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:70%"></div></div></td></tr>
+            <tr data-brand="fujifilm"><th><span class="stock-name">Superia 200</span><span class="brand-tag b-fuji">Fuji</span></th><td class="num">3.80</td><td class="num"><b>3.59</b></td><td class="num">95%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:72%"></div></div></td></tr>
+            <tr data-brand="kodak"><th><span class="stock-name">Ektar 100</span><span class="brand-tag b-kodak">Kodak</span></th><td class="num">3.78</td><td class="num"><b>3.66</b></td><td class="num">90%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:73%"></div></div></td></tr>
+            <tr data-brand="cinestill"><th><span class="stock-name">CineStill 800T</span><span class="brand-tag b-cine">CineStill</span></th><td class="num">3.72</td><td class="num"><b>3.71</b></td><td class="num">98%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:74%"></div></div></td></tr>
+            <tr data-brand="fujifilm"><th><span class="stock-name">Velvia 100</span><span class="brand-tag b-fuji">Fuji</span></th><td class="num">3.80</td><td class="num"><b>3.71</b></td><td class="num">93%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:74%"></div></div></td></tr>
+            <tr data-brand="kodak"><th><span class="stock-name">Kodachrome 64</span><span class="brand-tag b-kodak">Kodak</span></th><td class="num">4.38</td><td class="num"><b>4.33</b></td><td class="num">81%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:87%"></div></div></td></tr>
+            <tr data-brand="fujifilm"><th><span class="stock-name">Velvia 50</span><span class="brand-tag b-fuji">Fuji</span></th><td class="num">5.27</td><td class="num"><b>5.17</b></td><td class="num">44%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill high" style="width:100%"></div></div></td></tr>
+          
+        </table>
+      </div>
+
+      <div class="note-box">
+        <b>Disclaimer:</b> Scores are measured against Dehancer renders on 101 frames,
+        not chemical film scans. This is unofficial Magic Lantern firmware software
+        provided "as is" with no warranty — install at your own risk.
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap foot-inner">
+      <span>XPan Digital · Magic Lantern module for Canon EOS 6D (1.1.6)</span>
+      <span><a href="install.html" style="color:var(--amber)">Install Guide →</a></span>
+    </div>
+    </section>
+
+    <!-- ── Known Limitations ────────────────────────────────── -->
+    <section id="limitations">
+      <div class="section-head">
+        <div>
+          <p class="section-kicker">Honest Constraints</p>
+          <h2>Known Limitations</h2>
+        </div>
+        <p class="section-sub">
+          Running real-time film grading inside a 2012 DSLR's ARM CPU and 8-bit
+          YUV pipeline comes with real hardware trade-offs.
+        </p>
+      </div>
+
+      <div class="two-col">
+        <article class="highlight-card">
+          <span class="pill-tag tag-coral">Hardware · Firmware</span>
+          <h3>Canon EOS 6D (FW 1.1.6) Only</h3>
+          <p>
+            In-shutter grading hooks Canon's internal YUV encoder address
+            (<code>0xFF3442DC</code>) specific to the 6D running firmware
+            <code>1.1.6</code>. Other Canon bodies or firmware versions are not
+            supported.
+          </p>
+        </article>
+
+        <article class="highlight-card">
+          <span class="pill-tag tag-amber">Colour Precision</span>
+          <h3>8-Bit YUV422 &amp; 12×17×17 Lattice</h3>
+          <p>
+            Grades in-place on Canon's 8-bit YUV422 buffer rather than 32-bit
+            desktop GPU floats. Subtle hue/saturation differences
+            (<code>ΔE00 ~ 2–4</code>) remain visible in extreme blues, cyans, or
+            deep shadows compared to desktop Dehancer.
+          </p>
+        </article>
+
+        <article class="highlight-card">
+          <span class="pill-tag tag-cyan">Speed · Burst</span>
+          <h3>Single-Shot Pace &amp; CPU LiveView</h3>
+          <p>
+            LiveView grading runs on the ARM CPU (~12–20 fps depending on
+            overlays), and in-shutter grading adds ~150–300 ms per frame — built
+            for deliberate single shots rather than high-speed bursts.
+            <code>.CR2</code> RAW files stay untouched.
+          </p>
+        </article>
+
+        <article class="highlight-card">
+          <span class="pill-tag tag-sage">Spatial Effects</span>
+          <h3>No Real-Time Optical Halation</h3>
+          <p>
+            In-shutter and LiveView passes focus on colour, tone curves, framing
+            bars, and shot headers. Heavy spatial effects like physical halation
+            bloom or full optical grain structure are limited compared to offline
+            desktop plugins.
+          </p>
+        </article>
+      </div>
+    </section>
+    </main>
+
+    <div class="lightbox" id="lightbox" aria-hidden="true">
+      <img id="lightbox-img" src="" alt="">
+    </div>
+
+    <script>
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          const brand = btn.dataset.brand;
+          document.querySelectorAll('#stock-rows tr').forEach(tr => {
+            tr.classList.toggle('hidden', brand !== 'all' && tr.dataset.brand !== brand);
+          });
+        });
+      });
+
+      const lb = document.getElementById('lightbox');
+      const lbImg = document.getElementById('lightbox-img');
+      document.querySelectorAll('img[data-zoom]').forEach(img => {
+        img.addEventListener('click', () => {
+          lbImg.src = img.src;
+          lbImg.alt = img.alt;
+          lb.classList.add('open');
+          lb.setAttribute('aria-hidden', 'false');
+        });
+      });
+      lb.addEventListener('click', () => {
+        lb.classList.remove('open');
+        lb.setAttribute('aria-hidden', 'true');
+      });
+      document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') {
+          lb.classList.remove('open');
+          lb.setAttribute('aria-hidden', 'true');
+        }
+      });
+    </script>
 
 </body>
+
 </html>

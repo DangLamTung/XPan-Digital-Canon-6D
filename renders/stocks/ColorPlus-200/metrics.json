@@ -1,0 +1,40 @@
+{
+  "stock": "ColorPlus 200",
+  "fs": "CP200.fs",
+  "corpus_101": {
+    "stock": "ColorPlus 200",
+    "brand": "kodak",
+    "fs": "CP200.fs",
+    "n": 101,
+    "mean": 2.8495618618614307,
+    "median": 2.822769173984483,
+    "pass5": 100,
+    "skin": 2.9166026895975823
+  },
+  "board": [
+    {
+      "frame": "001_IMG_6883.jpg",
+      "mean": 2.55,
+      "median": 2.23,
+      "p90": 4.31
+    },
+    {
+      "frame": "015_IMG_8215.jpg",
+      "mean": 3.13,
+      "median": 2.71,
+      "p90": 5.84
+    },
+    {
+      "frame": "018_IMG_1553.jpg",
+      "mean": 2.89,
+      "median": 2.86,
+      "p90": 4.21
+    },
+    {
+      "frame": "054_IMG_6176.jpg",
+      "mean": 3.61,
+      "median": 3.04,
+      "p90": 6.75
+    }
+  ]
+}

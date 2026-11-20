@@ -1,0 +1,40 @@
+{
+  "stock": "Portra 160VC",
+  "fs": "P160VC.fs",
+  "corpus_101": {
+    "stock": "Portra 160VC",
+    "brand": "kodak",
+    "fs": "P160VC.fs",
+    "n": 101,
+    "mean": 2.8953625651841124,
+    "median": 2.9410320942428068,
+    "pass5": 99,
+    "skin": 3.061011903186793
+  },
+  "board": [
+    {
+      "frame": "001_IMG_6883.jpg",
+      "mean": 2.22,
+      "median": 1.9,
+      "p90": 3.95
+    },
+    {
+      "frame": "015_IMG_8215.jpg",
+      "mean": 3.28,
+      "median": 3.01,
+      "p90": 5.44
+    },
+    {
+      "frame": "018_IMG_1553.jpg",
+      "mean": 3.4,
+      "median": 3.22,
+      "p90": 5.64
+    },
+    {
+      "frame": "054_IMG_6176.jpg",
+      "mean": 3.63,
+      "median": 3.07,
+      "p90": 6.63
+    }
+  ]
+}

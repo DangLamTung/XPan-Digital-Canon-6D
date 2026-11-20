@@ -1,0 +1,40 @@
+{
+  "stock": "Velvia 50",
+  "fs": "velvia.fs",
+  "corpus_101": {
+    "stock": "Velvia 50",
+    "brand": "fujifilm",
+    "fs": "velvia.fs",
+    "n": 101,
+    "mean": 4.433961173917453,
+    "median": 4.413784555733528,
+    "pass5": 71,
+    "skin": 3.663468090713689
+  },
+  "board": [
+    {
+      "frame": "001_IMG_6883.jpg",
+      "mean": 3.15,
+      "median": 2.62,
+      "p90": 5.42
+    },
+    {
+      "frame": "015_IMG_8215.jpg",
+      "mean": 3.73,
+      "median": 3.11,
+      "p90": 5.9
+    },
+    {
+      "frame": "018_IMG_1553.jpg",
+      "mean": 4.28,
+      "median": 4.35,
+      "p90": 7.22
+    },
+    {
+      "frame": "054_IMG_6176.jpg",
+      "mean": 5.41,
+      "median": 4.56,
+      "p90": 9.45
+    }
+  ]
+}
