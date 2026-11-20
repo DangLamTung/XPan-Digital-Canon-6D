@@ -2,8 +2,9 @@
 
 ![Đà Lạt, 65:24](docs/img/promo.jpg)
 
-One frame, one camera: the camera's own JPEG, cut to the 65:24 window it was
-framed to. Đà Lạt, 2 November 2026.
+One frame, one camera: the camera's own JPEG, cut to 65:24 here from that same
+file. The crop is done on the host, not by Canon's encoder — the camera still
+writes 3:2 and this repository burns the bars. Đà Lạt, 2 November 2026.
 
 ![The same frame with no look, then Classic Chrome, Portra 400 and Velvia 50](docs/img/looks.jpg)
 
@@ -11,12 +12,12 @@ The same frame four times: untouched, then three shipped recipes. Two of the
 three carry their measured score; Classic Chrome is a hand-written look and has
 none.
 
-## What those three images do and do not prove
+## What these four images do and do not prove
 
-They show that three recipes render one scene three different ways. That is all
-they show. A three-up strip cannot say whether a stock is *right*: any two
-curves can look different from each other and both be wrong. The evidence for a
-stock is a number, and it is kept separately.
+They show that three recipes render one scene three different ways, and that the
+two with a score still look different from each other. That is all they show. A
+strip cannot say whether a stock is *right*: any two curves can differ and both
+be wrong. The evidence for a stock is a number, and it is kept separately.
 
 ## How the colour is made
 
