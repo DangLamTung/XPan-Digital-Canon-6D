@@ -14,7 +14,8 @@
     <a class="repo" href="https://github.com/DangLamTung/XPan-Digital-Canon-6D">github.com/DangLamTung/XPan-Digital-Canon-6D</a>
     <nav aria-label="sections">
       <a href="#catalog" aria-current="page">Catalogue</a>
-      <a href="#method">Method</a>
+      <a href="#lattice">Lattice</a>
+      <a href="#hook">Hook</a>
       <a href="#research">Research</a>
     </nav>
   </div>
@@ -29,6 +30,7 @@
       sectors, a split tone, halation and grain. It renders twice — a full-precision RGB
       develop and a 12 × 17 × 17 lattice for the camera's YUV buffer — so the picture on
       the screen and the file on the card are the same look.</p>
+      <p class="cta"><a class="button" href="https://github.com/DangLamTung/XPan-Digital-Canon-6D">Source, recipes and measurements →</a></p>
     </div>
     <figure>
       <div class="strip"><span></span><img src="img/promo.jpg" alt="Đà Lạt, 65:24"><span></span></div>
@@ -122,6 +124,42 @@
     <p>The lattice that runs on the camera has <code>12</code> nodes along luma and
     <code>17</code> along each chroma axis — <code>SE_YUV3_NY</code> and
     <code>SE_YUV3_NC</code>, 3468 nodes — rebuilt when the stock changes, not per frame.</p>
+  </section>
+
+  <section class="prose" id="lattice">
+    <h2>Why a lattice, and how it is cut</h2>
+    <figure class="fig"><img src="img/lattice.png" alt="12 slabs of 17 by 17 nodes"></figure>
+    <p>A frame is graded in the camera, between Canon writing the YUV buffer and
+    Canon encoding it. Running the full RGB engine there is far too slow, so the
+    recipe is <b>baked</b> into a three-dimensional table over luma and the two
+    chroma axes, and the pixels are graded by interpolating in it.</p>
+    <p>Equal steps on Cb and Cr waste nodes on colours no scene contains: an
+    8 × 8 × 8 cube costs <b>11.4 levels</b> of mean error on a real frame. Widening
+    only the chroma axes, to <b>17</b>, brings that to <b>7.0</b> at the same 12
+    nodes along luma — which is why the table is <b>12 × 17 × 17</b> and not a cube.</p>
+    <p>Luma keeps its own 256-entry curve; each of the 3468 nodes carries three
+    signed bytes — how much brighter or darker that <i>colour</i> grades than grey
+    of the same luma (<code>dy</code>), and where its chroma goes. Dropping
+    <code>dy</code> fixes chroma but leaves luma 3.4× worse, because a saturated
+    pixel does not grade to the same brightness as a grey one.</p>
+    <p>The table is <b>cut once per stock change</b>, not per frame: the engine is
+    sampled at the node positions, the result becomes
+    <code>ML/DATA</code>-side state in RAM, and every frame afterwards is three
+    interpolations per pixel.</p>
+  </section>
+
+  <section class="prose" id="hook">
+    <h2>Where it hooks on the 6D</h2>
+    <figure class="fig"><img src="img/hook.png" alt="YUV buffer, hook at 0xFF3442DC, graded YUV, JPEG"></figure>
+    <p><code>fs_yuvhook.c</code> patches <code>sdfExecuteYuvToJpegPath</code> at
+    <b>0xFF3442DC</b> — the still-JPEG path — so the grade lands on the file the
+    camera writes. LiveView is graded through the same tables, which is why the
+    preview and the shot agree. Canon is not modified on disk: the hook is installed
+    at module load and removed with it.</p>
+    <p>The 65:24 framing is a separate matter: the camera still writes 3:2, and the
+    bars are burned in afterwards. Canon's own encoder crop is not used — the code
+    that would control it sits outside the 16 MB ROM image available for the 6D,
+    which is documented in <a href="https://github.com/DangLamTung/XPan-Digital-Canon-6D/blob/main/docs/xpan-crop-port.md">docs/xpan-crop-port.md</a>.</p>
   </section>
 
   <section class="prose" id="research">

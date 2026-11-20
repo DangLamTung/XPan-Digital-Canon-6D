@@ -56,3 +56,9 @@ tbody tr:hover{background:#f8faf6}
 .box{background:#fff;border:1px solid var(--line);border-left:3px solid #b4544a;border-radius:8px;padding:16px 18px;margin:22px 0}
 footer{margin-top:20px;padding:20px 0 40px;border-top:1px solid var(--line);color:var(--muted);font-size:.86rem}
 @media(max-width:760px){.intro{grid-template-columns:1fr}.intro figure{justify-self:start;margin-top:18px;transform:none}}
+.cta{margin-top:22px}
+.button{display:inline-block;padding:10px 16px;border-radius:6px;background:#dce8d8;color:#20372a;
+font-weight:700;font-size:.94rem;border:1px solid #a9bfa9}
+.button:hover{background:#e9f2e4;border-color:#7f9d84}
+.fig{margin:18px 0 20px}
+.fig img{display:block;width:100%;height:auto;border:1px solid var(--line);border-radius:8px;background:#fff}
