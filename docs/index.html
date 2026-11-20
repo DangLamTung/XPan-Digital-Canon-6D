@@ -116,6 +116,7 @@
 
   <section class="prose" id="method">
     <h2>How a stock is scored</h2>
+    <figure class="fig"><img src="img/scores.png" alt="Median dE00 per stock"></figure>
     <p>Each recipe renders every frame of a <b>101-frame corpus</b> through the same
     engine, is compared against a Dehancer reference of that frame in
     <b>CIEDE2000</b> per pixel, and scored by the median per frame. Twenty of the 46
@@ -128,7 +129,6 @@
 
   <section class="prose" id="lattice">
     <h2>Why a lattice, and how it is cut</h2>
-    <figure class="fig"><img src="img/lattice.png" alt="12 slabs of 17 by 17 nodes"></figure>
     <p>A frame is graded in the camera, between Canon writing the YUV buffer and
     Canon encoding it. Running the full RGB engine there is far too slow, so the
     recipe is <b>baked</b> into a three-dimensional table over luma and the two
@@ -150,7 +150,6 @@
 
   <section class="prose" id="hook">
     <h2>Where it hooks on the 6D</h2>
-    <figure class="fig"><img src="img/hook.png" alt="YUV buffer, hook at 0xFF3442DC, graded YUV, JPEG"></figure>
     <p><code>fs_yuvhook.c</code> patches <code>sdfExecuteYuvToJpegPath</code> at
     <b>0xFF3442DC</b> — the still-JPEG path — so the grade lands on the file the
     camera writes. LiveView is graded through the same tables, which is why the
