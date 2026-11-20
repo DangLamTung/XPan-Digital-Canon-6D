@@ -6390,7 +6390,7 @@ static void fs_ptp_drain_rx(void)
 {
   int len = fs_ptp_rx_ready;
   int apply = fs_ptp_rx_apply;
-  char code[16], label[32], tmp_path[64], dst_path[64];
+  char code[12], label[32], tmp_path[64], dst_path[64];
   const char *raw_name;
   int i = 0, idx = -1;
   FILE *fp;
@@ -9308,15 +9308,6 @@ static struct menu_entry fs_menu_debug[] = {
         .icon_type = IT_ACTION,
         .help = "Write the diagnostic buffer to ML/LOGS/FILMSIM.LOG now.",
     },
-    {
-        .name = "Encoder Crop",
-        .priv = &film_sim_enccrop,
-        .max = 2,
-        .choices = fs_enc_names,
-        .update = fs_enc_update,
-        .select = fs_enc_select,
-        .help = "Experimental: crop inside Canon's encoder.",
-    },
     MENU_EOL,
 };
 
@@ -9539,70 +9530,70 @@ static MENU_SELECT_FUNC(fs_user_look_select) {
 
 static struct menu_entry fs_menu_userlook[] = {
     {
-        .name = "Apply WHEEL",
+        .name = "Apply Look 1",
         .priv = &fs_user_slot[0],
         .select = fs_user_look_select,
         .icon_type = IT_ACTION,
         .help = "Make ML/FILM/WHEEL.fs the active look.",
     },
     {
-        .name = "Apply WHEEL2",
+        .name = "Apply Look 2",
         .priv = &fs_user_slot[1],
         .select = fs_user_look_select,
         .icon_type = IT_ACTION,
         .help = "Make ML/FILM/WHEEL2.fs the active look.",
     },
     {
-        .name = "Apply WHEEL3",
+        .name = "Apply Look 3",
         .priv = &fs_user_slot[2],
         .select = fs_user_look_select,
         .icon_type = IT_ACTION,
         .help = "Make ML/FILM/WHEEL3.fs the active look.",
     },
     {
-        .name = "Apply WHEEL4",
+        .name = "Apply Look 4",
         .priv = &fs_user_slot[3],
         .select = fs_user_look_select,
         .icon_type = IT_ACTION,
         .help = "Make ML/FILM/WHEEL4.fs the active look.",
     },
     {
-        .name = "Apply WHEEL5",
+        .name = "Apply Look 5",
         .priv = &fs_user_slot[4],
         .select = fs_user_look_select,
         .icon_type = IT_ACTION,
         .help = "Make ML/FILM/WHEEL5.fs the active look.",
     },
     {
-        .name = "Apply WHEEL6",
+        .name = "Apply Look 6",
         .priv = &fs_user_slot[5],
         .select = fs_user_look_select,
         .icon_type = IT_ACTION,
         .help = "Make ML/FILM/WHEEL6.fs the active look.",
     },
     {
-        .name = "Apply WHEEL7",
+        .name = "Apply Look 7",
         .priv = &fs_user_slot[6],
         .select = fs_user_look_select,
         .icon_type = IT_ACTION,
         .help = "Make ML/FILM/WHEEL7.fs the active look.",
     },
     {
-        .name = "Apply WHEEL8",
+        .name = "Apply Look 8",
         .priv = &fs_user_slot[7],
         .select = fs_user_look_select,
         .icon_type = IT_ACTION,
         .help = "Make ML/FILM/WHEEL8.fs the active look.",
     },
     {
-        .name = "Apply WHEEL9",
+        .name = "Apply Look 9",
         .priv = &fs_user_slot[8],
         .select = fs_user_look_select,
         .icon_type = IT_ACTION,
         .help = "Make ML/FILM/WHEEL9.fs the active look.",
     },
     {
-        .name = "Apply WHEEL10",
+        .name = "Apply Look 10",
         .priv = &fs_user_slot[9],
         .select = fs_user_look_select,
         .icon_type = IT_ACTION,
@@ -9741,14 +9732,6 @@ static struct menu_entry fs_menu_settings[] = {
         .children = fs_menu_quality,
     },
     {
-        .name = "Aspect",
-        .priv = &film_sim_aspect,
-        .max = FS_ASPECT_COUNT - 1,
-        .choices = fs_aspect_names,
-        .update = fs_aspect_update,
-        .help = "Frame for LV bars and Develop; XPan is 65:24.",
-    },
-    {
         .name = "Look",
         .select = menu_open_submenu,
         .icon_type = IT_ACTION,
@@ -9867,10 +9850,10 @@ static struct menu_entry film_sim_menu[] = {
         .children = fs_menu_live,
     },
     {
-        .name = "User Look",
+        .name = "Saved Looks",
         .select = menu_open_submenu,
         .icon_type = IT_ACTION,
-        .help = "The looks the Color Creator saved, applied by name.",
+        .help = "Looks the Color Creator saved, applied by name.",
         .children = fs_menu_userlook,
     },
     {
@@ -9881,7 +9864,7 @@ static struct menu_entry film_sim_menu[] = {
         .children = fs_menu_custom,
     },
     {
-        .name = "Recipes",
+        .name = "Recipe Files",
         .select = menu_open_submenu,
         .icon_type = IT_ACTION,
         .help = "Import, export and reload .fs recipes.",
@@ -9895,18 +9878,18 @@ static struct menu_entry film_sim_menu[] = {
         .children = fs_menu_fuji,
     },
     {
-        .name = "Develop",
-        .select = menu_open_submenu,
-        .icon_type = IT_ACTION,
-        .help = "Darkroom, this photo, x4 compare, watch files.",
-        .children = fs_menu_develop,
-    },
-    {
         .name = "Photo",
         .select = fs_photo_next,
         .select_Q = fs_photo_prev,
         .update = fs_photo_update,
         .help = "Which frame Develop uses. SET: next, Q: previous.",
+    },
+    {
+        .name = "Develop",
+        .select = menu_open_submenu,
+        .icon_type = IT_ACTION,
+        .help = "Darkroom, this photo, x4 compare, watch files.",
+        .children = fs_menu_develop,
     },
     MENU_EOL,
 };
