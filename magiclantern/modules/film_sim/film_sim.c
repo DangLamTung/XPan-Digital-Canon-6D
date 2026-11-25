@@ -1094,7 +1094,8 @@ static void fs_sync() {
       ((unsigned)(film_sim_stylecheck ? 1 : 0) << 8) |
       ((unsigned)(film_sim_sharp & 7) << 9) |
       ((unsigned)(film_sim_pad & 1) << 12) |
-      ((unsigned)(film_sim_wbs_ba != 0 || film_sim_wbs_gm != 0) << 13);
+      ((unsigned)((film_sim_wbs_ba + 9) & 0x1f) << 13) |
+      ((unsigned)((film_sim_wbs_gm + 9) & 0x1f) << 18);
 
   if (fs_signature_valid && sig == fs_signature && sig2 == fs_signature2 &&
       sig3 == fs_signature3)
@@ -1395,7 +1396,10 @@ static void FAST fs_process_frame(void *src, void *dst) {
     uint32_t tc = get_ms_clock();
     memcpy(fs_dump_raw, src, fs_dump_total);
     copy_ms = get_ms_clock() - tc;
-    fs_core_process_rows(&fs_lut, fs_dump_raw, dst, pitch, row0, row1, &fs_rnd);
+    /* The dump has to show the look that is on the screen, so it goes through
+     * the same grade as LiveView. fs_lut is the old ten-parameter table and
+     * produced a different colour from the lattice the user is watching. */
+    fs_lv_grade(fs_dump_raw, dst, pitch, row0, row1);
     if (src != dst) {
       if (row0 > 0)
         memcpy(dst, fs_dump_raw, (size_t)row0 * pitch);
@@ -4956,14 +4960,24 @@ static const char *fs_stock_alias(const film_xml_t *f) {
    * "Portra", so a name check would send them to portra.fs, which is the 400
    * recipe.  Those two are different films and get their own files; 400 keeps
    * the shared one. */
+  if (!strcasecmp(f->code, "P160NC"))
+    return "P160NC";
+  if (!strcasecmp(f->code, "P160VC"))
+    return "P160VC";
   if (!strcasecmp(f->code, "P160"))
     return "P160";
   if (!strcasecmp(f->code, "P800"))
     return "P800";
+  if (strstr(f->name, "Portra 160NC"))
+    return "P160NC";
+  if (strstr(f->name, "Portra 160VC"))
+    return "P160VC";
   if (strstr(f->name, "Portra"))
     return "portra";
   if (strstr(f->name, "Gold"))
     return "gold";
+  if (!strcasecmp(f->code, "V100") || strstr(f->name, "Velvia 100"))
+    return "V100";
   if (strstr(f->name, "Velvia"))
     return "velvia";
   if (strstr(f->name, "Provia"))
@@ -4972,6 +4986,10 @@ static const char *fs_stock_alias(const film_xml_t *f) {
     return "acros";
   if (strstr(f->name, "Astia"))
     return "astia";
+  if (strstr(f->name, "PRO Neg. Hi") || strstr(f->name, "Pro Neg Hi"))
+    return "proneghi";
+  if (strstr(f->name, "PRO Neg. Std") || strstr(f->name, "Pro Neg Std"))
+    return "pronegstd";
   if (strstr(f->name, "Classic Chrome"))
     return "classicchrome";
   if (strstr(f->name, "Classic Neg"))
@@ -4980,15 +4998,14 @@ static const char *fs_stock_alias(const film_xml_t *f) {
     return "nostalgicneg";
   if (strstr(f->name, "Reala"))
     return "realaace";
-  if (strstr(f->name, "Eterna"))
-    return "eterna";
   if (strstr(f->name, "Bleach"))
     return "bleachbypass";
+  if (strstr(f->name, "Eterna"))
+    return "eterna";
   if (strstr(f->name, "CineStill 800T"))
-    return "soup800";
+    return "800T";
 
-  if (!strcasecmp(f->code, "P160") || !strcasecmp(f->code, "P400") ||
-      !strcasecmp(f->code, "P800"))
+  if (!strcasecmp(f->code, "P400"))
     return "portra";
   if (!strcasecmp(f->code, "GOLD"))
     return "gold";
@@ -4999,9 +5016,13 @@ static const char *fs_stock_alias(const film_xml_t *f) {
   if (!strcasecmp(f->code, "ACROS"))
     return "acros";
   if (!strcasecmp(f->code, "800T"))
-    return "soup800";
+    return "800T";
   if (!strcasecmp(f->code, "ASTIA"))
     return "astia";
+  if (!strcasecmp(f->code, "PNHI"))
+    return "proneghi";
+  if (!strcasecmp(f->code, "PNSTD"))
+    return "pronegstd";
   if (!strcasecmp(f->code, "CCHR"))
     return "classicchrome";
   if (!strcasecmp(f->code, "CNEG"))
@@ -6762,7 +6783,7 @@ static void fs_share_look_trigger(void *priv, int delta)
 }
 
 static void fs_creator_save_task(void *unused) {
-  char buf[2048];
+  char buf[4096];
   char path[64];
   char file[12];      /* the slot's file: WHEEL .. WHEEL4 */
   char label[16];     /* what the shelf will call it     */
@@ -7182,7 +7203,9 @@ static const char *fs_fuji_base_files[] = {
 };
 
 static void fs_fuji_save_task(void *unused) {
-  char buf[2048];
+  /* Must hold the largest base recipe plus the merged tables: velvia.fs is
+   * already 2084 bytes, so 2048 could not save a recipe based on it. */
+  char buf[4096];
   char path[64];
   char file[12];
   int n;
@@ -7440,7 +7463,7 @@ static const char *fc_basename(const char *p) {
  * beside the original. 8.3 names on purpose; FIO_CreateFile rejects long ones.
  */
 static void fs_develop_batch(void) {
-  static const char *const codes[4] = {"portra", "velvia", "soup800",
+  static const char *const codes[4] = {"portra", "velvia", "800T",
                                        "bleachbypass"};
   static const char *const labels[4] = {"Portra 400", "Velvia 50",
                                         "CineStill 800T", "Bleach Bypass"};

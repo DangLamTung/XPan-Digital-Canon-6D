@@ -106,7 +106,7 @@ static void copy_base_tables(const char *base, char *buf, int cap, int *pos)
             int wl = (int)strlen(want[k]);
             if (len >= wl && !strncmp(p, want[k], wl)) { keep = 1; break; }
         }
-        if (keep && len > 0 && len < cap - *pos) {
+        if (keep && len > 0 && len + 2 <= cap - *pos) {   /* line + '\n' + NUL  */
             memcpy(buf + *pos, p, (size_t)len);
             *pos += len;
             buf[(*pos)++] = '\n';

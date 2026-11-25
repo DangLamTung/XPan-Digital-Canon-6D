@@ -46,6 +46,7 @@
 #include <fio-ml.h>
 #include <patch.h>
 #include <exmem.h>
+#include <arm-mcr.h>          /* _clean_d_cache: the 6D is ARM946E-S */
 #include <lens.h>          /* lens_info.raw_picstyle: the style the camera is ON */
 #include <stdio.h>
 #include <string.h>
@@ -253,12 +254,16 @@ static void fs_hdr_burn(unsigned char *gp, int width, int rows, int stride,
 
 static void fs_dcache_clean(void *p, uint32_t len)
 {
-    uint32_t a = (uint32_t)p & ~31u;
-    uint32_t end = (uint32_t)p + len;
-    for (; a < end; a += 32)
-        asm volatile("mcr p15, 0, %0, c7, c11, 1" :: "r"(a) : "memory");
-    /* DSB: the write-backs must complete before Canon reads the frame. */
-    asm volatile("mcr p15, 0, %0, c7, c10, 4" :: "r"(0) : "memory");
+    (void)p; (void)len;
+    /*
+     * The 6D is an ARM946E-S (ARMv5TE): its D-cache is 8 KB, 256 lines, and
+     * c7,c11,1 (DCCMVAU) does not exist on it -- that is an ARMv7 instruction.
+     * Walking 40 MB of frame with it cost a million undefined MCRs and never
+     * cleaned the lines that mattered, so the last 8 KB of a frame could reach
+     * the encoder stale. _clean_d_cache() is ML's own ARM946E-S sequence:
+     * clean+invalidate by index over all segments, then drain the write buffer.
+     */
+    _clean_d_cache();
 }
 
 int fs_yuvhook_dcache_used(void) { return fs_dcache_used; }
