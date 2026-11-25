@@ -59,9 +59,12 @@
 /* The tables themselves, baked in look.c by running the real grade. */
 static se_yuvtbl tbl;
 /* The same look as a joint (y,u,v) lattice, for the LiveView filter. */
-static se_yuv3   tbl3;
-static int       baked;
-static char      baked_name[SE_STOCK_NAME];
+static se_yuv3      tbl3;
+static volatile int baked;
+static volatile int lv_have;
+static char         baked_name[SE_STOCK_NAME];
+static volatile int lv_busy;
+static volatile int eng_busy;
 
 /* Exact (engine) path, defined below; prepared when a stock is baked. */
 static void eng_prepare(const se_look *lk);
@@ -166,7 +169,6 @@ int fs_yuvlook_bake_lut(const char *stock_path, int strength, const char *lut_pa
     size_t   got = 0;
     FILE    *f;
 
-    baked = 0;
 #ifdef SE_HOSTED
     f = fopen(stock_path, "rb");
 #else
@@ -228,6 +230,28 @@ int fs_yuvlook_bake_lut(const char *stock_path, int strength, const char *lut_pa
         if (got < 0 && lut_path && lut_path[0])
             se_log("bake: %s unreadable, LiveView has the .fs only", lut_path);
         se_look_set_bake_cube(got > 0 ? &cube : NULL);
+        {
+            int prev_baked = baked, prev_lv = lv_have;
+            baked = 0;
+            lv_have = 0;
+            __asm__ volatile("" ::: "memory");
+#ifndef SE_HOSTED
+            {
+                int wait = 0;
+                while ((lv_busy || eng_busy) && wait++ < 400)
+                    msleep(5);
+                if (lv_busy || eng_busy) {
+                    baked = prev_baked;
+                    lv_have = prev_lv;
+                    se_look_set_bake_cube(NULL);
+                    free(hold);
+                    return -2;
+                }
+            }
+#endif
+            (void)prev_baked;
+            (void)prev_lv;
+        }
         se_look_bake_yuv(&lk, &tbl);
         eng_prepare(&lk);
         se_look_bake_yuv3(&lk, &tbl3);
@@ -329,11 +353,14 @@ static unsigned char eng_rgb[5760 * 3];
 /* the fitted look, kept so the run can be re-begun at the frame's real width */
 static se_look eng_fitted;
 static int     eng_fitted_ok;
+typedef struct {
+    unsigned char *dst;
+    int stride;
+    int row;
+} eng_emit_ctx;
 static unsigned char *eng_arena_used;   /* cached alias of eng_arena_mem */
-static unsigned char *eng_dst;
-static int eng_stride, eng_row;
 
-int fs_yuvlook_engine_ready(void) { return eng_run != NULL; }
+int fs_yuvlook_engine_ready(void) { return baked && eng_run != NULL; }
 
 /* ---- LiveView form: the same engine, colour only ----------------------
  *
@@ -344,7 +371,6 @@ int fs_yuvlook_engine_ready(void) { return eng_run != NULL; }
  */
 static int eng_emit(void *ctx, const uint8_t *row, int width);
 static se_look      lv_look;
-static int          lv_have;
 static se_look_run *lv_run;
 static se_arena     lv_arena;
 static unsigned char lv_mem[96 * 1024];
@@ -367,7 +393,10 @@ uint32_t fs_yuvlook_apply_lattice(unsigned char *buf, int width, int height, int
     uint32_t t0 = get_ms_clock();
 #endif
     if (!baked || !buf || width < 2 || height < 1 || stride < width * 2) return 0;
+    eng_busy = 1;
+    if (!baked) { eng_busy = 0; return 0; }
     fs_core_process_rows3(tbl3.y, tbl3.v, buf, buf, stride, 0, height, 0, &rnd);
+    eng_busy = 0;
 #ifdef SE_HOSTED
     return 1;
 #else
@@ -380,7 +409,10 @@ uint32_t fs_yuvlook_apply_lattice(unsigned char *buf, int width, int height, int
 uint32_t fs_yuvlook_apply_engine_lv(unsigned char *buf, int width, int height, int stride)
 {
     int y;
+    eng_emit_ctx ec;
     if (!lv_have || !buf || width < 2 || width > 2048) return 0;
+    lv_busy = 1;
+    if (!lv_have) { lv_busy = 0; return 0; }
     if (!lv_run || lv_w != width) {
         if (lv_run) { se_look_end(lv_run, eng_drop, NULL); lv_run = NULL; }
         /* same reason as the shot arena: MEM_TEMPORARY memory arrives
@@ -393,11 +425,12 @@ uint32_t fs_yuvlook_apply_engine_lv(unsigned char *buf, int width, int height, i
         se_look_fit(&lv_look, width, sizeof lv_mem);
         if (se_look_begin(&lv_run, &lv_look, width, &lv_arena) != SE_OK) {
             lv_run = NULL;
+            lv_busy = 0;
             return 0;
         }
         lv_w = width;
     }
-    eng_dst = buf; eng_stride = stride; eng_row = 0;
+    ec.dst = buf; ec.stride = stride; ec.row = 0;
     for (y = 0; y < height; y++) {
         unsigned char *src = buf + (size_t)y * (size_t)stride;
         int x;
@@ -419,17 +452,18 @@ uint32_t fs_yuvlook_apply_engine_lv(unsigned char *buf, int width, int height, i
             lv_rgb[x * 3 + 1] = (unsigned char)(g < 0 ? 0 : g > 255 ? 255 : g);
             lv_rgb[x * 3 + 2] = (unsigned char)(b < 0 ? 0 : b > 255 ? 255 : b);
         }
-        se_look_rows(lv_run, lv_rgb, 1, eng_emit, NULL);
+        se_look_rows(lv_run, lv_rgb, 1, eng_emit, &ec);
     }
-    se_look_end(lv_run, eng_emit, NULL);
+    se_look_end(lv_run, eng_emit, &ec);
+    lv_busy = 0;
     return 1;              /* graded: the caller must not fall back */
 }
 
 static int eng_emit(void *ctx, const uint8_t *row, int width)
 {
-    unsigned char *p = eng_dst + (size_t)eng_row * (size_t)eng_stride;
+    eng_emit_ctx *c = (eng_emit_ctx *)ctx;
+    unsigned char *p = c->dst + (size_t)c->row * (size_t)c->stride;
     int x;
-    (void)ctx;
     for (x = 0; x + 1 < width; x += 2) {
         const unsigned char *a = row + (size_t)x * 3;
         const unsigned char *b = row + (size_t)(x + 1) * 3;
@@ -443,7 +477,7 @@ static int eng_emit(void *ctx, const uint8_t *row, int width)
         p[x * 2 + 2] = (unsigned char)(signed char)(v < -128 ? -128 : v > 127 ? 127 : v);
         p[x * 2 + 3] = (unsigned char)(y1 < 0 ? 0 : y1 > 255 ? 255 : y1);
     }
-    eng_row++;
+    c->row++;
     return 0;
 }
 
@@ -457,8 +491,8 @@ static void eng_prepare(const se_look *lk)
     lv_look = *lk;
     lv_look.hal_amount = 0;          /* the expensive stages, dropped */
     lv_look.grain = 0;
-    lv_have = 1;
     if (lv_run) { se_look_end(lv_run, eng_drop, NULL); lv_run = NULL; }
+    lv_have = 1;
 
     se_look_fit(&fitted, 5760, sizeof eng_arena_mem);
     eng_fitted = fitted;
@@ -496,7 +530,9 @@ uint32_t fs_yuvlook_apply_engine(unsigned char *buf, int width, int height, int 
 #ifndef SE_HOSTED
     uint32_t t0 = get_ms_clock();
 #endif
-    if (!eng_run || !buf || width < 2 || width > 5760) return 0;
+    if (!baked || !eng_run || !buf || width < 2 || width > 5760) return 0;
+    eng_busy = 1;
+    if (!baked || !eng_run) { eng_busy = 0; return 0; }
     /*
      * The run was begun at 5760 because that was the largest row the arena
      * must fit. A 6D frame is 5472 wide, so grading through a 5760-wide run
@@ -511,33 +547,36 @@ uint32_t fs_yuvlook_apply_engine(unsigned char *buf, int width, int height, int 
                       sizeof eng_arena_mem);
         if (se_look_begin(&eng_run, &eng_fitted, width, &eng_arena) != SE_OK)
             eng_run = NULL;
-        if (!eng_run) return 0;
+        if (!eng_run) { eng_busy = 0; return 0; }
     }
-    eng_dst = buf; eng_stride = stride; eng_row = 0;
-    for (y = 0; y < height; y++) {
-        unsigned char *src = buf + (size_t)y * (size_t)stride;
-        int x;
-        for (x = 0; x < width; x++) {
-            /*
-             * UYVY is [U, Y0, V, Y1]: a pair of pixels shares one U and one
-             * V, and the pair starts at an even x. Reading src[x*2] and
-             * src[x*2+2] per pixel is right for x even and swaps U with V for
-             * x odd -- half the frame came out with the wrong chroma.
-             */
-            const unsigned char *pair = src + (size_t)(x & ~1) * 2;
-            int Y = src[x * 2 + 1];
-            int U = (int)(signed char)pair[0];
-            int V = (int)(signed char)pair[2];
-            int r = Y + ((359 * V + 128) >> 8);
-            int g = Y - ((88 * U + 183 * V + 128) >> 8);
-            int b = Y + ((454 * U + 128) >> 8);
-            eng_rgb[x * 3 + 0] = (unsigned char)(r < 0 ? 0 : r > 255 ? 255 : r);
-            eng_rgb[x * 3 + 1] = (unsigned char)(g < 0 ? 0 : g > 255 ? 255 : g);
-            eng_rgb[x * 3 + 2] = (unsigned char)(b < 0 ? 0 : b > 255 ? 255 : b);
+    {
+        eng_emit_ctx ec = { buf, stride, 0 };
+        for (y = 0; y < height; y++) {
+            unsigned char *src = buf + (size_t)y * (size_t)stride;
+            int x;
+            for (x = 0; x < width; x++) {
+                /*
+                 * UYVY is [U, Y0, V, Y1]: a pair of pixels shares one U and one
+                 * V, and the pair starts at an even x. Reading src[x*2] and
+                 * src[x*2+2] per pixel is right for x even and swaps U with V for
+                 * x odd -- half the frame came out with the wrong chroma.
+                 */
+                const unsigned char *pair = src + (size_t)(x & ~1) * 2;
+                int Y = src[x * 2 + 1];
+                int U = (int)(signed char)pair[0];
+                int V = (int)(signed char)pair[2];
+                int r = Y + ((359 * V + 128) >> 8);
+                int g = Y - ((88 * U + 183 * V + 128) >> 8);
+                int b = Y + ((454 * U + 128) >> 8);
+                eng_rgb[x * 3 + 0] = (unsigned char)(r < 0 ? 0 : r > 255 ? 255 : r);
+                eng_rgb[x * 3 + 1] = (unsigned char)(g < 0 ? 0 : g > 255 ? 255 : g);
+                eng_rgb[x * 3 + 2] = (unsigned char)(b < 0 ? 0 : b > 255 ? 255 : b);
+            }
+            se_look_rows(eng_run, eng_rgb, 1, eng_emit, &ec);
         }
-        se_look_rows(eng_run, eng_rgb, 1, eng_emit, NULL);
+        se_look_end(eng_run, eng_emit, &ec);
     }
-    se_look_end(eng_run, eng_emit, NULL);
+    eng_busy = 0;
 #ifdef SE_HOSTED
     return 0;
 #else
@@ -554,6 +593,8 @@ uint32_t fs_yuvlook_apply(unsigned char *buf, int width, int height, int stride)
 
     if (!baked || !buf || width < 2 || height < 1 || stride < width * 2)
         return 0;
+    eng_busy = 1;
+    if (!baked) { eng_busy = 0; return 0; }
 
     for (y = 0; y < height; y++) {
         unsigned char *p = buf + (size_t)y * (size_t)stride;
@@ -657,6 +698,7 @@ uint32_t fs_yuvlook_apply(unsigned char *buf, int width, int height, int stride)
             }
         }
     }
+    eng_busy = 0;
 #ifdef SE_HOSTED
     return 0;
 #else

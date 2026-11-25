@@ -112,11 +112,14 @@ void fs_yuvhook_header(const se_frame *f, unsigned char *scratch) {
     if (f && scratch) {
         /* Off while the copy lands: the hook may run mid-update, and a torn
          * struct would draw a band with half of the previous shot's text. */
-        int on = fs_hdr.on;
+        se_frame tmp = *f;
+        tmp.on = 0;
         fs_hdr.on = 0;
-        fs_hdr = *f;
+        __asm__ volatile("" ::: "memory");
+        fs_hdr = tmp;
         fs_hdr_scratch = scratch;
-        fs_hdr.on = on || f->on;
+        __asm__ volatile("" ::: "memory");
+        fs_hdr.on = f->on;
     } else {
         memset(&fs_hdr, 0, sizeof fs_hdr);
         fs_hdr_scratch = NULL;
@@ -303,6 +306,8 @@ static uint32_t fs_yuv_grade_cached(void *buf, int width, int rows, int stride,
     if (ba >= 0x40000000u && ba < 0x80000000u)
         gp = (unsigned char *)CACHEABLE(buf);
     fs_dcache_used = (gp != (unsigned char *)buf);
+    if (fs_dcache_used)
+        fs_dcache_clean(gp, 0);
     fs_tr_enter = get_ms_clock();
     fs_tr_enter_us = get_us_clock();
     /*

@@ -1400,6 +1400,13 @@ static void FAST fs_process_frame(void *src, void *dst) {
      * the same grade as LiveView. fs_lut is the old ten-parameter table and
      * produced a different colour from the lattice the user is watching. */
     fs_lv_grade(fs_dump_raw, dst, pitch, row0, row1);
+    if (film_sim_lvmode == 0 && row0 == 0) {
+      /* With preview grade off, "what is on the screen" IS ungraded, so the
+       * dump is too. Say it, or the next person hunts a seam in a file that
+       * was never graded. */
+      fs_log("dump: preview grade is off -- LV_LUT.BIN is the ungraded buffer");
+      fs_log_flush();
+    }
     if (src != dst) {
       if (row0 > 0)
         memcpy(dst, fs_dump_raw, (size_t)row0 * pitch);
@@ -2445,8 +2452,10 @@ static void fs_slot_backup_task(void *unused) {
       fs_yuvlook_dirty = 0;
       char stk[FS_PATH_LEN];
       if (fs_active_stock_path(stk, sizeof stk, NULL)) {
-        if (fs_bake_stock(stk, film_sim_strength, fs_own_lut_path()) == 0 &&
-            fs_yuvlook_name()[0]) {
+        int brc = fs_bake_stock(stk, film_sim_strength, fs_own_lut_path());
+        if (brc == -2) {
+          fs_yuvlook_dirty = 1;
+        } else if (brc == 0 && fs_yuvlook_name()[0]) {
           fs_log("yuvgrade: re-baked '%s' from %s at strength %d",
                  fs_yuvlook_name(), stk, film_sim_strength);
           /* Same rule as boot: grade in place only when the capture style was
@@ -7204,8 +7213,9 @@ static const char *fs_fuji_base_files[] = {
 
 static void fs_fuji_save_task(void *unused) {
   /* Must hold the largest base recipe plus the merged tables: velvia.fs is
-   * already 2084 bytes, so 2048 could not save a recipe based on it. */
-  char buf[4096];
+   * already 2084 bytes, so 2048 could not save a recipe based on it. Static
+   * like base_text below so it does not consume half the 8 KB task stack. */
+  static char buf[4096];
   char path[64];
   char file[12];
   int n;
