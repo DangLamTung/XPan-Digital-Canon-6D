@@ -7224,6 +7224,13 @@ static void fs_fuji_save_task(void *unused) {
         int got = FIO_ReadFile(bf, base_text, sizeof base_text - 1);
         FIO_CloseFile(bf);
         base_text[got > 0 ? got : 0] = 0;
+        if (got >= (int)sizeof base_text - 1) {
+          /* Silent truncation would drop the tail of the base's tables and
+           * save a recipe that is quietly wrong. Say so instead. */
+          fs_log("fuji: base %s is %d+ bytes, truncated at %d",
+                 bp, got, (int)sizeof base_text - 1);
+          fs_log_flush();
+        }
       } else {
         fs_log("fuji: base %s is not on the card, saving the flat version", bp);
         fs_log_flush();

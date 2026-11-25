@@ -412,9 +412,9 @@ uint32_t fs_yuvlook_apply_engine_lv(unsigned char *buf, int width, int height, i
             int Y = src[x * 2 + 1];
             int U = (int)(signed char)pair[0];
             int V = (int)(signed char)pair[2];
-            int r = Y + ((183 * V) >> 8);
-            int g = Y - ((44 * U + 91 * V) >> 8);
-            int b = Y + ((227 * U) >> 8);
+            int r = Y + ((359 * V + 128) >> 8);
+            int g = Y - ((88 * U + 183 * V + 128) >> 8);
+            int b = Y + ((454 * U + 128) >> 8);
             lv_rgb[x * 3 + 0] = (unsigned char)(r < 0 ? 0 : r > 255 ? 255 : r);
             lv_rgb[x * 3 + 1] = (unsigned char)(g < 0 ? 0 : g > 255 ? 255 : g);
             lv_rgb[x * 3 + 2] = (unsigned char)(b < 0 ? 0 : b > 255 ? 255 : b);
@@ -528,9 +528,9 @@ uint32_t fs_yuvlook_apply_engine(unsigned char *buf, int width, int height, int 
             int Y = src[x * 2 + 1];
             int U = (int)(signed char)pair[0];
             int V = (int)(signed char)pair[2];
-            int r = Y + ((183 * V) >> 8);
-            int g = Y - ((44 * U + 91 * V) >> 8);
-            int b = Y + ((227 * U) >> 8);
+            int r = Y + ((359 * V + 128) >> 8);
+            int g = Y - ((88 * U + 183 * V + 128) >> 8);
+            int b = Y + ((454 * U + 128) >> 8);
             eng_rgb[x * 3 + 0] = (unsigned char)(r < 0 ? 0 : r > 255 ? 255 : r);
             eng_rgb[x * 3 + 1] = (unsigned char)(g < 0 ? 0 : g > 255 ? 255 : g);
             eng_rgb[x * 3 + 2] = (unsigned char)(b < 0 ? 0 : b > 255 ? 255 : b);

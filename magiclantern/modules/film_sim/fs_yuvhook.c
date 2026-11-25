@@ -380,11 +380,11 @@ static uint32_t fs_yuv_grade_cached(void *buf, int width, int rows, int stride,
     fs_tr_band = get_ms_clock();
     if (gp != (unsigned char *)buf)
         /*
-         * Clean the span that was written, not the whole plane: with a 65:24
-         * crop the untouched rows below the picture and the band are 40% of
-         * the buffer, and cleaning them is pure time (43 ms for the full
-         * plane). fs_clean_from/fs_clean_to are the outermost rows any stage
-         * touched, set as the shot goes.
+         * fs_clean_from/fs_clean_to still describe the rows any stage touched,
+         * but fs_dcache_clean() now ignores the span: the 6D's D-cache is 8 KB
+         * (256 lines), so cleaning it by index costs microseconds and is exact,
+         * where walking 40 MB of frame with the old ARMv7 opcode cost 43 ms and
+         * cleaned nothing. The arguments stay so the call site documents intent.
          */
         fs_dcache_clean(gp + (size_t)fs_clean_from * stride,
                         (uint32_t)(fs_clean_to - fs_clean_from) * stride);

@@ -1562,8 +1562,10 @@ se_err se_look_end(se_look_run *r, se_look_emit emit, void *ctx) {
 
   if (!r || !emit)
     return SE_E_CORRUPT;
-  if (!r->on || r->pushed == 0)
+  if (!r->on || r->pushed == 0) {
+    r->y_out = 0;
     return SE_OK;
+  }
 
   w = r->w;
 
