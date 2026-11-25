@@ -1,0 +1,27 @@
+{
+  "stock": "Nostalgic Neg",
+  "folder": "Fujifilm-Nostalgic-Neg",
+  "fs_file": "magiclantern/modules/film_sim/films/nostalgicneg.fs",
+  "lattice": "12x17x17 YUV422 (ship3)",
+  "real_fuji_scenes": {
+    "count": 4,
+    "mean_dE00": 3.28,
+    "p95_dE00": 8.44,
+    "per_scene": {
+      "friimaind:ana-markovych": 4.2,
+      "friimaind:lili-liu": 2.31,
+      "friimaind:naoya-takahashi": 4.26,
+      "tingfengluo": 2.28
+    }
+  },
+  "colorchecker_24": {
+    "mean_dE00": 1.1,
+    "p95_dE00": 2.19,
+    "skin_dE00": 1.51,
+    "neutral_dE00": 0.87
+  },
+  "sweep_3d": {
+    "mean_dE00": 2.52,
+    "p95_dE00": 6.56
+  }
+}

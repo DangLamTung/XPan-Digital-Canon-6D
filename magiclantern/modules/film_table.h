@@ -87,6 +87,8 @@ enum
     FILM_ETERNA,
     FILM_BLEACH_BYPASS,
     FILM_OLYMPUS_NATURAL,
+    FILM_PRO_NEG_HI,
+    FILM_PRO_NEG_STD,
 
     FILM_COUNT
 };
@@ -152,7 +154,9 @@ static const film_t film_table[FILM_COUNT] =
      * the numbers here are the picture style it is paired with -- Neutral base,
      * no contrast or saturation push, because the recipe does that work and a
      * style that also pushed would double it. */
-    { "Olympus Natural",   "OLYNAT", "Authored", 0x84, 200, 0x50,   0,  2,  0,  0,  5500,   0,  0, 0, "CLEAN COOL WHITES, HONEST GREENS, GENTLE S" }
+    { "Olympus Natural",   "OLYNAT", "Authored", 0x84, 200, 0x50,   0,  2,  0,  0,  5500,   0,  0, 0, "CLEAN COOL WHITES, HONEST GREENS, GENTLE S" },
+    { "PRO Neg. Hi",       "PNHI",   "Fujifilm", 0x84, 160, 0x4d,  +1,  2,  0,  0,  5200,   0,  0, 0, "SOFT PORTRAIT SKIN, CRISP STUDIO CONTRAST" },
+    { "PRO Neg. Std",      "PNSTD",  "Fujifilm", 0x84, 160, 0x4d,  -1,  2, -1,  0,  5200,   0,  0, 0, "SOFT GRADATION, FLAT STUDIO PORTRAIT" }
 };
 
 static inline int film_clamp(int v, int lo, int hi)

@@ -1,0 +1,27 @@
+{
+  "stock": "Reala Ace",
+  "folder": "Fujifilm-Reala-Ace",
+  "fs_file": "magiclantern/modules/film_sim/films/realaace.fs",
+  "lattice": "12x17x17 YUV422 (ship3)",
+  "real_fuji_scenes": {
+    "count": 4,
+    "mean_dE00": 2.37,
+    "p95_dE00": 5.15,
+    "per_scene": {
+      "friimaind:ana-markovych": 2.51,
+      "friimaind:lili-liu": 1.94,
+      "friimaind:naoya-takahashi": 2.97,
+      "tingfengluo": 2.03
+    }
+  },
+  "colorchecker_24": {
+    "mean_dE00": 2.08,
+    "p95_dE00": 4.72,
+    "skin_dE00": 1.35,
+    "neutral_dE00": 1.28
+  },
+  "sweep_3d": {
+    "mean_dE00": 3.03,
+    "p95_dE00": 5.74
+  }
+}

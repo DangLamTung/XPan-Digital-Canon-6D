@@ -1,0 +1,27 @@
+{
+  "stock": "Eterna",
+  "folder": "Fujifilm-Eterna",
+  "fs_file": "magiclantern/modules/film_sim/films/eterna.fs",
+  "lattice": "12x17x17 YUV422 (ship3)",
+  "real_fuji_scenes": {
+    "count": 4,
+    "mean_dE00": 2.2,
+    "p95_dE00": 5.04,
+    "per_scene": {
+      "friimaind:ana-markovych": 2.47,
+      "friimaind:lili-liu": 1.68,
+      "friimaind:naoya-takahashi": 2.79,
+      "tingfengluo": 1.84
+    }
+  },
+  "colorchecker_24": {
+    "mean_dE00": 1.41,
+    "p95_dE00": 2.64,
+    "skin_dE00": 1.44,
+    "neutral_dE00": 0.49
+  },
+  "sweep_3d": {
+    "mean_dE00": 2.16,
+    "p95_dE00": 4.9
+  }
+}

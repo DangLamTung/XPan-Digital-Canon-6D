@@ -1,0 +1,27 @@
+{
+  "stock": "Eterna Bleach",
+  "folder": "Fujifilm-Bleach-Bypass",
+  "fs_file": "magiclantern/modules/film_sim/films/bleachbypass.fs",
+  "lattice": "12x17x17 YUV422 (ship3)",
+  "real_fuji_scenes": {
+    "count": 4,
+    "mean_dE00": 1.95,
+    "p95_dE00": 3.96,
+    "per_scene": {
+      "friimaind:ana-markovych": 1.96,
+      "friimaind:lili-liu": 1.74,
+      "friimaind:naoya-takahashi": 2.31,
+      "tingfengluo": 1.77
+    }
+  },
+  "colorchecker_24": {
+    "mean_dE00": 1.35,
+    "p95_dE00": 2.4,
+    "skin_dE00": 1.69,
+    "neutral_dE00": 0.87
+  },
+  "sweep_3d": {
+    "mean_dE00": 2.62,
+    "p95_dE00": 4.67
+  }
+}

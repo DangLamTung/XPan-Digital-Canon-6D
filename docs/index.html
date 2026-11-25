@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>XPan Digital — 65:24 Panoramic Film Colour for Canon EOS 6D</title>
   <meta name="description"
-    content="In-camera 65:24 XPan framing, real-time LiveView grading, 12-wedge custom colour, and Lightroom XMP import running natively on Canon EOS 6D via Magic Lantern.">
+    content="In-camera 65:24 XPan framing, real-time LiveView grading, 12-wedge custom colour, 9 Fujifilm X-Trans 4 simulations, and 28 EV-normalized analog film stocks running natively on Canon EOS 6D via Magic Lantern.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
@@ -24,6 +24,7 @@
         <a href="#highlights">Features</a>
         <a href="#gallery">Film Roll</a>
         <a href="#camera-ui">Camera UI</a>
+        <a href="#fujifilm">Fuji Sims</a>
         <a href="#catalog">Stocks</a>
         <a href="install.html">Install Guide</a>
       </nav>
@@ -41,7 +42,8 @@
         <div class="hero-copy">
           <p class="summary">
             Turns a Canon EOS 6D into a <b>65:24 XPan</b> camera with real-time
-            LiveView film grading, an on-body 12-wedge colour creator, and direct
+            LiveView film grading, 9 real-camera calibrated Fujifilm X-Trans 4 simulations,
+            28 EV-normalized analog film stocks, an on-body 12-wedge colour creator, and direct
             Lightroom <code>.xmp</code> preset import over Wi-Fi.
           </p>
           <div class="hero-actions">
@@ -96,36 +98,36 @@
           </p>
         </article>
 
-    <figure class="photo-card" style="margin-top:20px">
-      <img src="img/street_stocks.jpg" alt="Same 65:24 Saigon street scene shot straight out of Canon EOS 6D: IMG_6701 Pro 400H, IMG_6707 Portra 400, IMG_6708 Superia 400, IMG_6687 Gold 200" data-zoom>
-      <figcaption class="photo-cap">
-        <span><b>Same 65:24 street scene, four in-camera film simulations</b> — straight out of the Canon 6D SD card (<code>IMG_6701</code>, <code>IMG_6707</code>, <code>IMG_6708</code>, <code>IMG_6687</code> Gold 200), zero PC post-processing.</span>
-        <code>Pro 400H · Portra · Superia · Gold</code>
-      </figcaption>
-    </figure>
+        <article class="highlight-card">
+          <span class="pill-tag tag-cyan">Workflow · Wi-Fi / SD</span>
+          <h3>Direct Lightroom .xmp Import</h3>
+          <p>
+            Convert Adobe Lightroom <code>.xmp</code> presets (Basic tone, 4-channel
+            RGB curves, 8-band HSL → 48 sectors, PointColors, 3-way Color Grading)
+            and push live over Wi-Fi with <code>tools/push_fs.py</code>.
+          </p>
+        </article>
 
-        <figure class="photo-card" style="margin-top:20px">
-          <img src="img/shot_header.jpg"
-            alt="65:24 Ba Son Bridge and Landmark 81 straight out of Canon EOS 6D with real in-camera white paper Shot Info Header: ColorPlus 200, EF 40mm f/2.8 STM, f/2.8 1/125 ISO 5000"
-            data-zoom>
-          <figcaption class="photo-cap">
-            <span><b>Real in-camera Shot Info Header (IMG_6672 · ColorPlus 200)</b> — Ba Son Bridge &amp; Landmark 81 in
-              65:24 XPan with film stock, Canon EOS 6D, lens &amp; exposure burned directly at the shutter.</span>
-            <code>SOOC · Film Dev → Header</code>
-          </figcaption>
-        </figure>
-    </section>
+        <article class="highlight-card">
+          <span class="pill-tag tag-amber">On-Body · Creator</span>
+          <h3>12-Wedge Colour &amp; 5-Pt Tone Curve</h3>
+          <p>
+            Fine-tune hue rotation, saturation, and luminance across 12 colour
+            wedges plus a 5-point highlight/shadow spline right on the 6D dials,
+            then save straight to <code>ML/FILM/</code>.
+          </p>
+        </article>
 
-    <article class="highlight-card">
-      <span class="pill-tag tag-cyan">Workflow · Wi-Fi / SD</span>
-      <h3>Direct Lightroom .xmp Import</h3>
-      <p>
-        Convert Adobe Lightroom <code>.xmp</code> presets (Basic tone, 4-channel
-        RGB curves, 8-band HSL → 48 sectors, PointColors, 3-way Color Grading)
-        and push live over Wi-Fi with <code>tools/push_fs.py</code>.
-      </p>
-    </article>
-    </div>
+        <article class="highlight-card">
+          <span class="pill-tag tag-coral">0 EV · Shot Header</span>
+          <h3>Metering Parity &amp; Film Frame Header</h3>
+          <p>
+            All 28 Dehancer analog stocks are EV-normalized to Canon 6D <code>0 EV</code>
+            metering, with optional in-camera Shot Info Header burning stock, lens,
+            and exposure directly onto the frame.
+          </p>
+        </article>
+      </div>
     </section>
 
     <!-- ── Gallery (Film Roll) ──────────────────────────────── -->
@@ -203,7 +205,7 @@
           </div>
           <figcaption class="lcd-cap">
             <b>Film Shelf</b>
-            <span>46+ Recipes</span>
+            <span>48 Recipes</span>
           </figcaption>
         </figure>
 
@@ -230,16 +232,92 @@
       </div>
     </section>
 
+    <!-- ── Fujifilm X-Trans 4 Digital Simulations ───────────── -->
+    <section id="fujifilm">
+      <div class="section-head">
+        <div>
+          <p class="section-kicker">Fujifilm X-Trans 4 · Real Camera Validation</p>
+          <h2>9 Fujifilm Digital Simulations</h2>
+        </div>
+        <p class="section-sub">
+          Calibrated against verified X-Trans 4 <code>Provia → Sim</code> LUTs through the exact
+          <code>12×17×17</code> YUV lattice (<code>ship3</code>), then validated on 4 unseen real
+          Fujifilm camera JPEGs (<code>friimaind</code> + <code>TingfengLuo</code>) and ColorChecker-24
+          — averaging <b>2.26 ΔE00</b> on real camera shots and <b>1.22 ΔE00</b> on ColorChecker-24.
+        </p>
+      </div>
+
+      <div class="filter-bar" id="fuji-switcher" role="tablist" aria-label="Select Fujifilm simulation">
+        <button class="filter-btn active" data-fuji="classic-chrome">Classic Chrome<span>1.99</span></button>
+        <button class="filter-btn" data-fuji="classic-neg">Classic Neg<span>2.35</span></button>
+        <button class="filter-btn" data-fuji="reala-ace">Reala Ace<span>2.34</span></button>
+        <button class="filter-btn" data-fuji="nostalgic-neg">Nostalgic Neg<span>3.27</span></button>
+        <button class="filter-btn" data-fuji="astia">Astia<span>2.19</span></button>
+        <button class="filter-btn" data-fuji="pro-neg-hi">PRO Neg. Hi<span>1.97</span></button>
+        <button class="filter-btn" data-fuji="pro-neg-std">PRO Neg. Std<span>2.05</span></button>
+        <button class="filter-btn" data-fuji="eterna">Eterna<span>2.21</span></button>
+        <button class="filter-btn" data-fuji="eterna-bb">Eterna Bleach<span>1.98</span></button>
+      </div>
+
+      <figure class="photo-card" style="margin-bottom:20px">
+        <img id="fuji-board-img" src="img/fuji/classic-chrome.jpg"
+          alt="Classic Chrome — Real Fujifilm camera JPEGs vs Ours (classicchrome.fs, 12x17x17 YUV lattice) across 3 unseen scenes"
+          data-zoom>
+        <figcaption class="photo-cap">
+          <span id="fuji-board-cap"><b>Classic Chrome (classicchrome.fs)</b> — Provia ref (left) · Real Fujifilm camera JPEG (middle) · Ours via <code>12×17×17</code> lattice (right) across 3 unseen scenes (<code>friimaind</code>).</span>
+          <code id="fuji-board-badge">Real Fuji ΔE 1.99 · CC-24 0.70</code>
+        </figcaption>
+      </figure>
+
+      <figure class="photo-card" style="margin-bottom:24px">
+        <img src="img/fuji/overview_9sims.jpg"
+          alt="All 9 calibrated Fujifilm X-Trans 4 Digital Sims side-by-side on unseen TingfengLuo scene and ColorChecker-24 diagonal split"
+          data-zoom>
+        <figcaption class="photo-cap">
+          <span><b>All 9 Fujifilm X-Trans 4 sims side-by-side</b> — unseen real Fujifilm camera scene (<code>TingfengLuo</code>) and ColorChecker-24 diagonal split (top-left Real Fuji / bottom-right Ours <code>12×17×17</code>).</span>
+          <code>9 Digital Sims · Avg CC-24 ΔE 1.22</code>
+        </figcaption>
+      </figure>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Simulation</th>
+              <th>Recipe</th>
+              <th>Real Fuji ΔE00</th>
+              <th>Real Fuji P95</th>
+              <th>ColorChecker-24</th>
+              <th>3D Sweep</th>
+              <th class="bar-cell">Parity</th>
+            </tr>
+          </thead>
+          <tbody id="fuji-rows">
+            <tr data-fuji="pro-neg-hi"><th><span class="stock-name">PRO Neg. Hi</span><span class="brand-tag b-xtrans">X-Trans 4</span></th><td class="stock-file">proneghi.fs</td><td class="num"><b>1.97</b></td><td class="num">4.46</td><td class="num">0.89</td><td class="num">1.97</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill great" style="width:39%"></div></div></td></tr>
+            <tr data-fuji="eterna-bb"><th><span class="stock-name">Eterna Bleach</span><span class="brand-tag b-xtrans">X-Trans 4</span></th><td class="stock-file">bleachbypass.fs</td><td class="num"><b>1.98</b></td><td class="num">3.99</td><td class="num">1.35</td><td class="num">2.62</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill great" style="width:40%"></div></div></td></tr>
+            <tr data-fuji="classic-chrome" class="active-row"><th><span class="stock-name">Classic Chrome</span><span class="brand-tag b-xtrans">X-Trans 4</span></th><td class="stock-file">classicchrome.fs</td><td class="num"><b>1.99</b></td><td class="num">4.30</td><td class="num">0.70</td><td class="num">1.59</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill great" style="width:40%"></div></div></td></tr>
+            <tr data-fuji="pro-neg-std"><th><span class="stock-name">PRO Neg. Std</span><span class="brand-tag b-xtrans">X-Trans 4</span></th><td class="stock-file">pronegstd.fs</td><td class="num"><b>2.05</b></td><td class="num">4.54</td><td class="num">0.98</td><td class="num">2.10</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill great" style="width:41%"></div></div></td></tr>
+            <tr data-fuji="astia"><th><span class="stock-name">Astia</span><span class="brand-tag b-xtrans">X-Trans 4</span></th><td class="stock-file">astia.fs</td><td class="num"><b>2.19</b></td><td class="num">4.75</td><td class="num">1.01</td><td class="num">1.94</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill great" style="width:44%"></div></div></td></tr>
+            <tr data-fuji="eterna"><th><span class="stock-name">Eterna</span><span class="brand-tag b-xtrans">X-Trans 4</span></th><td class="stock-file">eterna.fs</td><td class="num"><b>2.21</b></td><td class="num">4.94</td><td class="num">1.41</td><td class="num">2.16</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill great" style="width:44%"></div></div></td></tr>
+            <tr data-fuji="reala-ace"><th><span class="stock-name">Reala Ace</span><span class="brand-tag b-xtrans">X-Trans 4</span></th><td class="stock-file">realaace.fs</td><td class="num"><b>2.34</b></td><td class="num">4.94</td><td class="num">2.08</td><td class="num">3.03</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill great" style="width:47%"></div></div></td></tr>
+            <tr data-fuji="classic-neg"><th><span class="stock-name">Classic Neg</span><span class="brand-tag b-xtrans">X-Trans 4</span></th><td class="stock-file">classicneg.fs</td><td class="num"><b>2.35</b></td><td class="num">4.79</td><td class="num">1.50</td><td class="num">2.43</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill great" style="width:47%"></div></div></td></tr>
+            <tr data-fuji="nostalgic-neg"><th><span class="stock-name">Nostalgic Neg</span><span class="brand-tag b-xtrans">X-Trans 4</span></th><td class="stock-file">nostalgicneg.fs</td><td class="num"><b>3.27</b></td><td class="num">8.26</td><td class="num">1.10</td><td class="num">2.52</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:65%"></div></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
     <!-- ── Interactive Stock Catalogue ──────────────────────── -->
     <section id="catalog">
       <div class="section-head">
         <div>
-          <p class="section-kicker">101-Frame Corpus · ISO CIEDE2000</p>
-          <h2>20 Calibrated Film Stocks</h2>
+          <p class="section-kicker">101-Frame Corpus · 0 EV Canon-Matched · ISO CIEDE2000</p>
+          <h2>28 EV-Normalized Analog &amp; B&amp;W Film Stocks</h2>
         </div>
         <p class="section-sub">
-          Every recipe is rendered through the on-camera <code>12×17×17</code> YUV lattice (<code>ship3</code>) on 101 real photos
-          and measured per pixel against Dehancer references in CIEDE2000 (lower is closer).
+          All 28 analog &amp; B&amp;W stocks are EV-normalized to Canon 6D <code>0 EV</code> metering
+          (<code>Med EV -0.04..+0.01</code>), rendered through the on-camera <code>12×17×17</code> YUV lattice
+          (<code>ship3</code>) on 101 Canon 6D photos, and measured in CIEDE2000 against EV-matched Dehancer references.
         </p>
       </div>
 
@@ -251,7 +329,7 @@
             <b>≤ 2.0</b> is nearly indistinguishable to the naked eye;
             <b>≤ 5.0</b> is <b>photographic print parity</b> — the same film hue,
             contrast and mood without side-by-side instrumentation.
-            The <b>P95 ΔE00</b> column shows the 95th-percentile frame error across all 101 test photos — how closely each stock holds up on the hardest 5% of scenes.
+            <b>Color-Only ΔE00</b> isolates hue/chroma accuracy at equal luminance, and <b>P95 ΔE00</b> tracks the hardest 5% of pixels across all 101 test photos.
           </p>
         </div>
         <div class="eval-box">
@@ -281,9 +359,9 @@
       </figure>
 
       <div class="filter-bar" role="tablist" aria-label="Filter by brand">
-        <button class="filter-btn active" data-brand="all">All<span>20</span></button>
-        <button class="filter-btn" data-brand="kodak">Kodak<span>10</span></button>
-        <button class="filter-btn" data-brand="fujifilm">Fujifilm<span>6</span></button>
+        <button class="filter-btn active" data-brand="all">All<span>28</span></button>
+        <button class="filter-btn" data-brand="kodak">Kodak<span>17</span></button>
+        <button class="filter-btn" data-brand="fujifilm">Fujifilm<span>7</span></button>
         <button class="filter-btn" data-brand="cinestill">CineStill<span>2</span></button>
         <button class="filter-btn" data-brand="ilford">Ilford<span>2</span></button>
       </div>
@@ -293,50 +371,50 @@
           <thead>
             <tr>
               <th>Stock</th>
-              <th>Mean ΔE00</th>
-              <th>Median ΔE00</th>
+              <th>EV-Match ΔE00</th>
+              <th>Color-Only ΔE00</th>
               <th>P95 ΔE00</th>
               <th class="bar-cell">Parity</th>
             </tr>
           </thead>
           <tbody id="stock-rows">
-            <tr data-brand="ilford"><th><span class="stock-name">XP2 Super</span><span class="brand-tag b-ilford">Ilford</span></th><td class="num">1.65</td><td class="num"><b>1.49</b></td><td class="num">100%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill great" style="width:30%"></div></div></td></tr>
-            <tr data-brand="fujifilm"><th><span class="stock-name">Acros 100</span><span class="brand-tag b-fuji">Fuji</span></th><td class="num">2.27</td><td class="num"><b>2.24</b></td><td class="num">100%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill great" style="width:45%"></div></div></td></tr>
-            <tr data-brand="fujifilm"><th><span class="stock-name">Provia 100F</span><span class="brand-tag b-fuji">Fuji</span></th><td class="num">2.69</td><td class="num"><b>2.63</b></td><td class="num">100%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill great" style="width:53%"></div></div></td></tr>
-            <tr data-brand="kodak"><th><span class="stock-name">ColorPlus 200</span><span class="brand-tag b-kodak">Kodak</span></th><td class="num">2.99</td><td class="num"><b>2.97</b></td><td class="num">100%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:59%"></div></div></td></tr>
-            <tr data-brand="kodak"><th><span class="stock-name">Portra 160VC</span><span class="brand-tag b-kodak">Kodak</span></th><td class="num">3.06</td><td class="num"><b>3.08</b></td><td class="num">99%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:62%"></div></div></td></tr>
-            <tr data-brand="kodak"><th><span class="stock-name">Portra 800</span><span class="brand-tag b-kodak">Kodak</span></th><td class="num">3.24</td><td class="num"><b>3.23</b></td><td class="num">100%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:65%"></div></div></td></tr>
-            <tr data-brand="kodak"><th><span class="stock-name">Gold 200</span><span class="brand-tag b-kodak">Kodak</span></th><td class="num">3.26</td><td class="num"><b>3.23</b></td><td class="num">100%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:65%"></div></div></td></tr>
-            <tr data-brand="ilford"><th><span class="stock-name">HP5 Plus</span><span class="brand-tag b-ilford">Ilford</span></th><td class="num">3.31</td><td class="num"><b>3.26</b></td><td class="num">100%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:65%"></div></div></td></tr>
-            <tr data-brand="kodak"><th><span class="stock-name">Portra 160NC</span><span class="brand-tag b-kodak">Kodak</span></th><td class="num">3.28</td><td class="num"><b>3.33</b></td><td class="num">100%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:67%"></div></div></td></tr>
-            <tr data-brand="kodak"><th><span class="stock-name">Ektachrome E100</span><span class="brand-tag b-kodak">Kodak</span></th><td class="num">3.33</td><td class="num"><b>3.39</b></td><td class="num">100%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:68%"></div></div></td></tr>
-            <tr data-brand="kodak"><th><span class="stock-name">Portra 160</span><span class="brand-tag b-kodak">Kodak</span></th><td class="num">3.35</td><td class="num"><b>3.42</b></td><td class="num">100%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:68%"></div></div></td></tr>
-            <tr data-brand="kodak"><th><span class="stock-name">Portra 400</span><span class="brand-tag b-kodak">Kodak</span></th><td class="num">3.46</td><td class="num"><b>3.47</b></td><td class="num">99%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:69%"></div></div></td></tr>
-            <tr data-brand="fujifilm"><th><span class="stock-name">Pro 400H</span><span class="brand-tag b-fuji">Fuji</span></th><td class="num">3.47</td><td class="num"><b>3.47</b></td><td class="num">100%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:69%"></div></div></td></tr>
-            <tr data-brand="cinestill"><th><span class="stock-name">CineStill 50D</span><span class="brand-tag b-cine">CineStill</span></th><td class="num">3.53</td><td class="num"><b>3.52</b></td><td class="num">99%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:70%"></div></div></td></tr>
-            <tr data-brand="fujifilm"><th><span class="stock-name">Superia 200</span><span class="brand-tag b-fuji">Fuji</span></th><td class="num">3.80</td><td class="num"><b>3.59</b></td><td class="num">95%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:72%"></div></div></td></tr>
-            <tr data-brand="kodak"><th><span class="stock-name">Ektar 100</span><span class="brand-tag b-kodak">Kodak</span></th><td class="num">3.78</td><td class="num"><b>3.66</b></td><td class="num">90%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:73%"></div></div></td></tr>
-            <tr data-brand="cinestill"><th><span class="stock-name">CineStill 800T</span><span class="brand-tag b-cine">CineStill</span></th><td class="num">3.72</td><td class="num"><b>3.71</b></td><td class="num">98%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:74%"></div></div></td></tr>
-            <tr data-brand="fujifilm"><th><span class="stock-name">Velvia 100</span><span class="brand-tag b-fuji">Fuji</span></th><td class="num">3.80</td><td class="num"><b>3.71</b></td><td class="num">93%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:74%"></div></div></td></tr>
-            <tr data-brand="kodak"><th><span class="stock-name">Kodachrome 64</span><span class="brand-tag b-kodak">Kodak</span></th><td class="num">4.38</td><td class="num"><b>4.33</b></td><td class="num">81%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:87%"></div></div></td></tr>
-            <tr data-brand="fujifilm"><th><span class="stock-name">Velvia 50</span><span class="brand-tag b-fuji">Fuji</span></th><td class="num">5.27</td><td class="num"><b>5.17</b></td><td class="num">44%</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill high" style="width:100%"></div></div></td></tr>
-          
+            <tr data-brand="ilford"><th><span class="stock-name">XP2 Super</span><span class="brand-tag b-ilford">Ilford</span></th><td class="num"><b>1.89</b></td><td class="num">0.00</td><td class="num">5.60</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill great" style="width:32%"></div></div></td></tr>
+            <tr data-brand="fujifilm"><th><span class="stock-name">Acros 100</span><span class="brand-tag b-fuji">Fuji</span></th><td class="num"><b>2.69</b></td><td class="num">1.46</td><td class="num">5.25</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill great" style="width:45%"></div></div></td></tr>
+            <tr data-brand="ilford"><th><span class="stock-name">HP5 Plus</span><span class="brand-tag b-ilford">Ilford</span></th><td class="num"><b>2.87</b></td><td class="num">2.60</td><td class="num">5.76</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill great" style="width:48%"></div></div></td></tr>
+            <tr data-brand="kodak"><th><span class="stock-name">Double-X 5222</span><span class="brand-tag b-kodak">Kodak</span></th><td class="num"><b>2.92</b></td><td class="num">1.55</td><td class="num">6.01</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill great" style="width:49%"></div></div></td></tr>
+            <tr data-brand="kodak"><th><span class="stock-name">ColorPlus 200</span><span class="brand-tag b-kodak">Kodak</span></th><td class="num"><b>2.94</b></td><td class="num">2.61</td><td class="num">5.87</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill great" style="width:49%"></div></div></td></tr>
+            <tr data-brand="kodak"><th><span class="stock-name">Portra 160NC</span><span class="brand-tag b-kodak">Kodak</span></th><td class="num"><b>2.94</b></td><td class="num">2.60</td><td class="num">6.20</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill great" style="width:49%"></div></div></td></tr>
+            <tr data-brand="kodak"><th><span class="stock-name">Portra 160VC</span><span class="brand-tag b-kodak">Kodak</span></th><td class="num"><b>2.98</b></td><td class="num">2.69</td><td class="num">6.37</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill great" style="width:50%"></div></div></td></tr>
+            <tr data-brand="kodak"><th><span class="stock-name">Portra 800</span><span class="brand-tag b-kodak">Kodak</span></th><td class="num"><b>3.12</b></td><td class="num">2.80</td><td class="num">6.30</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:52%"></div></div></td></tr>
+            <tr data-brand="fujifilm"><th><span class="stock-name">Pro 400H</span><span class="brand-tag b-fuji">Fuji</span></th><td class="num"><b>3.18</b></td><td class="num">2.80</td><td class="num">6.42</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:53%"></div></div></td></tr>
+            <tr data-brand="kodak"><th><span class="stock-name">Ektachrome E100</span><span class="brand-tag b-kodak">Kodak</span></th><td class="num"><b>3.23</b></td><td class="num">2.81</td><td class="num">6.43</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:54%"></div></div></td></tr>
+            <tr data-brand="kodak"><th><span class="stock-name">Portra 160</span><span class="brand-tag b-kodak">Kodak</span></th><td class="num"><b>3.29</b></td><td class="num">3.00</td><td class="num">6.95</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:55%"></div></div></td></tr>
+            <tr data-brand="kodak"><th><span class="stock-name">Plus-X Pan 125</span><span class="brand-tag b-kodak">Kodak</span></th><td class="num"><b>3.36</b></td><td class="num">1.21</td><td class="num">6.93</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:56%"></div></div></td></tr>
+            <tr data-brand="kodak"><th><span class="stock-name">Portra 400</span><span class="brand-tag b-kodak">Kodak</span></th><td class="num"><b>3.39</b></td><td class="num">2.86</td><td class="num">7.03</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:57%"></div></div></td></tr>
+            <tr data-brand="kodak"><th><span class="stock-name">Kodachrome 64</span><span class="brand-tag b-kodak">Kodak</span></th><td class="num"><b>3.57</b></td><td class="num">2.87</td><td class="num">7.75</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:60%"></div></div></td></tr>
+            <tr data-brand="cinestill"><th><span class="stock-name">CineStill 800T</span><span class="brand-tag b-cine">CineStill</span></th><td class="num"><b>3.60</b></td><td class="num">2.67</td><td class="num">7.48</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:60%"></div></div></td></tr>
+            <tr data-brand="fujifilm"><th><span class="stock-name">Provia 100F</span><span class="brand-tag b-fuji">Fuji</span></th><td class="num"><b>3.84</b></td><td class="num">3.22</td><td class="num">6.92</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:64%"></div></div></td></tr>
+            <tr data-brand="kodak"><th><span class="stock-name">Ektar 100</span><span class="brand-tag b-kodak">Kodak</span></th><td class="num"><b>3.88</b></td><td class="num">3.79</td><td class="num">8.59</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:65%"></div></div></td></tr>
+            <tr data-brand="cinestill"><th><span class="stock-name">CineStill 50D</span><span class="brand-tag b-cine">CineStill</span></th><td class="num"><b>3.93</b></td><td class="num">3.15</td><td class="num">7.29</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:66%"></div></div></td></tr>
+            <tr data-brand="fujifilm"><th><span class="stock-name">Superia 200</span><span class="brand-tag b-fuji">Fuji</span></th><td class="num"><b>3.97</b></td><td class="num">3.02</td><td class="num">8.61</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:66%"></div></div></td></tr>
+            <tr data-brand="kodak"><th><span class="stock-name">Gold 200</span><span class="brand-tag b-kodak">Kodak</span></th><td class="num"><b>3.99</b></td><td class="num">3.18</td><td class="num">7.08</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:67%"></div></div></td></tr>
+            <tr data-brand="kodak"><th><span class="stock-name">Pro Image 100</span><span class="brand-tag b-kodak">Kodak</span></th><td class="num"><b>4.05</b></td><td class="num">3.62</td><td class="num">7.88</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:68%"></div></div></td></tr>
+            <tr data-brand="fujifilm"><th><span class="stock-name">Velvia 100</span><span class="brand-tag b-fuji">Fuji</span></th><td class="num"><b>4.16</b></td><td class="num">4.26</td><td class="num">10.00</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:69%"></div></div></td></tr>
+            <tr data-brand="kodak"><th><span class="stock-name">Aerocolor IV 125</span><span class="brand-tag b-kodak">Kodak</span></th><td class="num"><b>4.38</b></td><td class="num">3.18</td><td class="num">9.04</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:73%"></div></div></td></tr>
+            <tr data-brand="fujifilm"><th><span class="stock-name">Velvia 50</span><span class="brand-tag b-fuji">Fuji</span></th><td class="num"><b>4.65</b></td><td class="num">3.71</td><td class="num">9.68</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:78%"></div></div></td></tr>
+            <tr data-brand="kodak"><th><span class="stock-name">Supra 100</span><span class="brand-tag b-kodak">Kodak</span></th><td class="num"><b>4.69</b></td><td class="num">3.95</td><td class="num">8.93</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:78%"></div></div></td></tr>
+            <tr data-brand="kodak"><th><span class="stock-name">Ultramax 400</span><span class="brand-tag b-kodak">Kodak</span></th><td class="num"><b>4.69</b></td><td class="num">3.82</td><td class="num">9.72</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:78%"></div></div></td></tr>
+            <tr data-brand="fujifilm"><th><span class="stock-name">Fujicolor C200</span><span class="brand-tag b-fuji">Fuji</span></th><td class="num"><b>4.77</b></td><td class="num">3.50</td><td class="num">10.33</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:80%"></div></div></td></tr>
+            <tr data-brand="kodak"><th><span class="stock-name">Ektar 25</span><span class="brand-tag b-kodak">Kodak</span></th><td class="num"><b>5.56</b></td><td class="num">4.66</td><td class="num">9.45</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill high" style="width:93%"></div></div></td></tr>
+          </tbody>
         </table>
       </div>
 
       <div class="note-box">
-        <b>Disclaimer:</b> Scores are measured against Dehancer renders on 101 frames,
-        not chemical film scans. This is unofficial Magic Lantern firmware software
+        <b>Disclaimer:</b> Analog &amp; B&amp;W scores are measured against EV-matched Dehancer renders on 101 Canon 6D frames,
+        and Fujifilm X-Trans 4 scores against real Fujifilm camera JPEGs and ColorChecker-24. This is unofficial Magic Lantern firmware software
         provided "as is" with no warranty — install at your own risk.
       </div>
-    </section>
-  </main>
-
-  <footer>
-    <div class="wrap foot-inner">
-      <span>XPan Digital · Magic Lantern module for Canon EOS 6D (1.1.6)</span>
-      <span><a href="install.html" style="color:var(--amber)">Install Guide →</a></span>
-    </div>
     </section>
 
     <!-- ── Known Limitations ────────────────────────────────── -->
@@ -398,45 +476,145 @@
         </article>
       </div>
     </section>
-    </main>
+  </main>
 
-    <div class="lightbox" id="lightbox" aria-hidden="true">
-      <img id="lightbox-img" src="" alt="">
+  <footer>
+    <div class="wrap foot-inner">
+      <span>XPan Digital · Magic Lantern module for Canon EOS 6D (1.1.6)</span>
+      <span><a href="install.html" style="color:var(--amber)">Install Guide →</a></span>
     </div>
+  </footer>
 
-    <script>
-      document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          const brand = btn.dataset.brand;
-          document.querySelectorAll('#stock-rows tr').forEach(tr => {
-            tr.classList.toggle('hidden', brand !== 'all' && tr.dataset.brand !== brand);
-          });
+  <div class="lightbox" id="lightbox" aria-hidden="true">
+    <img id="lightbox-img" src="" alt="">
+  </div>
+
+  <script>
+    const FUJI_BOARDS = {
+      'classic-chrome': {
+        name: 'Classic Chrome',
+        file: 'classicchrome.fs',
+        de: '1.99',
+        cc: '0.70',
+        scenes: '3 unseen scenes (friimaind)',
+      },
+      'classic-neg': {
+        name: 'Classic Neg',
+        file: 'classicneg.fs',
+        de: '2.35',
+        cc: '1.50',
+        scenes: '3 unseen scenes (friimaind)',
+      },
+      'reala-ace': {
+        name: 'Reala Ace',
+        file: 'realaace.fs',
+        de: '2.34',
+        cc: '2.08',
+        scenes: '3 unseen scenes (friimaind)',
+      },
+      'nostalgic-neg': {
+        name: 'Nostalgic Neg',
+        file: 'nostalgicneg.fs',
+        de: '3.27',
+        cc: '1.10',
+        scenes: '3 unseen scenes (friimaind)',
+      },
+      'astia': {
+        name: 'Astia',
+        file: 'astia.fs',
+        de: '2.19',
+        cc: '1.01',
+        scenes: '3 unseen scenes (friimaind)',
+      },
+      'pro-neg-hi': {
+        name: 'PRO Neg. Hi',
+        file: 'proneghi.fs',
+        de: '1.97',
+        cc: '0.89',
+        scenes: '3 unseen scenes (friimaind)',
+      },
+      'pro-neg-std': {
+        name: 'PRO Neg. Std',
+        file: 'pronegstd.fs',
+        de: '2.05',
+        cc: '0.98',
+        scenes: '3 unseen scenes (friimaind)',
+      },
+      'eterna': {
+        name: 'Eterna',
+        file: 'eterna.fs',
+        de: '2.21',
+        cc: '1.41',
+        scenes: '3 unseen scenes (friimaind)',
+      },
+      'eterna-bb': {
+        name: 'Eterna Bleach',
+        file: 'bleachbypass.fs',
+        de: '1.98',
+        cc: '1.35',
+        scenes: '3 unseen scenes (friimaind)',
+      },
+    };
+
+    const fujiImg = document.getElementById('fuji-board-img');
+    const fujiCap = document.getElementById('fuji-board-cap');
+    const fujiBadge = document.getElementById('fuji-board-badge');
+
+    function selectFujiSim(slug) {
+      const info = FUJI_BOARDS[slug];
+      if (!info) return;
+      document.querySelectorAll('#fuji-switcher .filter-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.fuji === slug);
+      });
+      document.querySelectorAll('#fuji-rows tr[data-fuji]').forEach(tr => {
+        tr.classList.toggle('active-row', tr.dataset.fuji === slug);
+      });
+      fujiImg.src = `img/fuji/${slug}.jpg`;
+      fujiImg.alt = `${info.name} — Real Fujifilm camera JPEGs vs Ours (${info.file}, 12x17x17 YUV lattice)`;
+      fujiCap.innerHTML = `<b>${info.name} (${info.file})</b> — Provia ref (left) · Real Fujifilm camera JPEG (middle) · Ours via <code>12×17×17</code> lattice (right) across ${info.scenes}.`;
+      fujiBadge.textContent = `Real Fuji ΔE ${info.de} · CC-24 ${info.cc}`;
+    }
+
+    document.querySelectorAll('#fuji-switcher .filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => selectFujiSim(btn.dataset.fuji));
+    });
+    document.querySelectorAll('#fuji-rows tr[data-fuji]').forEach(tr => {
+      tr.addEventListener('click', () => selectFujiSim(tr.dataset.fuji));
+    });
+
+    document.querySelectorAll('[data-brand]').forEach(btn => {
+      if (!btn.classList.contains('filter-btn')) return;
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-btn[data-brand]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const brand = btn.dataset.brand;
+        document.querySelectorAll('#stock-rows tr').forEach(tr => {
+          tr.classList.toggle('hidden', brand !== 'all' && tr.dataset.brand !== brand);
         });
       });
+    });
 
-      const lb = document.getElementById('lightbox');
-      const lbImg = document.getElementById('lightbox-img');
-      document.querySelectorAll('img[data-zoom]').forEach(img => {
-        img.addEventListener('click', () => {
-          lbImg.src = img.src;
-          lbImg.alt = img.alt;
-          lb.classList.add('open');
-          lb.setAttribute('aria-hidden', 'false');
-        });
+    const lb = document.getElementById('lightbox');
+    const lbImg = document.getElementById('lightbox-img');
+    document.querySelectorAll('img[data-zoom]').forEach(img => {
+      img.addEventListener('click', () => {
+        lbImg.src = img.src;
+        lbImg.alt = img.alt;
+        lb.classList.add('open');
+        lb.setAttribute('aria-hidden', 'false');
       });
-      lb.addEventListener('click', () => {
+    });
+    lb.addEventListener('click', () => {
+      lb.classList.remove('open');
+      lb.setAttribute('aria-hidden', 'true');
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
         lb.classList.remove('open');
         lb.setAttribute('aria-hidden', 'true');
-      });
-      document.addEventListener('keydown', e => {
-        if (e.key === 'Escape') {
-          lb.classList.remove('open');
-          lb.setAttribute('aria-hidden', 'true');
-        }
-      });
-    </script>
+      }
+    });
+  </script>
 
 </body>
 

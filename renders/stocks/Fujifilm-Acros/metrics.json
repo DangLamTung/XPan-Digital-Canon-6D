@@ -1,0 +1,18 @@
+{
+  "stock": "Acros (B&W)",
+  "folder": "Fujifilm-Acros",
+  "fs_file": "magiclantern/modules/film_sim/films/acros.fs",
+  "lattice": "12x17x17 YUV422 (ship3)",
+  "real_fuji_scenes": {
+    "count": 3,
+    "mean_dE00": 6.14,
+    "p95_dE00": 10.79,
+    "per_scene": {
+      "friimaind:ana-markovych": 5.71,
+      "friimaind:lili-liu": 6.67,
+      "friimaind:naoya-takahashi": 6.04
+    }
+  },
+  "colorchecker_24": null,
+  "sweep_3d": null
+}

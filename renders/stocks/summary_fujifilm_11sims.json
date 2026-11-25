@@ -1,0 +1,290 @@
+[
+  {
+    "stock": "Classic Chrome",
+    "folder": "Fujifilm-Classic-Chrome",
+    "fs_file": "magiclantern/modules/film_sim/films/classicchrome.fs",
+    "lattice": "12x17x17 YUV422 (ship3)",
+    "real_fuji_scenes": {
+      "count": 4,
+      "mean_dE00": 1.99,
+      "p95_dE00": 4.41,
+      "per_scene": {
+        "friimaind:ana-markovych": 1.84,
+        "friimaind:lili-liu": 1.54,
+        "friimaind:naoya-takahashi": 2.43,
+        "tingfengluo": 2.14
+      }
+    },
+    "colorchecker_24": {
+      "mean_dE00": 0.7,
+      "p95_dE00": 1.95,
+      "skin_dE00": 0.62,
+      "neutral_dE00": 0.72
+    },
+    "sweep_3d": {
+      "mean_dE00": 1.59,
+      "p95_dE00": 3.96
+    }
+  },
+  {
+    "stock": "Classic Neg",
+    "folder": "Fujifilm-Classic-Neg",
+    "fs_file": "magiclantern/modules/film_sim/films/classicneg.fs",
+    "lattice": "12x17x17 YUV422 (ship3)",
+    "real_fuji_scenes": {
+      "count": 4,
+      "mean_dE00": 2.33,
+      "p95_dE00": 4.77,
+      "per_scene": {
+        "friimaind:ana-markovych": 2.42,
+        "friimaind:lili-liu": 1.98,
+        "friimaind:naoya-takahashi": 2.9,
+        "tingfengluo": 2.02
+      }
+    },
+    "colorchecker_24": {
+      "mean_dE00": 1.5,
+      "p95_dE00": 2.63,
+      "skin_dE00": 1.44,
+      "neutral_dE00": 1.45
+    },
+    "sweep_3d": {
+      "mean_dE00": 2.43,
+      "p95_dE00": 4.71
+    }
+  },
+  {
+    "stock": "Reala Ace",
+    "folder": "Fujifilm-Reala-Ace",
+    "fs_file": "magiclantern/modules/film_sim/films/realaace.fs",
+    "lattice": "12x17x17 YUV422 (ship3)",
+    "real_fuji_scenes": {
+      "count": 4,
+      "mean_dE00": 2.37,
+      "p95_dE00": 5.15,
+      "per_scene": {
+        "friimaind:ana-markovych": 2.51,
+        "friimaind:lili-liu": 1.94,
+        "friimaind:naoya-takahashi": 2.97,
+        "tingfengluo": 2.03
+      }
+    },
+    "colorchecker_24": {
+      "mean_dE00": 2.08,
+      "p95_dE00": 4.72,
+      "skin_dE00": 1.35,
+      "neutral_dE00": 1.28
+    },
+    "sweep_3d": {
+      "mean_dE00": 3.03,
+      "p95_dE00": 5.74
+    }
+  },
+  {
+    "stock": "Nostalgic Neg",
+    "folder": "Fujifilm-Nostalgic-Neg",
+    "fs_file": "magiclantern/modules/film_sim/films/nostalgicneg.fs",
+    "lattice": "12x17x17 YUV422 (ship3)",
+    "real_fuji_scenes": {
+      "count": 4,
+      "mean_dE00": 3.28,
+      "p95_dE00": 8.44,
+      "per_scene": {
+        "friimaind:ana-markovych": 4.2,
+        "friimaind:lili-liu": 2.31,
+        "friimaind:naoya-takahashi": 4.26,
+        "tingfengluo": 2.28
+      }
+    },
+    "colorchecker_24": {
+      "mean_dE00": 1.1,
+      "p95_dE00": 2.19,
+      "skin_dE00": 1.51,
+      "neutral_dE00": 0.87
+    },
+    "sweep_3d": {
+      "mean_dE00": 2.52,
+      "p95_dE00": 6.56
+    }
+  },
+  {
+    "stock": "Astia",
+    "folder": "Fujifilm-Astia",
+    "fs_file": "magiclantern/modules/film_sim/films/astia.fs",
+    "lattice": "12x17x17 YUV422 (ship3)",
+    "real_fuji_scenes": {
+      "count": 4,
+      "mean_dE00": 2.23,
+      "p95_dE00": 5.0,
+      "per_scene": {
+        "friimaind:ana-markovych": 2.2,
+        "friimaind:lili-liu": 1.84,
+        "friimaind:naoya-takahashi": 2.77,
+        "tingfengluo": 2.08
+      }
+    },
+    "colorchecker_24": {
+      "mean_dE00": 1.01,
+      "p95_dE00": 2.06,
+      "skin_dE00": 1.62,
+      "neutral_dE00": 0.91
+    },
+    "sweep_3d": {
+      "mean_dE00": 1.94,
+      "p95_dE00": 4.13
+    }
+  },
+  {
+    "stock": "PRO Neg. Hi",
+    "folder": "Fujifilm-Pro-Neg-Hi",
+    "fs_file": "magiclantern/modules/film_sim/films/proneghi.fs",
+    "lattice": "12x17x17 YUV422 (ship3)",
+    "real_fuji_scenes": {
+      "count": 4,
+      "mean_dE00": 2.0,
+      "p95_dE00": 4.68,
+      "per_scene": {
+        "friimaind:ana-markovych": 1.99,
+        "friimaind:lili-liu": 1.6,
+        "friimaind:naoya-takahashi": 2.52,
+        "tingfengluo": 1.88
+      }
+    },
+    "colorchecker_24": {
+      "mean_dE00": 0.89,
+      "p95_dE00": 2.05,
+      "skin_dE00": 1.45,
+      "neutral_dE00": 0.34
+    },
+    "sweep_3d": {
+      "mean_dE00": 1.97,
+      "p95_dE00": 4.39
+    }
+  },
+  {
+    "stock": "PRO Neg. Std",
+    "folder": "Fujifilm-Pro-Neg-Std",
+    "fs_file": "magiclantern/modules/film_sim/films/pronegstd.fs",
+    "lattice": "12x17x17 YUV422 (ship3)",
+    "real_fuji_scenes": {
+      "count": 4,
+      "mean_dE00": 2.05,
+      "p95_dE00": 4.71,
+      "per_scene": {
+        "friimaind:ana-markovych": 2.07,
+        "friimaind:lili-liu": 1.7,
+        "friimaind:naoya-takahashi": 2.66,
+        "tingfengluo": 1.75
+      }
+    },
+    "colorchecker_24": {
+      "mean_dE00": 0.98,
+      "p95_dE00": 3.08,
+      "skin_dE00": 1.2,
+      "neutral_dE00": 0.41
+    },
+    "sweep_3d": {
+      "mean_dE00": 2.1,
+      "p95_dE00": 4.13
+    }
+  },
+  {
+    "stock": "Eterna",
+    "folder": "Fujifilm-Eterna",
+    "fs_file": "magiclantern/modules/film_sim/films/eterna.fs",
+    "lattice": "12x17x17 YUV422 (ship3)",
+    "real_fuji_scenes": {
+      "count": 4,
+      "mean_dE00": 2.2,
+      "p95_dE00": 5.04,
+      "per_scene": {
+        "friimaind:ana-markovych": 2.47,
+        "friimaind:lili-liu": 1.68,
+        "friimaind:naoya-takahashi": 2.79,
+        "tingfengluo": 1.84
+      }
+    },
+    "colorchecker_24": {
+      "mean_dE00": 1.41,
+      "p95_dE00": 2.64,
+      "skin_dE00": 1.44,
+      "neutral_dE00": 0.49
+    },
+    "sweep_3d": {
+      "mean_dE00": 2.16,
+      "p95_dE00": 4.9
+    }
+  },
+  {
+    "stock": "Eterna Bleach",
+    "folder": "Fujifilm-Bleach-Bypass",
+    "fs_file": "magiclantern/modules/film_sim/films/bleachbypass.fs",
+    "lattice": "12x17x17 YUV422 (ship3)",
+    "real_fuji_scenes": {
+      "count": 4,
+      "mean_dE00": 1.95,
+      "p95_dE00": 3.96,
+      "per_scene": {
+        "friimaind:ana-markovych": 1.96,
+        "friimaind:lili-liu": 1.74,
+        "friimaind:naoya-takahashi": 2.31,
+        "tingfengluo": 1.77
+      }
+    },
+    "colorchecker_24": {
+      "mean_dE00": 1.35,
+      "p95_dE00": 2.4,
+      "skin_dE00": 1.69,
+      "neutral_dE00": 0.87
+    },
+    "sweep_3d": {
+      "mean_dE00": 2.62,
+      "p95_dE00": 4.67
+    }
+  },
+  {
+    "stock": "Velvia (50)",
+    "folder": "Fujifilm-Velvia",
+    "fs_file": "magiclantern/modules/film_sim/films/velvia.fs",
+    "lattice": "12x17x17 YUV422 (ship3)",
+    "real_fuji_scenes": {
+      "count": 4,
+      "mean_dE00": 10.53,
+      "p95_dE00": 18.84,
+      "per_scene": {
+        "friimaind:ana-markovych": 8.44,
+        "friimaind:lili-liu": 9.73,
+        "friimaind:naoya-takahashi": 9.95,
+        "tingfengluo": 14.29
+      }
+    },
+    "colorchecker_24": {
+      "mean_dE00": 7.8,
+      "p95_dE00": 14.79,
+      "skin_dE00": 8.63,
+      "neutral_dE00": 8.19
+    },
+    "sweep_3d": {
+      "mean_dE00": 11.4,
+      "p95_dE00": 18.48
+    }
+  },
+  {
+    "stock": "Acros (B&W)",
+    "folder": "Fujifilm-Acros",
+    "fs_file": "magiclantern/modules/film_sim/films/acros.fs",
+    "lattice": "12x17x17 YUV422 (ship3)",
+    "real_fuji_scenes": {
+      "count": 3,
+      "mean_dE00": 6.14,
+      "p95_dE00": 10.79,
+      "per_scene": {
+        "friimaind:ana-markovych": 5.71,
+        "friimaind:lili-liu": 6.67,
+        "friimaind:naoya-takahashi": 6.04
+      }
+    },
+    "colorchecker_24": null,
+    "sweep_3d": null
+  }
+]

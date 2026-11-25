@@ -1,0 +1,27 @@
+{
+  "stock": "PRO Neg. Hi",
+  "folder": "Fujifilm-Pro-Neg-Hi",
+  "fs_file": "magiclantern/modules/film_sim/films/proneghi.fs",
+  "lattice": "12x17x17 YUV422 (ship3)",
+  "real_fuji_scenes": {
+    "count": 4,
+    "mean_dE00": 2.0,
+    "p95_dE00": 4.68,
+    "per_scene": {
+      "friimaind:ana-markovych": 1.99,
+      "friimaind:lili-liu": 1.6,
+      "friimaind:naoya-takahashi": 2.52,
+      "tingfengluo": 1.88
+    }
+  },
+  "colorchecker_24": {
+    "mean_dE00": 0.89,
+    "p95_dE00": 2.05,
+    "skin_dE00": 1.45,
+    "neutral_dE00": 0.34
+  },
+  "sweep_3d": {
+    "mean_dE00": 1.97,
+    "p95_dE00": 4.39
+  }
+}

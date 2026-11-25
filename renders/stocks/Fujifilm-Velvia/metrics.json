@@ -1,0 +1,27 @@
+{
+  "stock": "Velvia (50)",
+  "folder": "Fujifilm-Velvia",
+  "fs_file": "magiclantern/modules/film_sim/films/velvia.fs",
+  "lattice": "12x17x17 YUV422 (ship3)",
+  "real_fuji_scenes": {
+    "count": 4,
+    "mean_dE00": 10.53,
+    "p95_dE00": 18.84,
+    "per_scene": {
+      "friimaind:ana-markovych": 8.44,
+      "friimaind:lili-liu": 9.73,
+      "friimaind:naoya-takahashi": 9.95,
+      "tingfengluo": 14.29
+    }
+  },
+  "colorchecker_24": {
+    "mean_dE00": 7.8,
+    "p95_dE00": 14.79,
+    "skin_dE00": 8.63,
+    "neutral_dE00": 8.19
+  },
+  "sweep_3d": {
+    "mean_dE00": 11.4,
+    "p95_dE00": 18.48
+  }
+}
