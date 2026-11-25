@@ -263,7 +263,13 @@ static void fs_dcache_clean(void *p, uint32_t len)
      * the encoder stale. _clean_d_cache() is ML's own ARM946E-S sequence:
      * clean+invalidate by index over all segments, then drain the write buffer.
      */
+    /* ML wraps its own cache maintenance in cli()/sei() (_sync_caches), and
+     * this runs between the grade writing pixels and Canon's DMA reading them.
+     * Cleaning with interrupts live leaves a window where a handler can put a
+     * line back in the cache after it was cleaned. */
+    uint32_t old = cli();
     _clean_d_cache();
+    sei(old);
 }
 
 int fs_yuvhook_dcache_used(void) { return fs_dcache_used; }
